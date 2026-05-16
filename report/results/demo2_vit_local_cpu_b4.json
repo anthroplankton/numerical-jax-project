@@ -1,0 +1,25 @@
+{
+  "backend": "cpu",
+  "batch_size": 4,
+  "benchmark_steps": 10,
+  "devices": [
+    {
+      "device_kind": "cpu",
+      "id": 0,
+      "platform": "cpu",
+      "repr": "cpu:0"
+    }
+  ],
+  "input_shape": [
+    4,
+    3,
+    224,
+    224
+  ],
+  "mean_step_time_sec": 0.8838171279999187,
+  "model_name": "google/vit-base-patch16-224",
+  "predicted_index": 151,
+  "predicted_label": "Chihuahua",
+  "throughput_images_per_sec": 4.5258231293299485,
+  "warmup_steps": 2
+}
