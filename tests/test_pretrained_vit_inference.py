@@ -7,6 +7,7 @@ import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = PROJECT_ROOT / "examples" / "pretrained_vit_inference.py"
+SAMPLE_IMAGE_PATH = Path("examples/assets/chihuahua_pet_licorice.jpg")
 
 
 def load_vit_example_module():
@@ -23,10 +24,11 @@ def load_vit_example_module():
 def test_parse_args_uses_safe_defaults() -> None:
     module = load_vit_example_module()
 
-    args = module.parse_args(["--image", "sample.jpg"])
+    # These tests verify argparse behavior only; they do not read the image file.
+    args = module.parse_args(["--image", str(SAMPLE_IMAGE_PATH)])
 
     assert args.model == "google/vit-base-patch16-224"
-    assert args.image == Path("sample.jpg")
+    assert args.image == SAMPLE_IMAGE_PATH
     assert args.batch_size == 1
     assert args.warmup_steps == 1
     assert args.benchmark_steps == 5
@@ -40,7 +42,7 @@ def test_parse_args_accepts_benchmark_settings() -> None:
     args = module.parse_args(
         [
             "--image",
-            "sample.jpg",
+            str(SAMPLE_IMAGE_PATH),
             "--output",
             "runs/test/metrics.json",
             "--batch-size",
@@ -54,6 +56,7 @@ def test_parse_args_accepts_benchmark_settings() -> None:
         ]
     )
 
+    assert args.image == SAMPLE_IMAGE_PATH
     assert args.output == Path("runs/test/metrics.json")
     assert args.batch_size == 4
     assert args.warmup_steps == 0
@@ -65,8 +68,11 @@ def test_parse_args_accepts_jax_platform_choices() -> None:
     module = load_vit_example_module()
 
     for platform in ("default", "cpu", "cuda", "tpu"):
-        args = module.parse_args(["--image", "sample.jpg", "--jax-platform", platform])
+        args = module.parse_args(
+            ["--image", str(SAMPLE_IMAGE_PATH), "--jax-platform", platform]
+        )
 
+        assert args.image == SAMPLE_IMAGE_PATH
         assert args.jax_platform == platform
 
 
@@ -74,20 +80,20 @@ def test_parse_args_rejects_unknown_jax_platform() -> None:
     module = load_vit_example_module()
 
     with pytest.raises(SystemExit):
-        module.parse_args(["--image", "sample.jpg", "--jax-platform", "gpu"])
+        module.parse_args(["--image", str(SAMPLE_IMAGE_PATH), "--jax-platform", "gpu"])
 
 
 def test_parse_args_rejects_invalid_step_counts() -> None:
     module = load_vit_example_module()
 
     with pytest.raises(SystemExit):
-        module.parse_args(["--image", "sample.jpg", "--batch-size", "0"])
+        module.parse_args(["--image", str(SAMPLE_IMAGE_PATH), "--batch-size", "0"])
 
     with pytest.raises(SystemExit):
-        module.parse_args(["--image", "sample.jpg", "--warmup-steps", "-1"])
+        module.parse_args(["--image", str(SAMPLE_IMAGE_PATH), "--warmup-steps", "-1"])
 
     with pytest.raises(SystemExit):
-        module.parse_args(["--image", "sample.jpg", "--benchmark-steps", "0"])
+        module.parse_args(["--image", str(SAMPLE_IMAGE_PATH), "--benchmark-steps", "0"])
 
 
 def test_build_metrics_computes_throughput_and_preserves_schema() -> None:
