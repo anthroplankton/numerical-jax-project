@@ -19,6 +19,7 @@ env/
 
 # Local tool configuration
 .codex/config.toml
+.codex/rules/local.rules
 
 # Build artifacts
 build/
@@ -40,6 +41,8 @@ application_default_credentials.json
 
 # Logs, temporary outputs, and local artifacts
 *.log
+*.Zone.Identifier
+*:Zone.Identifier
 logs/
 tmp/
 temp/
@@ -57,12 +60,17 @@ downloaded_models/
 *.safetensors
 *.pt
 *.pth
+*.msgpack
 *.onnx
 dataset_cache/
 data/cache/
+data/local/
 data/raw/
 datasets/cache/
 .cache/
+.huggingface/
+hf_cache/
+huggingface_cache/
 
 # Uncurated cloud outputs
 cloud/artifacts/

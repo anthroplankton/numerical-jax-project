@@ -118,9 +118,50 @@
 - Next planned step：
   - Run or curate a local Demo 1 benchmark result under `report/results/`, then implement real dataset loading and prepare TPU workflow documentation.
 
+## Phase 4: Demo 2 Pretrained ViT Inference Compatibility Spike
+
+- Date / phase label：2026-05-17 Demo 2 scope update and local compatibility spike
+- What was changed：
+  - Demo 2 scope changed from a generic Flax + Optax or existing JAX training-stack comparison to a pretrained ViT inference benchmark.
+  - Selected default model：`google/vit-base-patch16-224`。
+  - Added an optional `pretrained` dependency group for the ViT demo only, keeping pretrained dependencies out of the default environment。
+  - Added a local inference benchmark script using Hugging Face `AutoImageProcessor` and `FlaxViTForImageClassification`。
+  - Added `--jax-platform` to the ViT script with choices `default`, `cpu`, `cuda`, and `tpu`; the default is `cpu` for stable local classroom runs。
+  - Added documentation for local setup, first-run model download behavior, expected metrics, and limitations。
+  - Added lightweight tests for argument parsing and metrics helpers that do not download model weights。
+  - Added a small public-domain sample image under `examples/assets/` for reproducible classroom use。
+- Files or modules added/updated：
+  - `pyproject.toml`
+  - `examples/pretrained_vit_inference.py`
+  - `examples/assets/chihuahua_pet_licorice.jpg`
+  - `examples/assets/README.md`
+  - `docs/pretrained_vit_demo.md`
+  - `report/results/README.md`
+  - `report/results/demo2_vit_local_cpu_b1.json`
+  - `report/results/demo2_vit_local_cpu_b4.json`
+  - `report/results/demo2_vit_local_cpu_b8.json`
+  - `tests/test_pretrained_vit_inference.py`
+  - `report/progress_log.md`
+- Current expected output：
+  - The ViT script writes JSON metrics with model name, selected JAX platform, actual JAX backend, devices, input shape, batch size, warmup steps, benchmark steps, mean step time, throughput, predicted class index, and predicted label。
+- Current evidence/results：
+  - Hugging Face model download for `google/vit-base-patch16-224` succeeded during manual local checking。
+  - Local CPU ViT inference succeeded using the sample image `examples/assets/chihuahua_pet_licorice.jpg`。
+  - `report/results/demo2_vit_local_cpu_b1.json` records backend `cpu`, batch size `1`, predicted label `Chihuahua`, mean step time `0.18744530999993003` seconds, and throughput `5.334889413879565` images/s。
+  - `report/results/demo2_vit_local_cpu_b4.json` records backend `cpu`, batch size `4`, predicted label `Chihuahua`, mean step time `0.8838171279999187` seconds, and throughput `4.5258231293299485` images/s。
+  - `report/results/demo2_vit_local_cpu_b8.json` records backend `cpu`, batch size `8`, predicted label `Chihuahua`, mean step time `1.973294752699894` seconds, and throughput `4.054133316401044` images/s。
+- Limitations：
+  - This phase is a local compatibility spike, not final benchmark evidence。
+  - The first real run downloads model weights and processor files from Hugging Face unless they are already cached。
+  - The default pytest suite does not download the pretrained model。
+  - Simple JAX GPU matrix multiplication worked on the laptop, but the ViT-like convolution path failed during cuDNN autotuning; local CUDA is therefore recorded as a limitation, not as completed Demo 2 benchmark evidence。
+  - TPU execution, monitoring, cleanup, and local-vs-TPU comparison for Demo 2 remain planned work and have not been completed。
+- Next planned step：
+  - Use the local CPU artifacts as Demo 2 baseline evidence, then plan TPU execution, monitoring, cleanup, and comparison separately without adding cloud automation before the workflow is ready。
+
 ## Planned Phases
 
-### Phase 4: Real MNIST/Fashion-MNIST and Curated Local Result
+### Phase 5: Real MNIST/Fashion-MNIST and Curated Local Result
 
 - Status：planned, not completed。
 - Goal：extend Demo 1 from synthetic MNIST-shaped data to real MNIST and Fashion-MNIST local-file data。
@@ -134,7 +175,7 @@
   - Tests or smoke checks。
   - Curated local benchmark artifact and documented command。
 
-### Phase 5: TPU Workflow and Local-vs-TPU Comparison for Demo 1
+### Phase 6: TPU Workflow and Local-vs-TPU Comparison for Demo 1
 
 - Status：planned, not completed。
 - Goal：run Demo 1 on Google Cloud TPU and compare against local execution using reproducible evidence。
@@ -149,24 +190,22 @@
   - Cleanup notes。
   - Comparison artifact grounded in saved metrics。
 
-### Phase 6: Demo 2 Existing JAX Training Stack
+### Phase 7: Demo 2 Pretrained ViT Inference Evidence
 
 - Status：planned, not completed。
-- Goal：compare Demo 1 raw-JAX implementation with a higher-level JAX ecosystem workflow。
+- Goal：turn the pretrained ViT local compatibility spike into documented benchmark evidence, then evaluate whether it can share local-vs-TPU comparison workflow with Demo 1。
 - Planned work：
-  - Choose Flax + Optax or a small existing JAX model/example。
-  - Document what abstractions are introduced and which code becomes simpler。
-  - Reuse Demo 1 metrics JSON format where practical。
-  - Explore whether the same local vs TPU workflow can be reused。
-  - Add lightweight local smoke tests。
+  - Decide whether the benchmark should remain single-image repeated-batch inference or use a small curated image set。
+  - Reuse comparable JSON fields with Demo 1 where practical。
+  - Explore whether the same local vs TPU workflow can be reused without adding cloud automation too early。
+  - Add any additional lightweight tests that still avoid model downloads in the default pytest suite。
 - Evidence needed before marking complete：
-  - Demo 2 source/example code。
-  - Documented run command。
-  - Metrics output。
-  - Tests or smoke checks。
-  - Clear comparison against Demo 1。
+  - TPU metrics if TPU execution is attempted。
+  - Cloud logs or screenshots if TPU execution is attempted。
+  - Monitoring notes and cleanup evidence if TPU resources are created。
+  - Local-vs-TPU comparison artifact grounded in saved metrics。
 
-### Phase 7: Optional Demo 3 Pretrained/Gemma Cloud Demo
+### Phase 8: Optional Demo 3 Pretrained/Gemma Cloud Demo
 
 - Status：optional planned work, not completed。
 - Goal：show how a pretrained-model cloud workflow differs from the smaller training demos, only if access and scope are manageable。
