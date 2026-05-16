@@ -97,7 +97,7 @@
   - Added and revised a Traditional Chinese presentation plan with a broader three-demo roadmap.
   - Added this progress log grounded in repository files, git history, tests, and available generated metrics.
   - Added a current project status summary for local demo usage, tested behavior, missing work, and next milestones.
-  - Clarified that Demo 2 and Demo 3 are planned work, not implemented work.
+  - Historical note: at that phase, Demo 2 and Demo 3 were still planned work, not implemented work.
 - Files or modules added：
   - `report/presentation_plan.md`
   - `report/progress_log.md`
@@ -159,9 +159,35 @@
 - Next planned step：
   - Use the local CPU artifacts as Demo 2 baseline evidence, then plan TPU execution, monitoring, cleanup, and comparison separately without adding cloud automation before the workflow is ready。
 
+## Phase 5: Current Presentation Scope And Demo 2 TPU Workflow Planning
+
+- Date / phase label：2026-05-17 presentation scope update
+- What changed：
+  - Because of course constraints, the current presentation/demo focus narrowed to Demo 2 only。
+  - Demo 2 remains the pretrained ViT inference benchmark using JAX/Flax and `google/vit-base-patch16-224`。
+  - Demo 1 is preserved in the repository as background/foundation work, but it is not the current presentation focus。
+  - Demo 3 is preserved as optional future work, but it is not the current presentation focus。
+  - Added documentation for a conservative Google Cloud TPU VM workflow for Demo 2。
+- Files or modules added/updated：
+  - `README.md`
+  - `docs/pretrained_vit_demo.md`
+  - `cloud/demo2_vit_tpu_workflow.md`
+  - `report/current_status.md`
+  - `report/presentation_plan.md`
+  - `report/progress_log.md`
+- Current evidence/results：
+  - Demo 2 local CPU baseline exists under `report/results/`。
+  - The curated local CPU artifacts remain the only completed Demo 2 benchmark evidence。
+  - Local CUDA remains a documented laptop limitation, not a completed benchmark。
+- Limitations：
+  - Demo 2 TPU execution, monitoring, artifact retrieval, cleanup, and local-vs-TPU comparison are planned but not completed。
+  - The TPU workflow document is documentation-only and uses placeholders such as `<PROJECT_ID>`, `<ZONE>`, `<TPU_NAME>`, and `<ACCELERATOR_TYPE>`。
+- Next planned step：
+  - Use `cloud/demo2_vit_tpu_workflow.md` to prepare a controlled TPU VM attempt, then record actual commands, metrics, logs, monitoring notes, and cleanup evidence only after a real run occurs。
+
 ## Planned Phases
 
-### Phase 5: Real MNIST/Fashion-MNIST and Curated Local Result
+### Phase 6: Real MNIST/Fashion-MNIST and Curated Local Result
 
 - Status：planned, not completed。
 - Goal：extend Demo 1 from synthetic MNIST-shaped data to real MNIST and Fashion-MNIST local-file data。
@@ -175,7 +201,7 @@
   - Tests or smoke checks。
   - Curated local benchmark artifact and documented command。
 
-### Phase 6: TPU Workflow and Local-vs-TPU Comparison for Demo 1
+### Phase 7: TPU Workflow and Local-vs-TPU Comparison for Demo 1
 
 - Status：planned, not completed。
 - Goal：run Demo 1 on Google Cloud TPU and compare against local execution using reproducible evidence。
@@ -190,22 +216,22 @@
   - Cleanup notes。
   - Comparison artifact grounded in saved metrics。
 
-### Phase 7: Demo 2 Pretrained ViT Inference Evidence
+### Phase 8: Demo 2 Pretrained ViT TPU Evidence
 
 - Status：planned, not completed。
-- Goal：turn the pretrained ViT local compatibility spike into documented benchmark evidence, then evaluate whether it can share local-vs-TPU comparison workflow with Demo 1。
+- Goal：extend the Demo 2 local CPU baseline to Google Cloud TPU, then compare local CPU and TPU inference evidence。
 - Planned work：
-  - Decide whether the benchmark should remain single-image repeated-batch inference or use a small curated image set。
-  - Reuse comparable JSON fields with Demo 1 where practical。
-  - Explore whether the same local vs TPU workflow can be reused without adding cloud automation too early。
-  - Add any additional lightweight tests that still avoid model downloads in the default pytest suite。
+  - Review and execute the TPU workflow manually when cloud project, quota, and cost constraints are acceptable。
+  - Run `examples/pretrained_vit_inference.py` with `--jax-platform tpu` on a TPU VM。
+  - Capture backend/device output, JSON metrics, terminal logs, monitoring notes, and cleanup evidence。
+  - Compare TPU metrics against the existing local CPU baseline artifacts。
 - Evidence needed before marking complete：
   - TPU metrics if TPU execution is attempted。
   - Cloud logs or screenshots if TPU execution is attempted。
   - Monitoring notes and cleanup evidence if TPU resources are created。
   - Local-vs-TPU comparison artifact grounded in saved metrics。
 
-### Phase 8: Optional Demo 3 Pretrained/Gemma Cloud Demo
+### Phase 9: Optional Demo 3 Pretrained/Gemma Cloud Demo
 
 - Status：optional planned work, not completed。
 - Goal：show how a pretrained-model cloud workflow differs from the smaller training demos, only if access and scope are manageable。

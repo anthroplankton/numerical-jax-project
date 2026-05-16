@@ -4,8 +4,14 @@ Demo 2 is a local compatibility spike for running pretrained Vision Transformer
 inference with JAX/Flax. The default model is
 `google/vit-base-patch16-224` from Hugging Face.
 
-This demo is inference-only. It does not add TPU automation, does not fine-tune
-the model, and does not claim TPU execution has been completed.
+Because of current course presentation constraints, this is the primary demo
+path for the project. Demo 1 remains preserved as background raw-JAX CNN work,
+and Demo 3 remains optional future work.
+
+This demo is inference-only. It does not fine-tune the model, and it does not
+claim TPU execution has been completed. The next planned step is a conservative
+Google Cloud TPU VM workflow for running the same inference benchmark with
+`--jax-platform tpu`.
 
 ## Setup
 
@@ -135,3 +141,9 @@ ViT inference success for Demo 2.
   systems-oriented inference measurement rather than a dataset-level evaluation.
 - TPU execution, monitoring, cleanup, and local-vs-TPU comparison remain planned
   work and have not been completed by this demo.
+
+## Next Planned Step
+
+Prepare and test a Google Cloud TPU VM workflow for Demo 2 using
+`examples/pretrained_vit_inference.py --jax-platform tpu`, then capture TPU
+metrics, logs, monitoring notes, and cleanup evidence if resources are created.

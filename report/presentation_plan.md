@@ -1,316 +1,129 @@
-# 手寫 CNN on MNIST / Fashion-MNIST：Local vs Google Cloud TPU Benchmark 簡報計畫
+# Demo 2 Pretrained ViT Inference: Presentation Scope and TPU Plan
 
-## 專案摘要
+## Purpose
 
-本專案是「Numerical Computation with JAX」課程專題，整體方向是建立一組可展示、可測量、可延伸到 Google Cloud TPU 的 JAX workflow。第一個 demo 以 raw JAX 手寫 CNN training benchmark 為核心，目前已完成 local scaffold、JAX runtime/device sanity check、synthetic MNIST-shaped data smoke benchmark、JSON metrics output 與相關 pytest smoke tests。後續規劃會延伸到三個 demo：Demo 1 完成 MNIST/Fashion-MNIST 的 local vs TPU benchmark；Demo 2 用 Flax + Optax 或既有 JAX training stack 對照 raw-JAX 寫法；Demo 3 在條件允許時展示 Gemma-like 或其他 pretrained-model cloud workflow。現階段尚未完成 real MNIST/Fashion-MNIST loader、TPU execution、cloud monitoring、local-vs-TPU comparison、Demo 2 implementation 或 Demo 3 implementation。
+This repository is a course project for Numerical Computation with JAX. The
+current presentation plan focuses on one complete path: build a reproducible
+local CPU baseline for pretrained ViT inference with JAX/Flax, then prepare the
+same workflow for planned Google Cloud TPU execution.
 
-## 簡報目標
+The primary model is `google/vit-base-patch16-224`. The goal is to demonstrate
+JAX runtime awareness, benchmark timing, JSON evidence collection, and a
+conservative path toward TPU comparison without claiming TPU results before a
+real cloud run exists.
 
-- 內容安排會先用簡短背景說明 JAX backend、TPU execution、benchmark metrics 等脈絡，再進入目前實作、可展示的 local benchmark，以及後續雲端與模型 demo 規劃。
-- 簡報目標是誠實呈現目前已完成的 local raw-JAX CNN benchmark foundation，說明它如何產生可重現的 metrics 與測試證據，並把 Demo 1、Demo 2、Demo 3 的完成狀態與下一步清楚分開。
+## Current Presentation Scope
 
-## Three-Demo Roadmap
+Demo 2 is the primary presentation target:
 
-### Demo 1: Hand-Written Model
+- pretrained ViT inference with JAX/Flax
+- local CPU baseline evidence
+- planned Google Cloud TPU VM workflow
 
-- Topic：CNN on MNIST / Fashion-MNIST。
-- Goal：用 raw JAX 實作 CNN training workflow，完成 local vs Google Cloud TPU training benchmark。
-- Current status：local raw-JAX CNN benchmark foundation exists。
-- Current data path：目前完成的是 deterministic synthetic MNIST-shaped data；除非 repository 後續新增 loader，否則 real MNIST/Fashion-MNIST 尚未完成。
-- Evidence now：`src/jax_tpu_project/cnn_mnist.py`、`examples/cnn_mnist_benchmark.py`、`tests/test_cnn_mnist.py`、README command、ignored local metrics file `runs/smoke/cnn_mnist_metrics.json`。
-- Planned next step：real MNIST/Fashion-MNIST local-file loader、curated local result、TPU run、local-vs-TPU comparison。
+Demo 1 is preserved as raw-JAX CNN background/foundation work. It remains useful
+for explaining the project history and lower-level JAX training concepts, but it
+is not the current presentation focus.
 
-### Demo 2: Existing JAX Model or Training Stack
+Demo 3 is preserved as optional future work for a larger pretrained-model or
+Gemma-like cloud workflow. It is not part of the current presentation scope.
 
-- Topic：使用 JAX ecosystem 中較高階的 training approach，例如 Flax + Optax，或小型既有 JAX model/example。
-- Goal：和 Demo 1 的 raw-JAX implementation 對照，觀察 framework abstraction 帶來的結構差異。
-- Emphasis：
-  - Flax/Optax 提供哪些 model definition、parameter handling、optimizer abstraction。
-  - 訓練程式碼是否更短、更容易維護或更容易擴充。
-  - metrics 與 benchmark artifacts 是否能沿用 Demo 1 的 JSON format。
-  - local vs TPU workflow 是否能重用 Demo 1 的 setup、run、collect、compare 流程。
-- Current status：planned, not implemented。
-- Evidence now：目前沒有 Demo 2 code、results 或 tests。
-- Planned next step：先選定最小 Flax + Optax 或既有 JAX example，保持 CPU-friendly defaults，避免引入過重 dependencies。
+The current presentation does not attempt to complete all three demos.
 
-### Demo 3: Gemma or Pretrained-Model Cloud Demo
+## Completed Work
 
-- Topic：在範圍、授權、資源與時間可控時，展示 Gemma-like 或其他 pretrained-model workflow on Google Cloud / TPU-related environment。
-- Goal：說明 pretrained model workflow 和小型 hand-written / standard training demo 的差異。
-- Emphasis：
-  - Model source、license、access requirements。
-  - Dependency group and setup requirements。
-  - Expected hardware and memory requirements。
-  - Demo 是 inference-only、fine-tuning，或只是 workflow demonstration。
-  - 若 model access、quota、hardware 或時間不足，如何退回文件化流程或小型替代展示。
-- Current status：optional advanced planned work, not implemented。
-- Evidence now：目前沒有 Gemma code、model downloads、model access evidence、TPU runs 或 results。
-- Planned next step：等 Demo 1 cloud workflow 穩定後，再評估是否納入 final scope。
+- Demo 2 script exists: `examples/pretrained_vit_inference.py`.
+- The script uses Hugging Face `AutoImageProcessor` for preprocessing.
+- The script uses `FlaxViTForImageClassification` for JAX/Flax inference.
+- The default model is `google/vit-base-patch16-224`.
+- A small public-domain sample image is checked in under `examples/assets/`.
+- The benchmark repeats the image to configurable batch sizes.
+- The benchmark uses warmup steps, timed steps, and `block_until_ready()`.
+- The benchmark writes JSON metrics.
+- Lightweight pytest tests exist and do not download model weights.
+- Local CPU inference succeeded during manual checking.
 
-## Slide-by-Slide Outline
+## Current Evidence
 
-### Slide 1: Project Direction
+Curated local CPU JSON artifacts:
 
-- Key message：本專題以 JAX training workflow 與 Google Cloud TPU benchmark 為主軸。
-- Content bullets：
-  - Course project: Numerical Computation with JAX
-  - Main direction: Hand-written CNN on MNIST / Fashion-MNIST
-  - Longer roadmap: raw JAX demo, higher-level JAX stack demo, optional pretrained-model cloud demo
-  - Current stage: local Demo 1 foundation
-- Demo or evidence to show：README opening and Demo 1 section。
-- Estimated time：0:45
-- Current status：completed for project direction documentation; implementation partial
+- `report/results/demo2_vit_local_cpu_b1.json`
+- `report/results/demo2_vit_local_cpu_b4.json`
+- `report/results/demo2_vit_local_cpu_b8.json`
 
-### Slide 2: Three-Demo Roadmap
+These artifacts record local CPU inference for the checked-in sample image. The
+predicted label was `Chihuahua`.
 
-- Key message：專案會用三個 demo 逐步展示從 raw JAX 到 higher-level stack，再到 optional pretrained workflow。
-- Content bullets：
-  - Demo 1: raw-JAX hand-written CNN benchmark
-  - Demo 2: Flax + Optax or existing JAX model/training stack comparison
-  - Demo 3: optional Gemma-like or pretrained-model cloud workflow
-  - Only Demo 1 local foundation exists now
-- Demo or evidence to show：roadmap table with completed / partial / planned labels。
-- Estimated time：1:00
-- Current status：Demo 1 partial; Demo 2 planned; Demo 3 optional planned
+These are single-image repeated-batch inference measurements. They are useful as
+local runtime and throughput evidence, but they are not dataset-level accuracy
+evaluation, not GPU results, and not TPU results.
 
-### Slide 3: Repository and Tooling Foundation
+## Local CUDA Limitation
 
-- Key message：local development foundation 已建立，讓後續 demo 可以用同一套 basic validation workflow。
-- Content bullets：
-  - `src/` layout，package name: `jax_tpu_project`
-  - `uv` setup with `pyproject.toml` and `uv.lock`
-  - Ruff and pytest configured in `pyproject.toml`
-  - Runtime check: `scripts/check_jax_device.sh` and `jax_tpu_project.cli devices`
-  - `.gitignore` excludes generated runs, credentials, raw data, model weights
-- Demo or evidence to show：`pyproject.toml`、`scripts/check_jax_device.sh`、`.gitignore`。
-- Estimated time：0:55
-- Current status：completed
+On the laptop used for local checking, simple JAX GPU matrix multiplication
+worked, but the ViT-like convolution path failed during cuDNN autotuning.
+Therefore local CUDA is documented as a laptop environment limitation and is not
+used as Demo 2 benchmark evidence.
 
-### Slide 4: Demo 1 Goal and Current Scope
+## Planned Google Cloud TPU Work
 
-- Key message：Demo 1 的已完成部分是 local raw-JAX CNN benchmark foundation，不是完整 MNIST/Fashion-MNIST 或 TPU result。
-- Content bullets：
-  - Goal: CNN on MNIST / Fashion-MNIST local vs TPU benchmark
-  - Current model: hand-written raw JAX CNN
-  - Current data: synthetic MNIST-shaped data
-  - Current output: JSON benchmark metrics
-  - Planned: real dataset loader and TPU execution
-- Demo or evidence to show：README Demo 1 command and `SUPPORTED_DATASETS` behavior。
-- Estimated time：0:55
-- Current status：partial
+The planned TPU workflow is documented in
+`cloud/demo2_vit_tpu_workflow.md`. The next step is to run the same Demo 2
+script on a TPU VM with:
 
-### Slide 5: Demo 1 CNN Architecture
+```bash
+--jax-platform tpu
+```
 
-- Key message：CNN architecture intentionally stays small and explainable for course presentation and benchmark workflow setup。
-- Content bullets：
-  - Input shape: `[batch, 28, 28, 1]`
-  - Conv1: 3x3, 1 to 8 channels
-  - Average pooling by reshape + mean
-  - Conv2: 3x3, 8 to 16 channels
-  - Dense hidden: `7 * 7 * 16` to 32
-  - Logits: 32 to 10 classes
-- Demo or evidence to show：`init_cnn_params()` and `forward()` in `src/jax_tpu_project/cnn_mnist.py`。
-- Estimated time：1:10
-- Current status：completed for synthetic benchmark foundation
+Planned evidence to collect from a real TPU attempt:
 
-### Slide 6: Demo 1 JAX Training Step
+- backend/device output
+- JSON benchmark metrics
+- terminal logs
+- monitoring notes or screenshots if available
+- cleanup evidence
 
-- Key message：training step 展示 raw JAX 的核心 building blocks，後續可作為 TPU benchmark 的共同 workload。
-- Content bullets：
-  - `jax.jit` on `training_step`
-  - `jax.value_and_grad` for loss and gradients
-  - explicit SGD update using `jax.tree_util.tree_map`
-  - `jax.lax.conv_general_dilated` for convolution
-  - `jax.vmap` in synthetic data template generation
-  - `block_until_ready()` for timing correctness
-- Demo or evidence to show：`training_step()`、`make_synthetic_mnist_data()`、`_block_training_outputs()`。
-- Estimated time：1:10
-- Current status：completed
+TPU execution is planned, not completed.
 
-### Slide 7: Dataset and Benchmark Evidence
+## Proposed In-Class Demonstration
 
-- Key message：目前的數據證據只支持 local synthetic smoke benchmark。
-- Content bullets：
-  - Implemented path: `synthetic`
-  - `mnist` and `fashion_mnist` are CLI choices but reserved for future local-file support
-  - Existing ignored artifact: `runs/smoke/cnn_mnist_metrics.json`
-  - Artifact records CPU backend, 3 steps, 1 warmup step, batch size 16, seed 0
-  - This is workflow evidence, not final benchmark conclusion
-- Demo or evidence to show：open metrics JSON and point to backend, devices, timing, loss, accuracy fields。
-- Estimated time：1:15
-- Current status：completed for local synthetic smoke; real datasets planned
+The proposed in-class demo is a high-level workflow demonstration, not a
+finished slide-by-slide deck:
 
-### Slide 8: Demo 1 Live Demo
+1. Briefly show the repository structure and the Demo 2 files.
+2. Run the local CPU Demo 2 command.
+3. Show the JSON output and predicted label.
+4. Explain the curated local CPU evidence under `report/results/`.
+5. Explain the planned TPU workflow and evidence requirements.
 
-- Key message：目前可現場展示的是 local synthetic benchmark and metrics generation。
-- Content bullets：
-  - Run JAX device summary
-  - Run short benchmark with synthetic data
-  - Show generated JSON metrics
-  - Show tests that protect benchmark behavior
-- Demo or evidence to show：
-  ```bash
-  uv run python examples/cnn_mnist_benchmark.py \
-    --dataset synthetic \
-    --steps 3 \
-    --batch-size 16 \
-    --seed 0 \
-    --output-dir runs/smoke \
-    --platform-label local
-  ```
-- Estimated time：1:30
-- Current status：completed for local smoke demo
+Stable local CPU command:
 
-### Slide 9: Test Coverage
+```bash
+uv run --group pretrained python examples/pretrained_vit_inference.py \
+  --jax-platform cpu \
+  --image examples/assets/chihuahua_pet_licorice.jpg \
+  --batch-size 1 \
+  --warmup-steps 1 \
+  --benchmark-steps 5 \
+  --output runs/vit-inference/demo2_cpu_b1.json
+```
 
-- Key message：tests are lightweight and aligned with current local smoke scope。
-- Content bullets：
-  - Runtime summary JSON serialization and fields
-  - CNN parameter shapes
-  - Forward logits shape
-  - Training smoke behavior
-  - Metrics writing
-  - Deterministic seed behavior
-  - No tests yet for TPU, real MNIST, Fashion-MNIST, Demo 2, or Demo 3
-- Demo or evidence to show：`tests/test_runtime.py` and `tests/test_cnn_mnist.py`。
-- Estimated time：0:55
-- Current status：completed for current scope
+## Risks And Fallback Plan
 
-### Slide 10: Demo 1 TPU Benchmark Plan
+- If model download or network access is unavailable during class, use the
+  existing `report/results/` JSON artifacts.
+- If TPU quota or access is unavailable, present the TPU workflow as planned
+  work and do not fabricate results.
+- If local CPU runtime is slow, reduce benchmark steps for live demonstration
+  and distinguish that run from the curated baseline artifacts.
+- If CUDA is asked about, explain it as a local hardware/environment limitation:
+  simple JAX GPU matmul worked, but the ViT-like convolution path failed during
+  cuDNN autotuning.
 
-- Key message：TPU benchmark remains planned work and will need reproducible cloud evidence。
-- Content bullets：
-  - Prepare TPU VM setup and cleanup documentation
-  - Run same benchmark with `platform-label=tpu`
-  - Capture JSON metrics, terminal logs, backend/devices, monitoring evidence
-  - Compare local and TPU with matching benchmark configuration where practical
-  - Document cost, quota, availability, and interpretation limits
-- Demo or evidence to show：planned workflow checklist, not completed result。
-- Estimated time：1:00
-- Current status：planned
+## Instructor Feedback Requested
 
-### Slide 11: Demo 2 and Demo 3 Planned Extensions
-
-- Key message：later demos broaden the project from raw JAX to ecosystem workflow and optional pretrained-model workflow。
-- Content bullets：
-  - Demo 2: Flax + Optax or existing JAX example; compare abstraction and code complexity
-  - Demo 2 should reuse metrics format and local/TPU workflow if practical
-  - Demo 3: optional Gemma-like/pretrained cloud demo
-  - Demo 3 depends on model access, license, dependencies, hardware, memory, quota, and time
-  - No code or results exist yet for either demo
-- Demo or evidence to show：roadmap status table with planned labels。
-- Estimated time：1:10
-- Current status：planned / optional planned
-
-### Slide 12: Risks, Limitations, and Next Steps
-
-- Key message：目前可以展示完整 local foundation，但最終 benchmark conclusions 還需要更多 evidence。
-- Content bullets：
-  - Synthetic data is not a real MNIST/Fashion-MNIST result
-  - 3-step smoke run is not a stable performance benchmark
-  - TPU execution, monitoring, and comparison are not completed
-  - Demo 2 and Demo 3 must stay scoped to avoid overexpansion
-  - Next: dataset loader, curated local result, TPU workflow, Demo 2 selection, optional Demo 3 feasibility check
-- Demo or evidence to show：completed vs planned checklist。
-- Estimated time：1:10
-- Current status：partial / planned
-
-## Suggested Live Demo Flow
-
-1. Show repository entry point:
-   ```bash
-   sed -n '1,160p' README.md
-   ```
-2. Show JAX runtime device summary:
-   ```bash
-   uv run python -m jax_tpu_project.cli devices
-   ```
-3. Run short local benchmark:
-   ```bash
-   uv run python examples/cnn_mnist_benchmark.py \
-     --dataset synthetic \
-     --steps 3 \
-     --batch-size 16 \
-     --seed 0 \
-     --output-dir runs/smoke \
-     --platform-label local
-   ```
-4. Show generated metrics:
-   ```bash
-   sed -n '1,220p' runs/smoke/cnn_mnist_metrics.json
-   ```
-5. Show tests that protect the current scope:
-   ```bash
-   sed -n '1,220p' tests/test_cnn_mnist.py
-   ```
-6. Close with roadmap slide for Demo 1 TPU work, Demo 2, and optional Demo 3.
-
-## Fallback Plan If Live Demo or TPU Access Fails
-
-- If local demo fails because environment is not ready, show README commands, `pyproject.toml`, tests, and expected output fields.
-- If JAX backend/device output differs from prior local artifact, explain that backend/device metadata is part of benchmark evidence.
-- If TPU access is unavailable, explicitly state TPU execution is planned work and present the Demo 1 cloud checklist.
-- If dataset or network access is unavailable, use synthetic mode because it is intentionally offline and deterministic.
-- If Demo 2 is not ready, keep it as a comparison plan rather than implying implementation exists.
-- If Demo 3 access, quota, hardware, or time is unavailable, present it as optional advanced work with a documented fallback.
-- If metrics file is missing, rerun the smoke command locally; do not fabricate metrics.
-
-## What Results Can Honestly Be Claimed Now
-
-- The repository has an initial Python/JAX project scaffold using `uv`, `pyproject.toml`, and `src/jax_tpu_project/`.
-- The repository includes Ruff and pytest configuration.
-- The repository includes a JAX runtime/device summary CLI and shell helper.
-- Demo 1 implements a hand-written raw-JAX CNN benchmark foundation for MNIST-shaped images.
-- The current completed data path is deterministic synthetic MNIST-shaped data.
-- The benchmark writes JSON metrics with backend, devices, dataset, seed, batch size, timing, throughput, loss, accuracy, and output path.
-- Tests cover runtime summary behavior, CNN parameter shapes, forward pass shape, training smoke behavior, metrics writing, and deterministic seed behavior.
-- A local ignored smoke metrics file exists under `runs/smoke/cnn_mnist_metrics.json`, showing a CPU synthetic run with 3 timed steps, batch size 16, seed 0, and warmup steps 1.
-
-## What Results Are Still Planned
-
-- Real MNIST local-file loader.
-- Fashion-MNIST local-file loader.
-- Longer local benchmark runs with curated result artifacts under `report/results/`.
-- Google Cloud TPU setup and execution workflow.
-- Actual TPU benchmark run with evidence.
-- Cloud monitoring notes or screenshots.
-- Local-vs-TPU comparison table or plot.
-- Demo 2 implementation using Flax + Optax or an existing JAX model/example.
-- Demo 2 tests, metrics, and comparison against Demo 1.
-- Optional Demo 3 pretrained-model cloud workflow, including access/license/dependency/hardware review.
-- Final interpretation of speed, throughput, cost, limitations, and backend differences.
-
-## Risks and Limitations
-
-- Synthetic data is useful for workflow validation but not a valid real dataset result.
-- Current local metrics are generated under ignored `runs/`; they should be curated before being treated as report evidence.
-- A 3-step smoke run is not enough for stable performance conclusions.
-- TPU execution has not been performed, so no cloud performance claim should be made yet.
-- Small CNN workloads may not saturate TPU hardware; comparison must separate compilation, warmup, and steady-state timing.
-- Demo 2 may introduce dependencies and abstractions that need careful scoping.
-- Demo 3 may be blocked by model license, access approval, quota, memory requirements, or setup time.
-
-## Next Steps
-
-1. Implement local-file MNIST and Fashion-MNIST loaders without network dependency in default tests.
-2. Add small curated local Demo 1 benchmark artifacts under `report/results/` with commands and configuration.
-3. Draft Demo 1 cloud TPU setup, execution, monitoring, retrieval, and cleanup documentation once local dataset workflow is stable.
-4. Run Demo 1 on TPU VM and capture JSON metrics, terminal logs, backend/devices, and monitoring evidence.
-5. Generate a local-vs-TPU comparison table or figure from saved Demo 1 metrics.
-6. Choose a minimal Demo 2 approach, such as Flax + Optax, and design it to reuse metrics and benchmark artifact conventions.
-7. Evaluate Demo 3 feasibility only after Demo 1 cloud workflow is stable: model source, license/access, dependencies, hardware, memory, quota, and fallback scope.
-
-## Possible Final-Report Structure
-
-1. 專案動機與三個 demo roadmap
-2. JAX runtime and backend/device inspection
-3. Demo 1: raw-JAX CNN implementation
-4. Demo 1 dataset strategy: synthetic smoke data, MNIST, Fashion-MNIST
-5. Demo 1 local benchmark methodology and metrics
-6. Demo 1 Google Cloud TPU setup and execution workflow
-7. Demo 1 local vs TPU results and comparison
-8. Demo 2: higher-level JAX training stack comparison
-9. Demo 3: optional pretrained-model cloud workflow and feasibility notes
-10. Monitoring, reproducibility evidence, and artifact management
-11. Limitations, failed attempts, and lessons learned
-12. Future work
+- Is focusing the current presentation on Demo 2 only acceptable?
+- Is the TPU workflow documentation enough before the actual TPU run?
+- Does the final submission need actual TPU metrics, or is a documented TPU
+  workflow plus local CPU evidence acceptable for the current milestone?
+- Is local CPU versus TPU inference comparison sufficient for the course
+  project once TPU execution is available?

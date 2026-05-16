@@ -1,8 +1,16 @@
 # Numerical JAX Project
 
-Course project repository for Numerical Computation with JAX. The current demo
-focus is a hand-written CNN benchmark foundation for local training now and
-later Google Cloud TPU comparison.
+Course project repository for Numerical Computation with JAX.
+
+The current course presentation focus is **Demo 2: pretrained ViT inference
+with JAX/Flax** using `google/vit-base-patch16-224`. Local CPU inference has
+been run successfully and curated JSON baseline artifacts are stored under
+`report/results/`. Google Cloud TPU execution is the next planned workflow and
+has not been completed yet.
+
+Demo 1 remains in the repository as preserved background work: a raw-JAX
+hand-written CNN benchmark foundation. Demo 3 remains optional future work for a
+larger pretrained or Gemma-like cloud workflow.
 
 ## Local Sanity Check
 
@@ -18,10 +26,50 @@ You can also run the package CLI directly:
 uv run python -m jax_tpu_project.cli devices
 ```
 
-The command prints the active JAX backend and visible devices as JSON. It should
-work on CPU-only machines and GPU-enabled machines.
+The command prints the active JAX backend and visible devices as JSON.
 
-## Demo 1: Hand-Written CNN Benchmark
+## Demo 2: Pretrained ViT Inference
+
+Demo 2 benchmarks inference for `google/vit-base-patch16-224` with
+Hugging Face Transformers, Flax, and JAX. Pretrained dependencies are optional:
+
+```bash
+uv sync --group pretrained
+```
+
+Run the stable local CPU classroom benchmark:
+
+```bash
+uv run --group pretrained python examples/pretrained_vit_inference.py \
+  --jax-platform cpu \
+  --image examples/assets/chihuahua_pet_licorice.jpg \
+  --batch-size 1 \
+  --warmup-steps 1 \
+  --benchmark-steps 5 \
+  --output runs/vit-inference/demo2_cpu_b1.json
+```
+
+The script writes JSON metrics with the selected JAX platform, actual backend,
+devices, input shape, timing, throughput, and predicted class. The included
+sample image is a small public-domain Wikimedia Commons image used only for
+reproducible classroom demonstration.
+
+Curated local CPU baseline artifacts:
+
+```text
+report/results/demo2_vit_local_cpu_b1.json
+report/results/demo2_vit_local_cpu_b4.json
+report/results/demo2_vit_local_cpu_b8.json
+```
+
+For full local instructions, expected output, model notes, and limitations, see
+[docs/pretrained_vit_demo.md](docs/pretrained_vit_demo.md).
+
+For the planned TPU workflow, see
+[cloud/demo2_vit_tpu_workflow.md](cloud/demo2_vit_tpu_workflow.md). This is
+documentation-only at the current stage; no TPU run is claimed.
+
+## Demo 1: Preserved Raw-JAX CNN Foundation
 
 Demo 1 trains a small CNN on MNIST-shaped image data using raw JAX. The model is
 implemented manually with explicit parameter initialization, `jax.jit`,
@@ -29,10 +77,8 @@ implemented manually with explicit parameter initialization, `jax.jit`,
 reshape-based average pooling. It does not use Flax, Optax, PyTorch, or
 TensorFlow.
 
-The default dataset is deterministic synthetic data shaped like MNIST:
-`[N, 28, 28, 1]` images and integer labels from 0 to 9. This keeps local smoke
-tests and default runs independent of network access while leaving the CLI ready
-for later local-file MNIST or Fashion-MNIST support under `data/raw/`.
+The current implemented dataset path is deterministic synthetic data shaped like
+MNIST: `[N, 28, 28, 1]` images and integer labels from 0 to 9.
 
 Run a quick local smoke benchmark:
 
@@ -46,39 +92,12 @@ uv run python examples/cnn_mnist_benchmark.py \
   --platform-label local
 ```
 
-The example script defaults to CPU when `JAX_PLATFORMS` is unset so smoke runs
-stay safe on ordinary local machines. Set `JAX_PLATFORMS` before launching the
-script when testing a specific JAX backend later.
+Demo 1 is preserved as background/foundation work and is not the primary path
+for the current course presentation. Real MNIST/Fashion-MNIST loading and TPU
+comparison for Demo 1 remain future work.
 
-Run a slightly longer local benchmark:
+## Demo 3: Optional Future Work
 
-```bash
-uv run python examples/cnn_mnist_benchmark.py \
-  --dataset synthetic \
-  --steps 50 \
-  --batch-size 64 \
-  --learning-rate 0.05 \
-  --warmup-steps 5 \
-  --seed 0 \
-  --output-dir runs/local-cnn-mnist \
-  --platform-label local
-```
-
-Expected terminal output includes per-step loss, synthetic accuracy, step time,
-the active JAX backend, visible devices, average step time, examples per second,
-and the metrics file path.
-
-Each run writes JSON metrics to:
-
-```text
-<output-dir>/cnn_mnist_metrics.json
-```
-
-The metrics include backend, devices, platform label, dataset name, seed, batch
-size, steps, warmup steps, learning rate, total training time, average step time,
-examples per second, initial and final loss, synthetic accuracy, and output
-artifact path.
-
-The CNN code is written to be portable across JAX backends and is intended for a
-future local-versus-Google Cloud TPU benchmark. TPU execution is planned but has
-not yet been run or measured in this repository.
+Demo 3 is reserved for a possible larger pretrained-model or Gemma-like cloud
+workflow if scope, access, quota, hardware, and time permit. It is not part of
+the current presentation scope.
