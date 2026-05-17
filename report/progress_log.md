@@ -181,10 +181,14 @@
   - Demo 1 is preserved in the repository as background/foundation work, but it is not the current presentation focus。
   - Demo 3 is preserved as optional future work, but it is not the current presentation focus。
   - Added documentation for a conservative Google Cloud TPU VM workflow for Demo 2。
+  - Added a local JSON comparison helper for Demo 2 result files; it compares existing files only and does not require TPU access。
+  - Added pre-TRC Google Cloud guidance：先建立 dedicated Google Cloud project、在本機記錄 project ID / project number、提交 project number 到 TRC form，等待 TRC confirmation / quota / instructions 後再建立 TPU resources。
+  - 明確記錄目前沒有建立 Google Cloud resources，沒有執行 TPU VM run，也沒有 CPU-vs-TPU result collection。
 - Files or modules added/updated：
   - `README.md`
   - `docs/pretrained_vit_demo.md`
   - `cloud/demo2_vit_tpu_workflow.md`
+  - `scripts/compare_vit_results.py`
   - `report/current_status.md`
   - `report/presentation_plan.md`
   - `report/progress_log.md`
@@ -194,9 +198,12 @@
   - Local CUDA remains a documented laptop limitation, not a completed benchmark。
 - Limitations：
   - Demo 2 TPU execution, monitoring, artifact retrieval, cleanup, and local-vs-TPU comparison are planned but not completed。
-  - The TPU workflow document is documentation-only and uses placeholders such as `<PROJECT_ID>`, `<ZONE>`, `<TPU_NAME>`, and `<ACCELERATOR_TYPE>`。
+  - TRC project-number submission is an external next step and is not stored in the repository。
+  - The TPU workflow document is documentation-only and uses placeholders such as `<PROJECT_ID>`, `<PROJECT_NUMBER>`, `<ZONE>`, `<TPU_NAME>`, `<ACCELERATOR_TYPE>`, `<RUNTIME_VERSION>`, `<REPO_URL>`, and `<BRANCH>`。
+  - Free-trial credits should not be consumed unless TRC is delayed or unavailable and the run plan plus cleanup command are ready。
 - Next planned step：
-  - Use `cloud/demo2_vit_tpu_workflow.md` to prepare a controlled TPU VM attempt, then record actual commands, metrics, logs, monitoring notes, and cleanup evidence only after a real run occurs。
+  - Submit the Google Cloud project number to TRC outside the repository, wait for confirmation/quota/instructions, and continue Imagenette / Demo 2 formalization work while waiting。
+  - Use `cloud/demo2_vit_tpu_workflow.md` to prepare a controlled TPU VM attempt, then record actual commands, metrics, logs, monitoring notes, cleanup evidence, and comparison output only after a real run occurs。
 
 ## Planned Phases
 
@@ -237,7 +244,7 @@
   - Review and execute the TPU workflow manually when cloud project, quota, and cost constraints are acceptable。
   - Run `examples/pretrained_vit_inference.py` with `--jax-platform tpu` on a TPU VM。
   - Capture backend/device output, JSON metrics, terminal logs, monitoring notes, and cleanup evidence。
-  - Compare TPU metrics against the existing local CPU baseline artifacts。
+  - Compare TPU metrics against the existing local CPU baseline artifacts with `scripts/compare_vit_results.py` after TPU artifacts are retrieved locally。
 - Evidence needed before marking complete：
   - TPU metrics if TPU execution is attempted。
   - Cloud logs or screenshots if TPU execution is attempted。

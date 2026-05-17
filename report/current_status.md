@@ -14,7 +14,11 @@ pretrained ViT inference benchmark with JAX/Flax**。
 - public image set：5 tracked images under `examples/assets/`
 - single-image smoke input：`examples/assets/chihuahua_pet_licorice.jpg`
 - curated local CPU result artifacts：`report/results/`
-- next major goal：prepare and run Google Cloud TPU workflow for Demo 2
+- next major Google Cloud step：建立 dedicated Google Cloud project，將
+  project number 提交到 TRC form，等待 TRC confirmation / quota /
+  instructions，之後才建立 TPU resources
+- next development work while waiting for TRC：繼續整理 Imagenette / Demo 2
+  formalization
 
 TPU execution has not been attempted or completed yet. No TPU performance claim
 should be made until a real TPU VM run, metrics, logs, monitoring notes, and
@@ -59,6 +63,13 @@ cleanup evidence exist.
   - `docs/pretrained_vit_demo.md`
 - Planned TPU workflow documentation:
   - `cloud/demo2_vit_tpu_workflow.md`
+- Local result comparison helper:
+  - `scripts/compare_vit_results.py`
+- Pre-TRC Google Cloud status:
+  - local CPU Demo 2 and JSON comparison helper are prepared
+  - Cloud TPU workflow is documented with placeholders only
+  - TRC project-number submission is the next external Google Cloud step
+  - TPU execution and CPU-vs-TPU result collection are not completed yet
 - Lightweight tests that do not download model weights:
   - `tests/test_pretrained_vit_inference.py`
 
@@ -137,10 +148,19 @@ Hugging Face access, image opening, or model weight download.
 
 ## Next Technical Milestones
 
-1. Review `cloud/demo2_vit_tpu_workflow.md` and confirm project, zone, TPU
-   accelerator type, quota, and cost constraints.
-2. Run JAX backend/device verification on a TPU VM.
-3. Run Demo 2 on TPU with `--jax-platform tpu`.
-4. Save TPU JSON metrics, logs, monitoring notes, and cleanup evidence.
-5. Compare Demo 2 local CPU and TPU results using curated artifacts.
-6. Keep Demo 1 and Demo 3 preserved as future work unless course scope changes.
+1. Create a dedicated Google Cloud project for the course project, record the
+   project ID and project number locally, and submit the project number to the
+   TRC form without committing real identifiers.
+2. Wait for TRC confirmation, quota, and instructions before creating TPU
+   resources.
+3. Review `cloud/demo2_vit_tpu_workflow.md` and confirm zone, TPU accelerator
+   type, runtime version, quota, cost constraints, and cleanup command.
+4. While waiting for TRC, continue Imagenette / Demo 2 formalization work that
+   does not require cloud resources.
+5. Run JAX backend/device verification on a TPU VM only after the cloud
+   experiment is ready.
+6. Run Demo 2 on TPU with `--jax-platform tpu`.
+7. Save TPU JSON metrics, logs, monitoring notes, and cleanup evidence.
+8. Compare Demo 2 local CPU and TPU JSON files with
+   `scripts/compare_vit_results.py`.
+9. Keep Demo 1 and Demo 3 preserved as future work unless course scope changes.

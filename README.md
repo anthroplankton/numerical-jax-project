@@ -87,9 +87,20 @@ report/results/demo2_vit_local_cpu_b8.json
 For full local instructions, expected output, model notes, and limitations, see
 [docs/pretrained_vit_demo.md](docs/pretrained_vit_demo.md).
 
-For the planned TPU workflow, see
+For the pre-TRC planned TPU workflow, see
 [cloud/demo2_vit_tpu_workflow.md](cloud/demo2_vit_tpu_workflow.md). This is
-documentation-only at the current stage; no TPU run is claimed.
+documentation-only at the current stage; TRC project-number submission is an
+external next step and no TPU run is claimed.
+
+After TPU JSON artifacts are copied back locally, compare existing result files
+without TPU access:
+
+```bash
+uv run python scripts/compare_vit_results.py \
+  report/results/demo2_vit_local_cpu_b1.json \
+  runs/vit-inference/demo2_tpu_b1.json \
+  --output runs/vit-inference/demo2_cpu_vs_tpu_b1_compare.json
+```
 
 ## Demo 1: Preserved Raw-JAX CNN Foundation
 
