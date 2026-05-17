@@ -31,6 +31,8 @@ DEFAULT_JAX_PLATFORM = "cpu"
 DEFAULT_TOP_K = 5
 JAX_PLATFORM_CHOICES = ("default", "cpu", "cuda", "tpu")
 DEFAULT_PRIVATE_IMAGE_DIR = Path("data/local/demo2_vit_images")
+PUBLIC_EXAMPLE_MANIFEST_PATH = Path("examples/assets/manifest.txt")
+DATA_LOCAL_DIR = Path("data/local")
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -352,6 +354,33 @@ def private_image_manifest_example_path() -> Path:
     return DEFAULT_PRIVATE_IMAGE_DIR / "manifest.txt"
 
 
+def classify_manifest_path(manifest_path: Path) -> str:
+    """Classify a manifest path for report metadata without reading images."""
+    repo_relative_path = to_repo_relative_path(manifest_path)
+    if repo_relative_path == PUBLIC_EXAMPLE_MANIFEST_PATH:
+        return "public_example"
+    if path_is_relative_to(repo_relative_path, DATA_LOCAL_DIR):
+        return "local_private"
+    return "local_manifest"
+
+
+def to_repo_relative_path(path: Path) -> Path:
+    """Return a repository-relative path when the path is inside the checkout."""
+    try:
+        return path.resolve().relative_to(Path.cwd().resolve())
+    except (OSError, ValueError):
+        return path
+
+
+def path_is_relative_to(path: Path, prefix: Path) -> bool:
+    """Return whether path is below prefix without raising ValueError."""
+    try:
+        path.relative_to(prefix)
+    except ValueError:
+        return False
+    return True
+
+
 def build_manifest_batch_specs(
     *, num_images: int, batch_size: int
 ) -> list[dict[str, int]]:
@@ -403,6 +432,7 @@ def build_image_metrics(
     """Build JSON-serializable metrics for one image benchmark run."""
     mean_step_time = fmean(step_times)
     total_timed_inference = sum(step_times)
+    throughput_counted_images = batch_size * benchmark_steps
     return {
         "image_path": str(image_path),
         "input_shape": [int(dimension) for dimension in input_shape],
@@ -410,9 +440,8 @@ def build_image_metrics(
         "benchmark_steps": benchmark_steps,
         "mean_step_time_sec": mean_step_time,
         "total_timed_inference_sec": total_timed_inference,
-        "throughput_images_per_sec": batch_size
-        * benchmark_steps
-        / total_timed_inference,
+        "throughput_counted_images": throughput_counted_images,
+        "throughput_images_per_sec": throughput_counted_images / total_timed_inference,
         **dict(prediction),
     }
 
@@ -470,6 +499,12 @@ def build_run_metrics(
     if manifest_path is None:
         return {
             "mode": "single_image",
+            "processing_mode": "repeated_single_image",
+            "num_images": 1,
+            "num_batches": 1,
+            "timed_batch_runs": benchmark_steps,
+            "num_padded_images": 0,
+            "last_batch_policy": "none",
             **common,
             **dict(image_results[0]),
         }
@@ -490,10 +525,12 @@ def build_run_metrics(
     total_timed_inference = sum(step_times)
     num_images = len(image_results)
     timed_batch_runs = len(step_times)
+    throughput_counted_images = num_images * benchmark_steps
     return {
         "mode": "image_manifest",
         **common,
         "manifest_path": str(manifest_path),
+        "manifest_kind": classify_manifest_path(manifest_path),
         "input_shape": [int(dimension) for dimension in input_shape],
         "processing_mode": processing_mode,
         "num_images": num_images,
@@ -503,9 +540,8 @@ def build_run_metrics(
         "last_batch_policy": last_batch_policy,
         "mean_step_time_sec": fmean(step_times),
         "total_timed_inference_sec": total_timed_inference,
-        "throughput_images_per_sec": num_images
-        * benchmark_steps
-        / total_timed_inference,
+        "throughput_counted_images": throughput_counted_images,
+        "throughput_images_per_sec": throughput_counted_images / total_timed_inference,
         "image_results": list(image_results),
     }
 

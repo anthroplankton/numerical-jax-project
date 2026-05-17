@@ -172,6 +172,16 @@ def test_private_image_manifest_example_path_uses_ignored_data_local() -> None:
     assert module.private_image_manifest_example_path() == PRIVATE_MANIFEST_PATH
 
 
+def test_classify_manifest_path_marks_public_and_local_manifests() -> None:
+    module = load_vit_example_module()
+
+    assert module.classify_manifest_path(PUBLIC_MANIFEST_PATH) == "public_example"
+    assert module.classify_manifest_path(PRIVATE_MANIFEST_PATH) == "local_private"
+    assert (
+        module.classify_manifest_path(Path("datasets/manifest.txt")) == "local_manifest"
+    )
+
+
 def test_public_example_manifest_lists_expected_images_without_opening_files() -> None:
     module = load_vit_example_module()
 
@@ -315,6 +325,7 @@ def test_build_image_metrics_computes_per_image_throughput() -> None:
         "benchmark_steps": 2,
         "mean_step_time_sec": pytest.approx(0.3),
         "total_timed_inference_sec": pytest.approx(0.6),
+        "throughput_counted_images": 4,
         "throughput_images_per_sec": pytest.approx(4 / 0.6),
         "top1_index": 285,
         "top1_label": "Egyptian cat",
@@ -355,7 +366,7 @@ def test_build_manifest_image_metrics_contains_batch_position_not_timing() -> No
     assert "mean_step_time_sec" not in metrics
 
 
-def test_build_run_metrics_single_image_schema_keeps_image_fields() -> None:
+def test_build_run_metrics_single_image_keeps_result_fields() -> None:
     module = load_vit_example_module()
 
     image_metrics = module.build_image_metrics(
@@ -400,6 +411,12 @@ def test_build_run_metrics_single_image_schema_keeps_image_fields() -> None:
 
     assert metrics == {
         "mode": "single_image",
+        "processing_mode": "repeated_single_image",
+        "num_images": 1,
+        "num_batches": 1,
+        "timed_batch_runs": 2,
+        "num_padded_images": 0,
+        "last_batch_policy": "none",
         "model_name": "google/vit-base-patch16-224",
         "selected_jax_platform": "cpu",
         "backend": "cpu",
@@ -418,6 +435,7 @@ def test_build_run_metrics_single_image_schema_keeps_image_fields() -> None:
         "benchmark_steps": 2,
         "mean_step_time_sec": pytest.approx(0.3),
         "total_timed_inference_sec": pytest.approx(0.6),
+        "throughput_counted_images": 4,
         "throughput_images_per_sec": pytest.approx(4 / 0.6),
         "top1_index": 285,
         "top1_label": "Egyptian cat",
@@ -433,7 +451,7 @@ def test_build_run_metrics_single_image_schema_keeps_image_fields() -> None:
     }
 
 
-def test_build_run_metrics_manifest_schema_uses_aggregate_fields() -> None:
+def test_build_run_metrics_manifest_uses_aggregate_fields() -> None:
     module = load_vit_example_module()
 
     image_results = [
@@ -481,6 +499,7 @@ def test_build_run_metrics_manifest_schema_uses_aggregate_fields() -> None:
 
     assert metrics["mode"] == "image_manifest"
     assert metrics["manifest_path"] == str(PRIVATE_MANIFEST_PATH)
+    assert metrics["manifest_kind"] == "local_private"
     assert metrics["input_shape"] == [2, 3, 224, 224]
     assert metrics["processing_mode"] == "batched_manifest"
     assert metrics["num_images"] == 2
@@ -490,6 +509,7 @@ def test_build_run_metrics_manifest_schema_uses_aggregate_fields() -> None:
     assert metrics["last_batch_policy"] == "pad_with_last_image"
     assert metrics["mean_step_time_sec"] == pytest.approx(0.15)
     assert metrics["total_timed_inference_sec"] == pytest.approx(0.3)
+    assert metrics["throughput_counted_images"] == 4
     assert metrics["throughput_images_per_sec"] == pytest.approx(4 / 0.3)
     assert metrics["image_results"] == image_results
     assert "image_path" not in metrics
