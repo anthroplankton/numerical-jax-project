@@ -20,6 +20,10 @@ Run the JAX device summary script first:
 bash scripts/check_jax_device.sh
 ```
 
+The script defaults `JAX_PLATFORMS` to `cpu` unless the caller already set it,
+keeping the local sanity path explicit on machines that may have unrelated GPU
+drivers or plugins installed.
+
 You can also run the package CLI directly:
 
 ```bash
@@ -33,13 +37,46 @@ Ruff linting, Ruff formatting, pytest, and a small JAX backend/device sanity
 command. It does not run pretrained inference, formal benchmarks, Docker builds,
 Google Cloud commands, or TPU workflows.
 
+## Fresh Demo 2 Benchmark Machine Setup
+
+Run from an Ubuntu or WSL terminal at the repository root:
+
+```bash
+uv sync --frozen --group dev --group pretrained
+bash scripts/check_jax_device.sh
+uv run ruff check .
+uv run ruff format --check .
+uv run pytest
+```
+
+Run a public five-image manifest smoke benchmark before using local-only
+datasets:
+
+```bash
+uv run --group pretrained python examples/pretrained_vit_inference.py \
+  --jax-platform cpu \
+  --image-manifest examples/assets/manifest.txt \
+  --batch-size 4 \
+  --warmup-steps 1 \
+  --benchmark-steps 1 \
+  --output runs/vit-inference/demo2_public_examples_smoke_cpu_b4.json
+```
+
+Imagenette 320 is not downloaded by tests or project scripts. Before running
+Imagenette benchmarks, manually download and extract `imagenette2-320` so this
+local ignored path exists:
+
+```text
+data/local/imagenette2-320/val
+```
+
 ## Demo 2: Pretrained ViT Inference
 
 Demo 2 benchmarks inference for `google/vit-base-patch16-224` with
 Hugging Face Transformers, Flax, and JAX. Pretrained dependencies are optional:
 
 ```bash
-uv sync --group pretrained
+uv sync --frozen --group pretrained
 ```
 
 Run the stable local CPU classroom benchmark. This is the formal Demo 2 `b1`
@@ -86,7 +123,9 @@ not a public benchmark dataset or an accuracy benchmark.
 For later local benchmark work, use Imagenette 320 (`imagenette2-320`) as an
 optional local-only dataset. Keep extracted files and generated manifests under
 ignored `data/local/imagenette2-320/`, and build a manifest before running a
-benchmark. The primary documented path is the 64-image validation manifest:
+benchmark. `scripts/build_image_manifest.py` scans existing local images only;
+it does not download Imagenette. The primary documented path is the 64-image
+validation manifest:
 
 ```bash
 uv run python scripts/build_image_manifest.py \

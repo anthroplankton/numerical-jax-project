@@ -270,6 +270,23 @@
     accuracy evaluation。
   - Private local evidence is not a public reproducible benchmark dataset。
 
+## Phase 5.3: Demo 2 Benchmark Setup Clarification
+
+- Date / phase label：2026-05-18 Demo 2 external-machine setup clarification
+- What changed：
+  - Updated the local JAX device sanity script so it defaults
+    `JAX_PLATFORMS` to `cpu` unless the caller already set a platform。
+  - Documented the fresh Ubuntu/WSL benchmark-machine setup path, including
+    dependency sync, local CPU device sanity check, Ruff, pytest, and a public
+    five-image manifest smoke run。
+  - Clarified that Imagenette 320 must be manually downloaded/extracted before
+    building local manifests, and that scripts/tests do not download it。
+  - Added neutral external-machine artifact naming guidance for CPU vs
+    ROCm/GPU exploratory outputs。
+- Current evidence/results：
+  - This phase records documentation and setup behavior only。
+  - No new benchmark result, GPU/ROCm result, cloud run, or TPU run is claimed。
+
 ## Planned Phases
 
 ### Phase 6: Real MNIST/Fashion-MNIST and Curated Local Result

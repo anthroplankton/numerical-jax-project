@@ -70,6 +70,17 @@ uv run python scripts/compare_vit_results.py \
 Raw JSON outputs under `runs/vit-inference/` are not committed by default.
 Curate small report tables under this directory when they are ready to cite.
 
+### External-Machine Naming
+
+Keep standard curated baseline names generic, such as
+`demo2_imagenette320_val64_cpu.md`. Exploratory external-machine artifacts may
+include a neutral machine or environment label, for example
+`demo2_asus_a16_ryzen7735hs_wsl_imagenette320_val64_cpu.md`.
+
+CPU artifacts should not include a GPU model such as `rx7600s`. Reserve
+`rx7600s` and `rocm` labels for explicit ROCm/GPU sanity-check artifacts, and
+only when actual ROCm/GPU evidence exists.
+
 ### Private Local Live-Demo Table
 
 - `demo2_private_local_cpu.md`: private local live-demo evidence from local

@@ -37,6 +37,8 @@ cleanup evidence exist.
   - `src/jax_tpu_project/runtime.py`
   - `src/jax_tpu_project/cli.py`
   - `scripts/check_jax_device.sh`
+  - local sanity script defaults `JAX_PLATFORMS` to `cpu` unless the caller
+    already set it, so CPU evidence remains explicit on benchmark machines
 
 已完成的 Demo 2 重點：
 
@@ -73,6 +75,8 @@ cleanup evidence exist.
   - intended for existing local-only image directories such as optional
     Imagenette 320 data under ignored `data/local/imagenette2-320/`
   - does not download datasets or inspect image contents
+  - requires `data/local/imagenette2-320/val` to exist before Imagenette
+    manifests can be generated
 - Pre-TRC Google Cloud status:
   - local CPU Demo 2 and JSON comparison helper are prepared
   - Cloud TPU workflow is documented with placeholders only

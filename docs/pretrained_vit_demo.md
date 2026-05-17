@@ -21,12 +21,46 @@ The pretrained dependencies are optional and live in the `pretrained` dependency
 group:
 
 ```bash
-uv sync --group pretrained
+uv sync --frozen --group pretrained
 ```
 
 The first run downloads the image processor and model weights from Hugging Face
 unless they are already present in the local cache. This can take time and uses
 network bandwidth and disk space.
+
+## Fresh Benchmark Machine Setup
+
+Run from an Ubuntu or WSL terminal at the repository root:
+
+```bash
+uv sync --frozen --group dev --group pretrained
+bash scripts/check_jax_device.sh
+uv run ruff check .
+uv run ruff format --check .
+uv run pytest
+```
+
+`scripts/check_jax_device.sh` defaults `JAX_PLATFORMS` to `cpu` unless the
+caller already set it. This keeps the local classroom sanity path explicit and
+avoids misleading GPU plugin initialization during CPU-only checks on machines
+with unrelated GPU drivers installed.
+
+After the environment checks pass, run a public five-image manifest smoke
+benchmark:
+
+```bash
+uv run --group pretrained python examples/pretrained_vit_inference.py \
+  --jax-platform cpu \
+  --image-manifest examples/assets/manifest.txt \
+  --batch-size 4 \
+  --warmup-steps 1 \
+  --benchmark-steps 1 \
+  --output runs/vit-inference/demo2_public_examples_smoke_cpu_b4.json
+```
+
+Optional Imagenette benchmarks require separately prepared local data. Project
+scripts and tests do not download Imagenette, and pytest/CI should not depend
+on that dataset.
 
 ## Public Example Images
 
@@ -115,6 +149,17 @@ ignored `data/local/imagenette2-320/`:
 ```text
 data/local/imagenette2-320/
 ```
+
+Before running the Imagenette commands below, the validation directory must
+already exist:
+
+```text
+data/local/imagenette2-320/val
+```
+
+If that path is missing, manually download and extract Imagenette 320 first.
+`scripts/build_image_manifest.py` only scans existing local images; it does not
+download datasets or create the Imagenette directory tree.
 
 Build manifests before running benchmarks. Use these names for the validation
 split:
@@ -224,6 +269,19 @@ uv run python scripts/compare_vit_results.py \
 
 Only commit the generated Markdown table if it is intentionally curated for the
 report. Do not commit raw `runs/` outputs, Imagenette images, or local manifests.
+
+## External-Machine Artifact Names
+
+Standard curated baseline table names should stay generic, for example
+`demo2_imagenette320_val64_cpu.md`. Exploratory external-machine artifacts may
+include a neutral machine or environment label, such as
+`demo2_asus_a16_ryzen7735hs_wsl_imagenette320_val64_cpu.md` or
+`demo2_external_ryzen7735hs_wsl_imagenette320_val64_cpu.md`.
+
+For CPU artifacts, avoid including a GPU model in the file name. Reserve labels
+such as `rx7600s` and `rocm` for explicit ROCm/GPU sanity-check artifacts with
+actual ROCm/GPU evidence. Docker or ROCm setup is optional AMD GPU
+sanity-check work, not part of the default local CPU benchmark setup.
 
 ## Run Command
 
