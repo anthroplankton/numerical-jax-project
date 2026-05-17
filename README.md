@@ -28,6 +28,11 @@ uv run python -m jax_tpu_project.cli devices
 
 The command prints the active JAX backend and visible devices as JSON.
 
+Continuous integration is intentionally limited to lightweight local CPU checks:
+Ruff linting, Ruff formatting, pytest, and a small JAX backend/device sanity
+command. It does not run pretrained inference, formal benchmarks, Docker builds,
+Google Cloud commands, or TPU workflows.
+
 ## Demo 2: Pretrained ViT Inference
 
 Demo 2 benchmarks inference for `google/vit-base-patch16-224` with
