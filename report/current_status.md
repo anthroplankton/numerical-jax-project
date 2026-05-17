@@ -17,8 +17,9 @@ pretrained ViT inference benchmark with JAX/Flax**。
 - next major Google Cloud step：建立 dedicated Google Cloud project，將
   project number 提交到 TRC form，等待 TRC confirmation / quota /
   instructions，之後才建立 TPU resources
-- next development work while waiting for TRC：繼續整理 Imagenette / Demo 2
-  formalization
+- next development work while waiting for TRC：繼續整理 Demo 2 documentation
+  and evidence；Imagenette 只保留為 optional future dataset direction，不是目前
+  主要 next step
 
 TPU execution has not been attempted or completed yet. No TPU performance claim
 should be made until a real TPU VM run, metrics, logs, monitoring notes, and
@@ -155,8 +156,9 @@ Hugging Face access, image opening, or model weight download.
    resources.
 3. Review `cloud/demo2_vit_tpu_workflow.md` and confirm zone, TPU accelerator
    type, runtime version, quota, cost constraints, and cleanup command.
-4. While waiting for TRC, continue Imagenette / Demo 2 formalization work that
-   does not require cloud resources.
+4. While waiting for TRC, continue Demo 2 documentation/evidence preparation
+   that does not require cloud resources; treat Imagenette as an optional future
+   dataset direction rather than the current next step.
 5. Run JAX backend/device verification on a TPU VM only after the cloud
    experiment is ready.
 6. Run Demo 2 on TPU with `--jax-platform tpu`.

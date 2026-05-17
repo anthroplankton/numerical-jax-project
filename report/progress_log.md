@@ -110,17 +110,17 @@
   - `git show --stat --oneline --decorate 4f6001b`
   - Inspected README, pyproject, source modules, examples, tests, scripts, `.gitignore`, and `runs/smoke/cnn_mnist_metrics.json`
 - Current evidence/results：
-  - Documentation now separates completed local scaffold/Demo 1 CNN foundation from planned real dataset work, planned TPU benchmark, planned Demo 2, and optional planned Demo 3。
+  - At that phase, documentation separated completed local scaffold/Demo 1 CNN foundation from planned real dataset work, planned TPU benchmark, planned Demo 2, and optional planned Demo 3。
 - Limitations：
   - This phase is documentation-only。
   - No new source code, tests, cloud workflows, dependencies, Docker files, CI, or notebooks were added。
-  - No real MNIST/Fashion-MNIST, TPU, Demo 2, or Demo 3 results are claimed。
-- Next planned step：
+  - At that phase, no real MNIST/Fashion-MNIST, TPU, Demo 2, or Demo 3 results were claimed。
+- Next planned step at that phase：
   - Run or curate a local Demo 1 benchmark result under `report/results/`, then implement real dataset loading and prepare TPU workflow documentation.
 
-## Phase 4: Demo 2 Pretrained ViT Inference Compatibility Spike
+## Phase 4: Demo 2 Pretrained ViT Inference Local CPU Baseline
 
-- Date / phase label：2026-05-17 Demo 2 scope update and local compatibility spike
+- Date / phase label：2026-05-17 Demo 2 scope update and local CPU baseline
 - What was changed：
   - Demo 2 scope changed from a generic Flax + Optax or existing JAX training-stack comparison to a pretrained ViT inference benchmark.
   - Selected default model：`google/vit-base-patch16-224`。
@@ -161,7 +161,7 @@
   - `report/results/demo2_vit_local_cpu_b4.json` records backend `cpu`, batch size `4`, predicted label `Chihuahua`, mean step time `0.8838171279999187` seconds, and throughput `4.5258231293299485` images/s。
   - `report/results/demo2_vit_local_cpu_b8.json` records backend `cpu`, batch size `8`, predicted label `Chihuahua`, mean step time `1.973294752699894` seconds, and throughput `4.054133316401044` images/s。
 - Limitations：
-  - This phase is a local compatibility spike, not final benchmark evidence。
+  - This phase created the local CPU Demo 2 baseline and compatibility evidence, not final local-vs-TPU benchmark evidence。
   - The first real run downloads model weights and processor files from Hugging Face unless they are already cached。
   - The default pytest suite does not download the pretrained model。
   - Private local demo photos and their manifest should stay under ignored `data/local/` and should not be committed。
@@ -169,8 +169,8 @@
   - Manifest throughput counts real manifest images only, so final-batch padding is included as runtime overhead but not counted as extra real images; `num_padded_images` records the padding count。
   - Simple JAX GPU matrix multiplication worked on the laptop, but the ViT-like convolution path failed during cuDNN autotuning; local CUDA is therefore recorded as a limitation, not as completed Demo 2 benchmark evidence。
   - TPU execution, monitoring, cleanup, and local-vs-TPU comparison for Demo 2 remain planned work and have not been completed。
-- Next planned step：
-  - Use the local CPU artifacts as Demo 2 baseline evidence, then plan TPU execution, monitoring, cleanup, and comparison separately without adding cloud automation before the workflow is ready。
+- Next planned step at that phase：
+  - Use the local CPU artifacts as Demo 2 baseline evidence, then plan TPU execution, monitoring, cleanup, and comparison separately without adding cloud automation before the workflow is ready. Phase 5 later addressed TPU workflow documentation and comparison-helper preparation; real TPU execution remains planned。
 
 ## Phase 5: Current Presentation Scope And Demo 2 TPU Workflow Planning
 
@@ -202,7 +202,7 @@
   - The TPU workflow document is documentation-only and uses placeholders such as `<PROJECT_ID>`, `<PROJECT_NUMBER>`, `<ZONE>`, `<TPU_NAME>`, `<ACCELERATOR_TYPE>`, `<RUNTIME_VERSION>`, `<REPO_URL>`, and `<BRANCH>`。
   - Free-trial credits should not be consumed unless TRC is delayed or unavailable and the run plan plus cleanup command are ready。
 - Next planned step：
-  - Submit the Google Cloud project number to TRC outside the repository, wait for confirmation/quota/instructions, and continue Imagenette / Demo 2 formalization work while waiting。
+  - Submit the Google Cloud project number to TRC outside the repository, wait for confirmation/quota/instructions, and continue Demo 2 documentation/evidence preparation while waiting. Treat Imagenette as an optional future dataset direction, not the current next step。
   - Use `cloud/demo2_vit_tpu_workflow.md` to prepare a controlled TPU VM attempt, then record actual commands, metrics, logs, monitoring notes, cleanup evidence, and comparison output only after a real run occurs。
 
 ## Planned Phases

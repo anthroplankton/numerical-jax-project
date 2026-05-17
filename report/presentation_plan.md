@@ -35,10 +35,19 @@ The current presentation does not attempt to complete all three demos.
 - The script uses Hugging Face `AutoImageProcessor` for preprocessing.
 - The script uses `FlaxViTForImageClassification` for JAX/Flax inference.
 - The default model is `google/vit-base-patch16-224`.
-- A small public-domain sample image is checked in under `examples/assets/`.
-- The benchmark repeats the image to configurable batch sizes.
+- Five public example assets are checked in under `examples/assets/`.
+- `examples/assets/manifest.txt` provides a reproducible public five-image
+  manifest.
+- Single-image mode repeats one image to configurable batch sizes.
+- Manifest mode supports true mixed-image batches.
+- Manifest final-batch padding repeats the last real image; padded entries are
+  ignored for predictions and throughput, and `num_padded_images` records the
+  padding count.
 - The benchmark uses warmup steps, timed steps, and `block_until_ready()`.
 - The benchmark writes JSON metrics.
+- The local comparison helper exists: `scripts/compare_vit_results.py`.
+- The pre-TRC TPU workflow documentation exists:
+  `cloud/demo2_vit_tpu_workflow.md`.
 - Lightweight pytest tests exist and do not download model weights.
 - Local CPU inference succeeded during manual checking.
 

@@ -1,7 +1,8 @@
 # Demo 2: Pretrained ViT Inference Benchmark
 
-Demo 2 is a local compatibility spike for running pretrained Vision Transformer
-inference with JAX/Flax. The default model is
+Demo 2 is now a local CPU Vision Transformer inference benchmark baseline with
+JAX/Flax. It uses curated local CPU artifacts, manifest batching, public example
+assets, and a documented pre-TRC Google Cloud TPU workflow. The default model is
 `google/vit-base-patch16-224` from Hugging Face.
 
 Because of current course presentation constraints, this is the primary demo
@@ -9,9 +10,10 @@ path for the project. Demo 1 remains preserved as background raw-JAX CNN work,
 and Demo 3 remains optional future work.
 
 This demo is inference-only. It does not fine-tune the model, and it does not
-claim TPU execution has been completed. The next planned step is a conservative
-Google Cloud TPU VM workflow for running the same inference benchmark with
-`--jax-platform tpu`.
+claim TPU execution has been completed. The pre-TRC TPU workflow is documented in
+`cloud/demo2_vit_tpu_workflow.md`; the next step is executing that workflow on a
+TPU VM after TRC confirmation, quota, cost, zone, and cleanup readiness are
+confirmed.
 
 ## Setup
 
@@ -306,7 +308,8 @@ total timed runtime, throughput, derived per-image time, and output path.
 
 ## Limitations
 
-- This is a local compatibility spike, not a final benchmark result.
+- This is a local CPU benchmark baseline with curated artifacts, not a final
+  local-vs-TPU benchmark result.
 - The default pytest suite does not download the model or require Hugging Face
   network access.
 - First-run download time is not part of the timed inference loop.
@@ -321,6 +324,7 @@ total timed runtime, throughput, derived per-image time, and output path.
 
 ## Next Planned Step
 
-Prepare and test a Google Cloud TPU VM workflow for Demo 2 using
-`examples/pretrained_vit_inference.py --jax-platform tpu`, then capture TPU
-metrics, logs, monitoring notes, and cleanup evidence if resources are created.
+Execute the documented pre-TRC Google Cloud TPU VM workflow for Demo 2 after
+TRC/quota readiness, using `examples/pretrained_vit_inference.py --jax-platform
+tpu`, then capture TPU metrics, logs, monitoring notes, and cleanup evidence if
+resources are created.
