@@ -26,18 +26,25 @@ The first run downloads the image processor and model weights from Hugging Face
 unless they are already present in the local cache. This can take time and uses
 network bandwidth and disk space.
 
-## Sample Image
+## Public Example Images
 
-The repository includes a small public-domain sample image for reproducible
+The repository includes five public Wikimedia Commons images for reproducible
 classroom demos:
 
 ```text
 examples/assets/chihuahua_pet_licorice.jpg
+examples/assets/adelie_penguins_brooding.jpg
+examples/assets/doge_homemade_meme.jpg
+examples/assets/polar_bear_zoo_face.jpg
+examples/assets/black_cat_staring_closeup.jpg
+examples/assets/manifest.txt
 ```
 
-The image is `chihuahua_pet_licorice.jpg` from Wikimedia Commons. It is included
-only as a small, stable input image for Demo 2. Do not commit private images,
-large datasets, model caches, or downloaded model weights.
+The single-image smoke test still uses `chihuahua_pet_licorice.jpg`. The public
+manifest runs the five-image public example set after cloning the repository.
+These images are qualitative Demo 2 inputs, not a public benchmark dataset or an
+accuracy benchmark. Do not commit private images, large datasets, model caches,
+or downloaded model weights.
 
 ## Private Local Image Set
 
@@ -49,6 +56,10 @@ data/local/demo2_vit_images/
 
 This path is ignored by Git through `data/local/`, so private photos and the
 local manifest should not be committed.
+
+The current local live-demo manifest is expected to contain 15 images: the
+original local set, the local banana image, and local copies of the four public
+Wikimedia examples.
 
 Recommended naming convention:
 
@@ -80,7 +91,7 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --batch-size 4 \
   --warmup-steps 1 \
   --benchmark-steps 5 \
-  --output runs/vit-inference/demo2_private_local.json
+  --output runs/vit-inference/demo2_private_local_b4.json
 ```
 
 The public `--image examples/assets/chihuahua_pet_licorice.jpg` path remains the
@@ -115,6 +126,18 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --warmup-steps 2 \
   --benchmark-steps 10 \
   --output runs/vit-inference/batch4_metrics.json
+```
+
+Run the five-image public example manifest:
+
+```bash
+uv run --group pretrained python examples/pretrained_vit_inference.py \
+  --jax-platform cpu \
+  --image-manifest examples/assets/manifest.txt \
+  --batch-size 4 \
+  --warmup-steps 1 \
+  --benchmark-steps 5 \
+  --output runs/vit-inference/demo2_public_examples_b4.json
 ```
 
 ## Expected Output
@@ -170,14 +193,14 @@ mistaken for whole-run predictions:
   "manifest_path": "data/local/demo2_vit_images/manifest.txt",
   "input_shape": [4, 3, 224, 224],
   "processing_mode": "batched_manifest",
-  "num_images": 10,
-  "num_batches": 3,
-  "timed_batch_runs": 15,
-  "num_padded_images": 2,
+  "num_images": 15,
+  "num_batches": 4,
+  "timed_batch_runs": 20,
+  "num_padded_images": 1,
   "last_batch_policy": "pad_with_last_image",
   "mean_step_time_sec": 0.2,
-  "total_timed_inference_sec": 3.0,
-  "throughput_images_per_sec": 16.67,
+  "total_timed_inference_sec": 4.0,
+  "throughput_images_per_sec": 18.75,
   "image_results": [
     {
       "image_path": "data/local/demo2_vit_images/demo2_chihuahua_pet_licorice_public.jpg",
@@ -201,6 +224,15 @@ mistaken for whole-run predictions:
 Each `image_results` entry includes that image's input shape, batch index,
 position inside its batch, and qualitative top-k predictions. Manifest timing is
 reported at the batch/run level rather than as separate per-image timing.
+
+Expected manifest metadata for the current image sets:
+
+| Image set | Images | Batch size | Num batches | Padded images |
+| --- | ---: | ---: | ---: | ---: |
+| Public `examples/assets/manifest.txt` | 5 | 1 | 5 | 0 |
+| Public `examples/assets/manifest.txt` | 5 | 4 | 2 | 3 |
+| Local `data/local/demo2_vit_images/manifest.txt` | 15 | 1 | 15 | 0 |
+| Local `data/local/demo2_vit_images/manifest.txt` | 15 | 4 | 4 | 1 |
 
 ## Model Notes
 

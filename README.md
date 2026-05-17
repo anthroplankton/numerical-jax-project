@@ -50,9 +50,21 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
 ```
 
 The script writes JSON metrics with the selected JAX platform, actual backend,
-devices, input shape, timing, throughput, and predicted class. The included
-sample image is a small public-domain Wikimedia Commons image used only for
-reproducible classroom demonstration.
+devices, input shape, timing, throughput, and predicted class. The tracked
+public example set contains five Wikimedia Commons images under
+`examples/assets/`, including the single-image smoke-test input.
+
+Run the public five-image manifest:
+
+```bash
+uv run --group pretrained python examples/pretrained_vit_inference.py \
+  --jax-platform cpu \
+  --image-manifest examples/assets/manifest.txt \
+  --batch-size 4 \
+  --warmup-steps 1 \
+  --benchmark-steps 5 \
+  --output runs/vit-inference/demo2_public_examples_b4.json
+```
 
 For a private live demo, keep local photos and the optional manifest under
 `data/local/demo2_vit_images/`. That path is ignored by Git; see
@@ -60,8 +72,9 @@ For a private live demo, keep local photos and the optional manifest under
 format and command. Manifest mode uses true mixed-image batches; the final
 partial batch is padded by repeating its last real image, padded entries are
 ignored for predictions and throughput, and `num_padded_images` records that
-padding. The private manifest workflow is for qualitative live predictions only;
-it is not a public benchmark dataset or an accuracy benchmark.
+padding. The current local live-demo manifest is expected to contain 15 images.
+The private manifest workflow is for qualitative live predictions only; it is
+not a public benchmark dataset or an accuracy benchmark.
 
 Curated local CPU baseline artifacts:
 

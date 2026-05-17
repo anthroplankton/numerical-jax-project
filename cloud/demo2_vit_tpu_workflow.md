@@ -141,6 +141,25 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --output report/results/demo2_vit_tpu_b1.json
 ```
 
+The tracked public example manifest is also available after a normal Git
+checkout:
+
+```bash
+uv run --group pretrained python examples/pretrained_vit_inference.py \
+  --jax-platform tpu \
+  --image-manifest examples/assets/manifest.txt \
+  --batch-size 4 \
+  --warmup-steps 1 \
+  --benchmark-steps 5 \
+  --output report/results/demo2_vit_tpu_public_b4.json
+```
+
+Private live-demo images under `data/local/demo2_vit_images/` are ignored by
+Git. They will not appear on a TPU VM from repository checkout alone. If a
+private manifest TPU run is needed, copy that directory to the TPU VM manually,
+verify the files are present, and avoid committing private images or cloud
+transfer artifacts.
+
 For an initial exploratory run, it is also acceptable to write to an ignored
 temporary path first:
 

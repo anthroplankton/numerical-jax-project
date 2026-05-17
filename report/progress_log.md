@@ -129,12 +129,19 @@
   - Added `--jax-platform` to the ViT script with choices `default`, `cpu`, `cuda`, and `tpu`; the default is `cpu` for stable local classroom runs。
   - Added documentation for local setup, first-run model download behavior, expected metrics, and limitations。
   - Added lightweight tests for argument parsing and metrics helpers that do not download model weights。
-  - Added a small public-domain sample image under `examples/assets/` for reproducible classroom use。
+  - Added a public example image set under `examples/assets/` for reproducible classroom use。
   - Added support for a local-only private image manifest under ignored `data/local/demo2_vit_images/` for live demos。
+  - The public example manifest now contains 5 tracked images。
+  - The local live-demo manifest is expected to contain 15 images, including the local banana image and local copies of the four public Wikimedia examples。
 - Files or modules added/updated：
   - `pyproject.toml`
   - `examples/pretrained_vit_inference.py`
   - `examples/assets/chihuahua_pet_licorice.jpg`
+  - `examples/assets/adelie_penguins_brooding.jpg`
+  - `examples/assets/doge_homemade_meme.jpg`
+  - `examples/assets/polar_bear_zoo_face.jpg`
+  - `examples/assets/black_cat_staring_closeup.jpg`
+  - `examples/assets/manifest.txt`
   - `examples/assets/README.md`
   - `docs/pretrained_vit_demo.md`
   - `report/results/README.md`

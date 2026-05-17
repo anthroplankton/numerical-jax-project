@@ -11,7 +11,8 @@ pretrained ViT inference benchmark with JAX/Flax**。
 - runtime：JAX/Flax
 - demo script：`examples/pretrained_vit_inference.py`
 - stable classroom backend：local CPU
-- sample image：`examples/assets/chihuahua_pet_licorice.jpg`
+- public image set：5 tracked images under `examples/assets/`
+- single-image smoke input：`examples/assets/chihuahua_pet_licorice.jpg`
 - curated local CPU result artifacts：`report/results/`
 - next major goal：prepare and run Google Cloud TPU workflow for Demo 2
 
@@ -37,12 +38,18 @@ cleanup evidence exist.
   Face workflow。
 - Pretrained ViT inference script:
   - `examples/pretrained_vit_inference.py`
-- Local CPU classroom sample image:
+- Local CPU classroom public images:
   - `examples/assets/chihuahua_pet_licorice.jpg`
+  - `examples/assets/adelie_penguins_brooding.jpg`
+  - `examples/assets/doge_homemade_meme.jpg`
+  - `examples/assets/polar_bear_zoo_face.jpg`
+  - `examples/assets/black_cat_staring_closeup.jpg`
+  - `examples/assets/manifest.txt`
   - `examples/assets/README.md`
 - Optional private live-demo image set support:
   - recommended local-only path: `data/local/demo2_vit_images/`
   - optional manifest: `data/local/demo2_vit_images/manifest.txt`
+  - current expected local manifest size: 15 images
   - manifest mode uses real mixed-image batches
   - the final partial batch is padded by repeating its last real image; padded
     entries are ignored for predictions and throughput, and `num_padded_images`

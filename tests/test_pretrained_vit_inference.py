@@ -8,6 +8,7 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = PROJECT_ROOT / "examples" / "pretrained_vit_inference.py"
 SAMPLE_IMAGE_PATH = Path("examples/assets/chihuahua_pet_licorice.jpg")
+PUBLIC_MANIFEST_PATH = Path("examples/assets/manifest.txt")
 PRIVATE_MANIFEST_PATH = Path("data/local/demo2_vit_images/manifest.txt")
 
 
@@ -171,10 +172,67 @@ def test_private_image_manifest_example_path_uses_ignored_data_local() -> None:
     assert module.private_image_manifest_example_path() == PRIVATE_MANIFEST_PATH
 
 
-def test_build_manifest_batch_specs_pads_only_final_batch() -> None:
+def test_public_example_manifest_lists_expected_images_without_opening_files() -> None:
     module = load_vit_example_module()
 
-    batch_specs = module.build_manifest_batch_specs(num_images=10, batch_size=4)
+    image_paths = module.read_image_manifest(PUBLIC_MANIFEST_PATH)
+
+    assert image_paths == [
+        Path("examples/assets/chihuahua_pet_licorice.jpg"),
+        Path("examples/assets/adelie_penguins_brooding.jpg"),
+        Path("examples/assets/doge_homemade_meme.jpg"),
+        Path("examples/assets/polar_bear_zoo_face.jpg"),
+        Path("examples/assets/black_cat_staring_closeup.jpg"),
+    ]
+
+
+def test_build_manifest_batch_specs_matches_public_example_counts() -> None:
+    module = load_vit_example_module()
+
+    image_count = len(module.read_image_manifest(PUBLIC_MANIFEST_PATH))
+
+    assert image_count == 5
+    assert module.build_manifest_batch_specs(num_images=image_count, batch_size=1) == [
+        {"start_index": 0, "end_index": 1, "real_size": 1, "padding_count": 0},
+        {"start_index": 1, "end_index": 2, "real_size": 1, "padding_count": 0},
+        {"start_index": 2, "end_index": 3, "real_size": 1, "padding_count": 0},
+        {"start_index": 3, "end_index": 4, "real_size": 1, "padding_count": 0},
+        {"start_index": 4, "end_index": 5, "real_size": 1, "padding_count": 0},
+    ]
+
+    assert module.build_manifest_batch_specs(num_images=image_count, batch_size=4) == [
+        {
+            "start_index": 0,
+            "end_index": 4,
+            "real_size": 4,
+            "padding_count": 0,
+        },
+        {
+            "start_index": 4,
+            "end_index": 5,
+            "real_size": 1,
+            "padding_count": 3,
+        },
+    ]
+
+
+def test_build_manifest_batch_specs_matches_local_live_demo_counts() -> None:
+    module = load_vit_example_module()
+
+    local_live_demo_image_count = 15
+
+    assert module.build_manifest_batch_specs(
+        num_images=local_live_demo_image_count, batch_size=1
+    )[-1] == {
+        "start_index": 14,
+        "end_index": 15,
+        "real_size": 1,
+        "padding_count": 0,
+    }
+
+    batch_specs = module.build_manifest_batch_specs(
+        num_images=local_live_demo_image_count, batch_size=4
+    )
 
     assert batch_specs == [
         {
@@ -191,9 +249,15 @@ def test_build_manifest_batch_specs_pads_only_final_batch() -> None:
         },
         {
             "start_index": 8,
-            "end_index": 10,
-            "real_size": 2,
-            "padding_count": 2,
+            "end_index": 12,
+            "real_size": 4,
+            "padding_count": 0,
+        },
+        {
+            "start_index": 12,
+            "end_index": 15,
+            "real_size": 3,
+            "padding_count": 1,
         },
     ]
 

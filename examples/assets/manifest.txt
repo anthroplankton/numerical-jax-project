@@ -1,0 +1,7 @@
+# Demo 2 public example images.
+# These files are tracked in the repository and should work after cloning.
+chihuahua_pet_licorice.jpg
+adelie_penguins_brooding.jpg
+doge_homemade_meme.jpg
+polar_bear_zoo_face.jpg
+black_cat_staring_closeup.jpg
