@@ -78,15 +78,19 @@ padding. The current local live-demo manifest is expected to contain 15 images.
 The private manifest workflow is for qualitative live predictions only; it is
 not a public benchmark dataset or an accuracy benchmark.
 
-Optional larger local image sets, such as an Imagenette subset, should also stay
-under ignored `data/local/`. Build a manifest from existing local files without
-downloading data:
+For later local benchmark work, use Imagenette 320 (`imagenette2-320`) as an
+optional local-only dataset. Keep extracted files and generated manifests under
+ignored `data/local/imagenette2-320/`, and build a manifest before running a
+benchmark. The primary documented path is the 64-image validation manifest:
 
 ```bash
 uv run python scripts/build_image_manifest.py \
   data/local/imagenette2-320/val \
-  --output data/local/imagenette2-320/val/manifest.txt \
+  --output data/local/imagenette2-320/val/manifest_val_64.txt \
   --limit 64
+
+wc -l data/local/imagenette2-320/val/manifest_val_64.txt
+head data/local/imagenette2-320/val/manifest_val_64.txt
 ```
 
 Curated local CPU baseline artifacts:
