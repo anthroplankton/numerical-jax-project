@@ -22,5 +22,19 @@ The benchmark repeats the same single image along the batch dimension and times
 JAX/Flax inference after warmup steps. These files are useful for local runtime
 and throughput comparison, but they are not dataset-level accuracy evaluation.
 
+Generate a report-ready Markdown table from these existing JSON files:
+
+```bash
+uv run python scripts/compare_vit_results.py \
+  report/results/demo2_vit_local_cpu_b1.json \
+  report/results/demo2_vit_local_cpu_b4.json \
+  report/results/demo2_vit_local_cpu_b8.json \
+  --markdown-output runs/vit-inference/demo2_local_cpu_table.md
+```
+
+The current curated JSON files are legacy local CPU artifacts and may not
+include every field emitted by newer Demo 2 runs. The comparison helper infers
+stable summary fields where possible without changing the original artifacts.
+
 These artifacts are not GPU results and not TPU results. TPU execution,
 monitoring, cleanup, and local-vs-TPU comparison remain planned work.

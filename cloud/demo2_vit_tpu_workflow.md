@@ -250,12 +250,14 @@ The Demo 2 JSON output records:
 - `command_used`
 - `output_path`
 - `image_path` or `manifest_path`
+- `mode` and `processing_mode`
 - `backend`
 - `devices`
 - `batch_size`
-- `num_images` for manifest mode
+- `num_images`, `num_batches`, `timed_batch_runs`, and `num_padded_images`
 - `total_timed_inference_sec`
 - `mean_step_time_sec`
+- `throughput_counted_images`
 - `throughput_images_per_sec`
 - per-image predictions under `image_results` for manifest mode
 
@@ -293,7 +295,8 @@ Run on the local machine / Ubuntu WSL after TPU JSON files are retrieved:
 uv run python scripts/compare_vit_results.py \
   report/results/demo2_vit_local_cpu_b1.json \
   runs/vit-inference/demo2_tpu_b1.json \
-  --output runs/vit-inference/demo2_cpu_vs_tpu_b1_compare.json
+  --output runs/vit-inference/demo2_cpu_vs_tpu_b1_compare.json \
+  --markdown-output runs/vit-inference/demo2_cpu_vs_tpu_b1_table.md
 ```
 
 For the public manifest comparison, first create or choose a local CPU manifest
@@ -315,7 +318,8 @@ Then compare:
 uv run python scripts/compare_vit_results.py \
   runs/vit-inference/demo2_cpu_public_b4.json \
   runs/vit-inference/demo2_tpu_public_b4.json \
-  --output runs/vit-inference/demo2_cpu_vs_tpu_public_b4_compare.json
+  --output runs/vit-inference/demo2_cpu_vs_tpu_public_b4_compare.json \
+  --markdown-output runs/vit-inference/demo2_cpu_vs_tpu_public_b4_table.md
 ```
 
 The comparison helper summarizes command, input path or manifest, backend,

@@ -66,6 +66,12 @@ cleanup evidence exist.
   - `cloud/demo2_vit_tpu_workflow.md`
 - Local result comparison helper:
   - `scripts/compare_vit_results.py`
+  - optional `--markdown-output` for report-ready benchmark tables
+- Local image manifest builder:
+  - `scripts/build_image_manifest.py`
+  - intended for existing local-only image directories such as optional
+    Imagenette subsets under ignored `data/local/`
+  - does not download datasets or inspect image contents
 - Pre-TRC Google Cloud status:
   - local CPU Demo 2 and JSON comparison helper are prepared
   - Cloud TPU workflow is documented with placeholders only
@@ -100,6 +106,12 @@ dataset-level accuracy evaluation, not GPU results, and not TPU results.
 Private manifest runs follow the same qualitative-inference framing unless
 explicit labels and top-k evaluation are added later, but they now measure true
 batched manifest inference over the listed images.
+
+New Demo 2 JSON outputs include stable result fields for mode, processing mode,
+batch size, image count, batch count, padding count, timed batch runs, timing,
+throughput, backend/devices, and manifest kind when applicable. The existing
+curated local CPU JSON artifacts remain legacy evidence and can be summarized
+with `scripts/compare_vit_results.py`.
 
 ## Local CUDA Limitation
 
@@ -142,6 +154,8 @@ Default tests remain lightweight and offline:
 - `tests/test_runtime.py`
 - `tests/test_cnn_mnist.py`
 - `tests/test_pretrained_vit_inference.py`
+- `tests/test_compare_vit_results.py`
+- `tests/test_build_image_manifest.py`
 
 The Demo 2 tests check argument parsing, metrics helper behavior, and platform
 environment helper behavior. They do not require GPU, TPU, network access,
@@ -157,8 +171,9 @@ Hugging Face access, image opening, or model weight download.
 3. Review `cloud/demo2_vit_tpu_workflow.md` and confirm zone, TPU accelerator
    type, runtime version, quota, cost constraints, and cleanup command.
 4. While waiting for TRC, continue Demo 2 documentation/evidence preparation
-   that does not require cloud resources; treat Imagenette as an optional future
-   dataset direction rather than the current next step.
+   that does not require cloud resources; optional Imagenette preparation should
+   stay local-only under ignored `data/local/` and use manifest files rather
+   than automatic downloads.
 5. Run JAX backend/device verification on a TPU VM only after the cloud
    experiment is ready.
 6. Run Demo 2 on TPU with `--jax-platform tpu`.

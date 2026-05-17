@@ -37,7 +37,8 @@ Hugging Face Transformers, Flax, and JAX. Pretrained dependencies are optional:
 uv sync --group pretrained
 ```
 
-Run the stable local CPU classroom benchmark:
+Run the stable local CPU classroom benchmark. This is the formal Demo 2 `b1`
+baseline command:
 
 ```bash
 uv run --group pretrained python examples/pretrained_vit_inference.py \
@@ -54,7 +55,8 @@ devices, input shape, timing, throughput, and predicted class. The tracked
 public example set contains five Wikimedia Commons images under
 `examples/assets/`, including the single-image smoke-test input.
 
-Run the public five-image manifest:
+Run the public five-image manifest. This is the formal Demo 2 public manifest
+`b4` command:
 
 ```bash
 uv run --group pretrained python examples/pretrained_vit_inference.py \
@@ -75,6 +77,17 @@ ignored for predictions and throughput, and `num_padded_images` records that
 padding. The current local live-demo manifest is expected to contain 15 images.
 The private manifest workflow is for qualitative live predictions only; it is
 not a public benchmark dataset or an accuracy benchmark.
+
+Optional larger local image sets, such as an Imagenette subset, should also stay
+under ignored `data/local/`. Build a manifest from existing local files without
+downloading data:
+
+```bash
+uv run python scripts/build_image_manifest.py \
+  data/local/imagenette2-320/val \
+  --output data/local/imagenette2-320/val/manifest.txt \
+  --limit 64
+```
 
 Curated local CPU baseline artifacts:
 
@@ -99,7 +112,8 @@ without TPU access:
 uv run python scripts/compare_vit_results.py \
   report/results/demo2_vit_local_cpu_b1.json \
   runs/vit-inference/demo2_tpu_b1.json \
-  --output runs/vit-inference/demo2_cpu_vs_tpu_b1_compare.json
+  --output runs/vit-inference/demo2_cpu_vs_tpu_b1_compare.json \
+  --markdown-output runs/vit-inference/demo2_cpu_vs_tpu_b1_table.md
 ```
 
 ## Demo 1: Preserved Raw-JAX CNN Foundation

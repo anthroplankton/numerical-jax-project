@@ -205,6 +205,48 @@
   - Submit the Google Cloud project number to TRC outside the repository, wait for confirmation/quota/instructions, and continue Demo 2 documentation/evidence preparation while waiting. Treat Imagenette as an optional future dataset direction, not the current next step。
   - Use `cloud/demo2_vit_tpu_workflow.md` to prepare a controlled TPU VM attempt, then record actual commands, metrics, logs, monitoring notes, cleanup evidence, and comparison output only after a real run occurs。
 
+## Phase 5.1: Demo 2 Benchmark Asset And Result Field Stabilization
+
+- Date / phase label：2026-05-17 Demo 2 benchmark asset/result-field stabilization
+- What changed：
+  - Stabilized new Demo 2 JSON outputs with explicit fields for mode,
+    processing mode, batch size, image count, batch count, padding count, timed
+    batch runs, throughput counted images, timing, backend/devices, and manifest
+    kind。
+  - Kept legacy curated local CPU JSON artifacts unchanged, while updating the
+    comparison helper to infer stable summary fields where possible。
+  - Added report-ready Markdown table output to `scripts/compare_vit_results.py`
+    through `--markdown-output`。
+  - Added `scripts/build_image_manifest.py` for deterministic manifests from
+    existing local image directories, including optional local Imagenette subsets
+    under ignored `data/local/`。
+  - Documented formal Demo 2 local CPU `b1` and public manifest `b4` commands,
+    including final-batch padding behavior。
+- Files or modules added/updated：
+  - `examples/pretrained_vit_inference.py`
+  - `scripts/compare_vit_results.py`
+  - `scripts/build_image_manifest.py`
+  - `tests/test_pretrained_vit_inference.py`
+  - `tests/test_compare_vit_results.py`
+  - `tests/test_build_image_manifest.py`
+  - `README.md`
+  - `docs/pretrained_vit_demo.md`
+  - `report/results/README.md`
+  - `report/current_status.md`
+  - `report/progress_log.md`
+- Commands/checks run：
+  - `uv run ruff check .` passed。
+  - `uv run ruff format --check .` passed after formatting touched Python
+    files。
+  - `uv run pytest` passed with 40 tests after `uv` cache-lock escalation was
+    required。
+  - `git diff --check` passed。
+- Limitations：
+  - This phase did not download Imagenette, run TPU, create cloud resources, or
+    generate new benchmark evidence。
+  - Imagenette remains local-only optional preparation unless a later run
+    produces curated artifacts and documentation。
+
 ## Planned Phases
 
 ### Phase 6: Real MNIST/Fashion-MNIST and Curated Local Result

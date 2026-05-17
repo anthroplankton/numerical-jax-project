@@ -104,9 +104,33 @@ showing qualitative pretrained predictions on a few local images, but it is not
 a public benchmark dataset and it is not an accuracy benchmark unless explicit
 ground-truth labels and top-k evaluation are added later.
 
+## Optional Local Imagenette Preparation
+
+Imagenette can be used as a larger local image set later, but this repository
+does not download it automatically and default tests do not depend on it. Keep
+any extracted Imagenette files under ignored `data/local/`, for example:
+
+```text
+data/local/imagenette2-320/
+```
+
+After manually placing files there, build a deterministic manifest from the
+existing local images:
+
+```bash
+uv run python scripts/build_image_manifest.py \
+  data/local/imagenette2-320/val \
+  --output data/local/imagenette2-320/val/manifest.txt \
+  --limit 64
+```
+
+The helper scans local image files only. It does not download data, decode
+images, require labels, or add files to Git. Use `--limit` for small smoke or
+benchmark subsets before attempting a larger run.
+
 ## Run Command
 
-Run a small local benchmark:
+Run the formal local CPU `b1` benchmark:
 
 ```bash
 uv run --group pretrained python examples/pretrained_vit_inference.py \
@@ -118,7 +142,7 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --output runs/vit-inference/metrics.json
 ```
 
-For a larger repeated-image batch:
+For a larger repeated-image batch on the same public image:
 
 ```bash
 uv run --group pretrained python examples/pretrained_vit_inference.py \
@@ -130,7 +154,7 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --output runs/vit-inference/batch4_metrics.json
 ```
 
-Run the five-image public example manifest:
+Run the formal public five-image manifest `b4` benchmark:
 
 ```bash
 uv run --group pretrained python examples/pretrained_vit_inference.py \
@@ -152,6 +176,7 @@ that count.
 ```json
 {
   "mode": "single_image",
+  "processing_mode": "repeated_single_image",
   "command_used": "python examples/pretrained_vit_inference.py --jax-platform cpu ...",
   "output_path": "runs/vit-inference/metrics.json",
   "model_name": "google/vit-base-patch16-224",
@@ -169,8 +194,14 @@ that count.
   "batch_size": 1,
   "warmup_steps": 1,
   "benchmark_steps": 5,
+  "num_images": 1,
+  "num_batches": 1,
+  "timed_batch_runs": 5,
+  "num_padded_images": 0,
+  "last_batch_policy": "none",
   "mean_step_time_sec": 0.123,
   "total_timed_inference_sec": 0.615,
+  "throughput_counted_images": 5,
   "throughput_images_per_sec": 8.13,
   "top1_index": 151,
   "top1_label": "Chihuahua",
@@ -188,7 +219,7 @@ that count.
 
 The exact backend, device list, prediction, and timing values depend on the
 machine, installed JAX build, image content, and local cache state. Manifest
-runs use a different top-level schema so first-image predictions are not
+runs use different top-level result fields so first-image predictions are not
 mistaken for whole-run predictions:
 
 ```json
@@ -197,6 +228,7 @@ mistaken for whole-run predictions:
   "command_used": "python examples/pretrained_vit_inference.py --jax-platform cpu ...",
   "output_path": "runs/vit-inference/demo2_private_local_b4.json",
   "manifest_path": "data/local/demo2_vit_images/manifest.txt",
+  "manifest_kind": "local_private",
   "input_shape": [4, 3, 224, 224],
   "processing_mode": "batched_manifest",
   "num_images": 15,
@@ -206,6 +238,7 @@ mistaken for whole-run predictions:
   "last_batch_policy": "pad_with_last_image",
   "mean_step_time_sec": 0.2,
   "total_timed_inference_sec": 4.0,
+  "throughput_counted_images": 75,
   "throughput_images_per_sec": 18.75,
   "image_results": [
     {
@@ -233,6 +266,28 @@ reported at the batch/run level rather than as separate per-image timing.
 New CLI-generated outputs also include `command_used` and `output_path` so local
 CPU and future TPU artifacts can be compared with clearer provenance. Older
 curated files under `report/results/` may not contain those two fields.
+
+## Result JSON Fields
+
+CPU and future TPU comparison should rely on these stable top-level fields when
+present:
+
+- `mode` and `processing_mode`
+- `model_name`, `selected_jax_platform`, actual `backend`, and `devices`
+- `batch_size`, `warmup_steps`, `benchmark_steps`, `timed_batch_runs`
+- `num_images`, `num_batches`, `num_padded_images`, and `last_batch_policy`
+- `mean_step_time_sec`, `total_timed_inference_sec`,
+  `throughput_counted_images`, and `throughput_images_per_sec`
+- `image_path` for single-image mode or `manifest_path` and `manifest_kind` for
+  manifest mode
+- `image_results` for manifest mode, with per-image qualitative predictions
+
+For `b1` single-image mode, `batch_size` is 1, `num_images` is 1,
+`num_batches` is 1, `timed_batch_runs` equals `benchmark_steps`, and
+`num_padded_images` is 0. For the public manifest `b4` command, the five-image
+manifest creates two batches and pads the final one with three repeated copies
+of the last real image. Padded entries are excluded from predictions and
+throughput counts.
 
 Expected manifest metadata for the current image sets:
 
@@ -299,12 +354,14 @@ Use the local comparison helper after a TPU JSON artifact has been retrieved:
 uv run python scripts/compare_vit_results.py \
   report/results/demo2_vit_local_cpu_b1.json \
   runs/vit-inference/demo2_tpu_b1.json \
-  --output runs/vit-inference/demo2_cpu_vs_tpu_b1_compare.json
+  --output runs/vit-inference/demo2_cpu_vs_tpu_b1_compare.json \
+  --markdown-output runs/vit-inference/demo2_cpu_vs_tpu_b1_table.md
 ```
 
 The helper only reads existing JSON files. It summarizes command metadata when
 available, input image or manifest, backend, devices, batch size, image count,
-total timed runtime, throughput, derived per-image time, and output path.
+total timed runtime, throughput, derived per-image time, and output path. The
+optional Markdown output is intended for report-ready benchmark tables.
 
 ## Limitations
 
