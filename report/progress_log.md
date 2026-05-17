@@ -247,6 +247,29 @@
   - Imagenette 320 remains local-only optional benchmark preparation unless a
     later run produces curated artifacts and documentation。
 
+## Phase 5.2: Demo 2 Local CPU Benchmark Tables
+
+- Date / phase label：2026-05-18 Demo 2 local CPU benchmark table organization
+- What changed：
+  - Added curated Markdown tables under `report/results/` for legacy
+    single-image local CPU results, Imagenette 320 val64, Imagenette 320 val256,
+    and private local live-demo results。
+  - Updated `report/results/README.md` to distinguish legacy JSON artifacts,
+    public report-ready tables, extended Imagenette evidence, and private
+    local-only evidence。
+  - Clarified that raw JSON files under `runs/vit-inference/` are not committed
+    by default。
+- Current evidence/results：
+  - `report/results/demo2_vit_single_image_local_cpu.md`
+  - `report/results/demo2_imagenette320_val64_cpu.md`
+  - `report/results/demo2_imagenette320_val256_cpu.md`
+  - `report/results/demo2_private_local_cpu.md`
+- Limitations：
+  - These are local CPU tables only, not TPU results。
+  - The tables summarize inference timing/throughput, not classification
+    accuracy evaluation。
+  - Private local evidence is not a public reproducible benchmark dataset。
+
 ## Planned Phases
 
 ### Phase 6: Real MNIST/Fashion-MNIST and Curated Local Result

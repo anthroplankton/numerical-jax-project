@@ -92,6 +92,11 @@ Manual local checks completed:
   - `report/results/demo2_vit_local_cpu_b1.json`
   - `report/results/demo2_vit_local_cpu_b4.json`
   - `report/results/demo2_vit_local_cpu_b8.json`
+- Curated Markdown tables:
+  - `report/results/demo2_vit_single_image_local_cpu.md`
+  - `report/results/demo2_imagenette320_val64_cpu.md`
+  - `report/results/demo2_imagenette320_val256_cpu.md`
+  - `report/results/demo2_private_local_cpu.md`
   - `report/results/README.md`
 
 Observed local CPU throughput:
@@ -104,6 +109,9 @@ Observed local CPU throughput:
 
 These are single-image repeated-batch inference results. They are not
 dataset-level accuracy evaluation, not GPU results, and not TPU results.
+The Imagenette 320 tables are local CPU benchmark summaries only; raw JSON
+outputs under `runs/vit-inference/` are not committed by default. The private
+local table is live-demo evidence, not a public reproducible benchmark dataset.
 Private manifest runs follow the same qualitative-inference framing unless
 explicit labels and top-k evaluation are added later, but they now measure true
 batched manifest inference over the listed images.
