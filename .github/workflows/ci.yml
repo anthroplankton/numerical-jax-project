@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "feat/**"
+
+permissions:
+  contents: read
+
+jobs:
+  local-checks:
+    name: Local CPU checks
+    runs-on: ubuntu-latest
+    env:
+      JAX_PLATFORMS: cpu
+      XLA_PYTHON_CLIENT_PREALLOCATE: "false"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --frozen --group dev
+
+      - name: Ruff lint
+        run: uv run ruff check .
+
+      - name: Ruff format
+        run: uv run ruff format --check .
+
+      - name: Pytest
+        run: uv run pytest
+
+      - name: JAX CPU sanity
+        run: |
+          uv run python - <<'PY'
+          import json
+
+          import jax
+
+          print(
+              json.dumps(
+                  {
+                      "backend": jax.default_backend(),
+                      "devices": [str(device) for device in jax.devices()],
+                  },
+                  indent=2,
+                  sort_keys=True,
+              )
+          )
+          PY

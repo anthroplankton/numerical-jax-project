@@ -104,29 +104,126 @@ showing qualitative pretrained predictions on a few local images, but it is not
 a public benchmark dataset and it is not an accuracy benchmark unless explicit
 ground-truth labels and top-k evaluation are added later.
 
-## Optional Local Imagenette Preparation
+## Optional Local Imagenette 320 Benchmark Data
 
-Imagenette can be used as a larger local image set later, but this repository
-does not download it automatically and default tests do not depend on it. Keep
-any extracted Imagenette files under ignored `data/local/`, for example:
+Imagenette 320 (`imagenette2-320`) is the recommended local benchmark dataset
+for later Demo 2 work. This workflow is optional and local-only: the repository
+does not download Imagenette automatically, default tests do not depend on it,
+and CI should not require it. Keep extracted files and generated manifests under
+ignored `data/local/imagenette2-320/`:
 
 ```text
 data/local/imagenette2-320/
 ```
 
-After manually placing files there, build a deterministic manifest from the
-existing local images:
+Build manifests before running benchmarks. Use these names for the validation
+split:
+
+```text
+data/local/imagenette2-320/val/manifest_val_64.txt
+data/local/imagenette2-320/val/manifest_val_256.txt
+data/local/imagenette2-320/val/manifest_val_full.txt
+```
+
+Primary 64-image manifest:
 
 ```bash
 uv run python scripts/build_image_manifest.py \
   data/local/imagenette2-320/val \
-  --output data/local/imagenette2-320/val/manifest.txt \
+  --output data/local/imagenette2-320/val/manifest_val_64.txt \
   --limit 64
+
+wc -l data/local/imagenette2-320/val/manifest_val_64.txt
+head data/local/imagenette2-320/val/manifest_val_64.txt
+```
+
+Larger 256-image manifest:
+
+```bash
+uv run python scripts/build_image_manifest.py \
+  data/local/imagenette2-320/val \
+  --output data/local/imagenette2-320/val/manifest_val_256.txt \
+  --limit 256
+
+wc -l data/local/imagenette2-320/val/manifest_val_256.txt
+head data/local/imagenette2-320/val/manifest_val_256.txt
+```
+
+Optional full validation manifest:
+
+```bash
+uv run python scripts/build_image_manifest.py \
+  data/local/imagenette2-320/val \
+  --output data/local/imagenette2-320/val/manifest_val_full.txt
+
+wc -l data/local/imagenette2-320/val/manifest_val_full.txt
+head data/local/imagenette2-320/val/manifest_val_full.txt
 ```
 
 The helper scans local image files only. It does not download data, decode
-images, require labels, or add files to Git. Use `--limit` for small smoke or
-benchmark subsets before attempting a larger run.
+images, require labels, or add files to Git. Do not commit Imagenette images or
+the generated manifests under `data/local/`. The generated manifest includes
+one header line, so `wc -l` reports one more line than the `--limit` image
+count.
+
+## Imagenette 320 Local CPU Benchmark Commands
+
+Use `manifest_val_64.txt` as the primary local benchmark input. These runs
+measure model inference after preprocessing; they do not include full dataset
+loading time and they do not compute Imagenette accuracy.
+
+Val64 `b1`:
+
+```bash
+uv run --group pretrained python examples/pretrained_vit_inference.py \
+  --jax-platform cpu \
+  --image-manifest data/local/imagenette2-320/val/manifest_val_64.txt \
+  --batch-size 1 \
+  --warmup-steps 1 \
+  --benchmark-steps 5 \
+  --output runs/vit-inference/demo2_imagenette320_val64_cpu_b1.json
+```
+
+Val64 `b4`:
+
+```bash
+uv run --group pretrained python examples/pretrained_vit_inference.py \
+  --jax-platform cpu \
+  --image-manifest data/local/imagenette2-320/val/manifest_val_64.txt \
+  --batch-size 4 \
+  --warmup-steps 1 \
+  --benchmark-steps 5 \
+  --output runs/vit-inference/demo2_imagenette320_val64_cpu_b4.json
+```
+
+Val64 `b8`:
+
+```bash
+uv run --group pretrained python examples/pretrained_vit_inference.py \
+  --jax-platform cpu \
+  --image-manifest data/local/imagenette2-320/val/manifest_val_64.txt \
+  --batch-size 8 \
+  --warmup-steps 1 \
+  --benchmark-steps 5 \
+  --output runs/vit-inference/demo2_imagenette320_val64_cpu_b8.json
+```
+
+When local runtime is acceptable, `manifest_val_256.txt` can use the same `b1`,
+`b4`, and `b8` command pattern by replacing `val64` paths and output filenames
+with `val256`.
+
+Generate a report-ready local CPU table after the JSON files exist:
+
+```bash
+uv run python scripts/compare_vit_results.py \
+  runs/vit-inference/demo2_imagenette320_val64_cpu_b1.json \
+  runs/vit-inference/demo2_imagenette320_val64_cpu_b4.json \
+  runs/vit-inference/demo2_imagenette320_val64_cpu_b8.json \
+  --markdown-output report/results/demo2_imagenette320_val64_cpu.md
+```
+
+Only commit the generated Markdown table if it is intentionally curated for the
+report. Do not commit raw `runs/` outputs, Imagenette images, or local manifests.
 
 ## Run Command
 

@@ -38,3 +38,24 @@ stable summary fields where possible without changing the original artifacts.
 
 These artifacts are not GPU results and not TPU results. TPU execution,
 monitoring, cleanup, and local-vs-TPU comparison remain planned work.
+
+## Demo 2: Imagenette 320 Local CPU Tables
+
+Imagenette 320 (`imagenette2-320`) is the recommended optional local benchmark
+dataset for later Demo 2 work. Keep the dataset and generated manifests under
+ignored `data/local/imagenette2-320/`. After creating
+`data/local/imagenette2-320/val/manifest_val_64.txt` and running the `b1`,
+`b4`, and `b8` CPU benchmarks documented in `docs/pretrained_vit_demo.md`,
+generate a report-ready table with:
+
+```bash
+uv run python scripts/compare_vit_results.py \
+  runs/vit-inference/demo2_imagenette320_val64_cpu_b1.json \
+  runs/vit-inference/demo2_imagenette320_val64_cpu_b4.json \
+  runs/vit-inference/demo2_imagenette320_val64_cpu_b8.json \
+  --markdown-output report/results/demo2_imagenette320_val64_cpu.md
+```
+
+Do not commit Imagenette images or local manifests under `data/local/`. Commit
+the Markdown table only after the JSON inputs represent intentional curated
+local CPU evidence.

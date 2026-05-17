@@ -202,7 +202,7 @@
   - The TPU workflow document is documentation-only and uses placeholders such as `<PROJECT_ID>`, `<PROJECT_NUMBER>`, `<ZONE>`, `<TPU_NAME>`, `<ACCELERATOR_TYPE>`, `<RUNTIME_VERSION>`, `<REPO_URL>`, and `<BRANCH>`。
   - Free-trial credits should not be consumed unless TRC is delayed or unavailable and the run plan plus cleanup command are ready。
 - Next planned step：
-  - Submit the Google Cloud project number to TRC outside the repository, wait for confirmation/quota/instructions, and continue Demo 2 documentation/evidence preparation while waiting. Treat Imagenette as an optional future dataset direction, not the current next step。
+  - Submit the Google Cloud project number to TRC outside the repository, wait for confirmation/quota/instructions, and continue Demo 2 documentation/evidence preparation while waiting. Use Imagenette 320 (`imagenette2-320`) as the recommended optional local benchmark dataset for later Demo 2 work, while keeping it under ignored `data/local/` and out of pytest/CI。
   - Use `cloud/demo2_vit_tpu_workflow.md` to prepare a controlled TPU VM attempt, then record actual commands, metrics, logs, monitoring notes, cleanup evidence, and comparison output only after a real run occurs。
 
 ## Phase 5.1: Demo 2 Benchmark Asset And Result Field Stabilization
@@ -218,8 +218,8 @@
   - Added report-ready Markdown table output to `scripts/compare_vit_results.py`
     through `--markdown-output`。
   - Added `scripts/build_image_manifest.py` for deterministic manifests from
-    existing local image directories, including optional local Imagenette subsets
-    under ignored `data/local/`。
+    existing local image directories, including optional local Imagenette 320
+    data under ignored `data/local/imagenette2-320/`。
   - Documented formal Demo 2 local CPU `b1` and public manifest `b4` commands,
     including final-batch padding behavior。
 - Files or modules added/updated：
@@ -242,10 +242,10 @@
     required。
   - `git diff --check` passed。
 - Limitations：
-  - This phase did not download Imagenette, run TPU, create cloud resources, or
-    generate new benchmark evidence。
-  - Imagenette remains local-only optional preparation unless a later run
-    produces curated artifacts and documentation。
+  - This phase did not download Imagenette 320, run TPU, create cloud resources,
+    or generate new benchmark evidence。
+  - Imagenette 320 remains local-only optional benchmark preparation unless a
+    later run produces curated artifacts and documentation。
 
 ## Planned Phases
 

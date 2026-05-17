@@ -18,8 +18,9 @@ pretrained ViT inference benchmark with JAX/Flax**。
   project number 提交到 TRC form，等待 TRC confirmation / quota /
   instructions，之後才建立 TPU resources
 - next development work while waiting for TRC：繼續整理 Demo 2 documentation
-  and evidence；Imagenette 只保留為 optional future dataset direction，不是目前
-  主要 next step
+  and evidence；Imagenette 320 (`imagenette2-320`) 是後續 Demo 2 local
+  benchmark 的 recommended optional dataset，但 workflow 仍維持 local-only，
+  不自動下載、不進 pytest/CI，也不提交 `data/local/` 內容
 
 TPU execution has not been attempted or completed yet. No TPU performance claim
 should be made until a real TPU VM run, metrics, logs, monitoring notes, and
@@ -70,7 +71,7 @@ cleanup evidence exist.
 - Local image manifest builder:
   - `scripts/build_image_manifest.py`
   - intended for existing local-only image directories such as optional
-    Imagenette subsets under ignored `data/local/`
+    Imagenette 320 data under ignored `data/local/imagenette2-320/`
   - does not download datasets or inspect image contents
 - Pre-TRC Google Cloud status:
   - local CPU Demo 2 and JSON comparison helper are prepared
@@ -171,9 +172,10 @@ Hugging Face access, image opening, or model weight download.
 3. Review `cloud/demo2_vit_tpu_workflow.md` and confirm zone, TPU accelerator
    type, runtime version, quota, cost constraints, and cleanup command.
 4. While waiting for TRC, continue Demo 2 documentation/evidence preparation
-   that does not require cloud resources; optional Imagenette preparation should
-   stay local-only under ignored `data/local/` and use manifest files rather
-   than automatic downloads.
+   that does not require cloud resources; Imagenette 320 preparation should stay
+   local-only under ignored `data/local/imagenette2-320/`, use
+   `manifest_val_64.txt` as the primary benchmark manifest, and avoid automatic
+   downloads.
 5. Run JAX backend/device verification on a TPU VM only after the cloud
    experiment is ready.
 6. Run Demo 2 on TPU with `--jax-platform tpu`.
