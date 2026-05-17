@@ -54,6 +54,15 @@ devices, input shape, timing, throughput, and predicted class. The included
 sample image is a small public-domain Wikimedia Commons image used only for
 reproducible classroom demonstration.
 
+For a private live demo, keep local photos and the optional manifest under
+`data/local/demo2_vit_images/`. That path is ignored by Git; see
+[docs/pretrained_vit_demo.md](docs/pretrained_vit_demo.md) for the manifest
+format and command. Manifest mode uses true mixed-image batches; the final
+partial batch is padded by repeating its last real image, padded entries are
+ignored for predictions and throughput, and `num_padded_images` records that
+padding. The private manifest workflow is for qualitative live predictions only;
+it is not a public benchmark dataset or an accuracy benchmark.
+
 Curated local CPU baseline artifacts:
 
 ```text

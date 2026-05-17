@@ -111,6 +111,13 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
 
 - If model download or network access is unavailable during class, use the
   existing `report/results/` JSON artifacts.
+- If using private live-demo photos, keep them under ignored
+  `data/local/demo2_vit_images/` and use the manifest workflow rather
+  than committing the files. Treat those predictions as qualitative examples,
+  not public benchmark or accuracy evidence. The manifest workflow uses true
+  mixed-image batches. If the final batch is partial, it is padded by repeating
+  its last real image; padded entries are ignored for predictions and
+  throughput, and `num_padded_images` records the padding count.
 - If TPU quota or access is unavailable, present the TPU workflow as planned
   work and do not fabricate results.
 - If local CPU runtime is slow, reduce benchmark steps for live demonstration

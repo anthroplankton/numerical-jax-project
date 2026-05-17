@@ -130,6 +130,7 @@
   - Added documentation for local setup, first-run model download behavior, expected metrics, and limitations。
   - Added lightweight tests for argument parsing and metrics helpers that do not download model weights。
   - Added a small public-domain sample image under `examples/assets/` for reproducible classroom use。
+  - Added support for a local-only private image manifest under ignored `data/local/demo2_vit_images/` for live demos。
 - Files or modules added/updated：
   - `pyproject.toml`
   - `examples/pretrained_vit_inference.py`
@@ -143,7 +144,9 @@
   - `tests/test_pretrained_vit_inference.py`
   - `report/progress_log.md`
 - Current expected output：
-  - The ViT script writes JSON metrics with model name, selected JAX platform, actual JAX backend, devices, input shape, batch size, warmup steps, benchmark steps, mean step time, throughput, predicted class index, and predicted label。
+  - Single-image mode writes JSON metrics with model name, selected JAX platform, actual JAX backend, devices, input shape, batch size, warmup steps, benchmark steps, timing, throughput, top-k predictions, predicted class index, and predicted label。
+  - Manifest mode writes run-level aggregate timing fields plus `image_results` for per-image top-k qualitative predictions, without presenting the first image prediction as a whole-run prediction。
+  - Manifest mode now uses true mixed-image batches shaped `[batch_size, 3, 224, 224]`; the final partial batch is padded by repeating its last real image and padded entries are ignored for predictions。
 - Current evidence/results：
   - Hugging Face model download for `google/vit-base-patch16-224` succeeded during manual local checking。
   - Local CPU ViT inference succeeded using the sample image `examples/assets/chihuahua_pet_licorice.jpg`。
@@ -154,6 +157,9 @@
   - This phase is a local compatibility spike, not final benchmark evidence。
   - The first real run downloads model weights and processor files from Hugging Face unless they are already cached。
   - The default pytest suite does not download the pretrained model。
+  - Private local demo photos and their manifest should stay under ignored `data/local/` and should not be committed。
+  - Private manifest predictions are qualitative local live-demo outputs, not a public benchmark dataset or classification-accuracy evaluation。
+  - Manifest throughput counts real manifest images only, so final-batch padding is included as runtime overhead but not counted as extra real images; `num_padded_images` records the padding count。
   - Simple JAX GPU matrix multiplication worked on the laptop, but the ViT-like convolution path failed during cuDNN autotuning; local CUDA is therefore recorded as a limitation, not as completed Demo 2 benchmark evidence。
   - TPU execution, monitoring, cleanup, and local-vs-TPU comparison for Demo 2 remain planned work and have not been completed。
 - Next planned step：

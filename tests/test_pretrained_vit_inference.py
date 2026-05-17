@@ -8,6 +8,7 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = PROJECT_ROOT / "examples" / "pretrained_vit_inference.py"
 SAMPLE_IMAGE_PATH = Path("examples/assets/chihuahua_pet_licorice.jpg")
+PRIVATE_MANIFEST_PATH = Path("data/local/demo2_vit_images/manifest.txt")
 
 
 def load_vit_example_module():
@@ -33,6 +34,7 @@ def test_parse_args_uses_safe_defaults() -> None:
     assert args.warmup_steps == 1
     assert args.benchmark_steps == 5
     assert args.jax_platform == "cpu"
+    assert args.top_k == 5
     assert args.output == Path("runs/vit-inference/metrics.json")
 
 
@@ -53,6 +55,8 @@ def test_parse_args_accepts_benchmark_settings() -> None:
             "2",
             "--jax-platform",
             "default",
+            "--top-k",
+            "3",
         ]
     )
 
@@ -62,6 +66,30 @@ def test_parse_args_accepts_benchmark_settings() -> None:
     assert args.warmup_steps == 0
     assert args.benchmark_steps == 2
     assert args.jax_platform == "default"
+    assert args.top_k == 3
+
+
+def test_parse_args_accepts_private_image_manifest() -> None:
+    module = load_vit_example_module()
+
+    args = module.parse_args(["--image-manifest", str(PRIVATE_MANIFEST_PATH)])
+
+    assert args.image is None
+    assert args.image_manifest == PRIVATE_MANIFEST_PATH
+
+
+def test_parse_args_rejects_image_and_manifest_together() -> None:
+    module = load_vit_example_module()
+
+    with pytest.raises(SystemExit):
+        module.parse_args(
+            [
+                "--image",
+                str(SAMPLE_IMAGE_PATH),
+                "--image-manifest",
+                str(PRIVATE_MANIFEST_PATH),
+            ]
+        )
 
 
 def test_parse_args_accepts_jax_platform_choices() -> None:
@@ -96,10 +124,198 @@ def test_parse_args_rejects_invalid_step_counts() -> None:
         module.parse_args(["--image", str(SAMPLE_IMAGE_PATH), "--benchmark-steps", "0"])
 
 
-def test_build_metrics_computes_throughput_and_preserves_schema() -> None:
+def test_read_image_manifest_resolves_paths_without_reading_images(tmp_path) -> None:
+    module = load_vit_example_module()
+    manifest = tmp_path / "manifest.txt"
+    manifest.write_text(
+        "\n".join(
+            [
+                "# private live-demo images",
+                "demo2_private_001.jpg",
+                "nested/demo2_private_002.png",
+                str(SAMPLE_IMAGE_PATH),
+                "",
+            ]
+        )
+    )
+
+    image_paths = module.read_image_manifest(manifest)
+
+    assert image_paths == [
+        tmp_path / "demo2_private_001.jpg",
+        tmp_path / "nested" / "demo2_private_002.png",
+        tmp_path / SAMPLE_IMAGE_PATH,
+    ]
+
+
+def test_read_image_manifest_rejects_empty_manifest(tmp_path) -> None:
+    module = load_vit_example_module()
+    manifest = tmp_path / "manifest.txt"
+    manifest.write_text("# no images yet\n\n")
+
+    with pytest.raises(ValueError, match="contains no image paths"):
+        module.read_image_manifest(manifest)
+
+
+def test_resolve_image_paths_prefers_single_image_over_manifest() -> None:
     module = load_vit_example_module()
 
-    metrics = module.build_metrics(
+    image_paths = module.resolve_image_paths(SAMPLE_IMAGE_PATH, PRIVATE_MANIFEST_PATH)
+
+    assert image_paths == [SAMPLE_IMAGE_PATH]
+
+
+def test_private_image_manifest_example_path_uses_ignored_data_local() -> None:
+    module = load_vit_example_module()
+
+    assert module.private_image_manifest_example_path() == PRIVATE_MANIFEST_PATH
+
+
+def test_build_manifest_batch_specs_pads_only_final_batch() -> None:
+    module = load_vit_example_module()
+
+    batch_specs = module.build_manifest_batch_specs(num_images=10, batch_size=4)
+
+    assert batch_specs == [
+        {
+            "start_index": 0,
+            "end_index": 4,
+            "real_size": 4,
+            "padding_count": 0,
+        },
+        {
+            "start_index": 4,
+            "end_index": 8,
+            "real_size": 4,
+            "padding_count": 0,
+        },
+        {
+            "start_index": 8,
+            "end_index": 10,
+            "real_size": 2,
+            "padding_count": 2,
+        },
+    ]
+
+
+def test_format_top_k_predictions_preserves_indices_labels_and_scores() -> None:
+    module = load_vit_example_module()
+
+    prediction = module.format_top_k_predictions(
+        indices=[285, 207, 208],
+        scores=[0.7, 0.2, 0.1],
+        id2label={285: "Egyptian cat", "207": "golden retriever", 208: "Labrador"},
+    )
+
+    assert prediction == {
+        "top1_index": 285,
+        "top1_label": "Egyptian cat",
+        "top5": [
+            {"index": 285, "label": "Egyptian cat", "score": pytest.approx(0.7)},
+            {
+                "index": 207,
+                "label": "golden retriever",
+                "score": pytest.approx(0.2),
+            },
+            {"index": 208, "label": "Labrador", "score": pytest.approx(0.1)},
+        ],
+    }
+
+
+def test_build_image_metrics_computes_per_image_throughput() -> None:
+    module = load_vit_example_module()
+
+    metrics = module.build_image_metrics(
+        image_path=SAMPLE_IMAGE_PATH,
+        input_shape=(2, 3, 224, 224),
+        batch_size=2,
+        benchmark_steps=2,
+        step_times=[0.2, 0.4],
+        prediction={
+            "top1_index": 285,
+            "top1_label": "Egyptian cat",
+            "top5": [
+                {
+                    "index": 285,
+                    "label": "Egyptian cat",
+                    "score": 0.9,
+                }
+            ],
+        },
+    )
+
+    assert metrics == {
+        "image_path": str(SAMPLE_IMAGE_PATH),
+        "input_shape": [2, 3, 224, 224],
+        "batch_size": 2,
+        "benchmark_steps": 2,
+        "mean_step_time_sec": pytest.approx(0.3),
+        "total_timed_inference_sec": pytest.approx(0.6),
+        "throughput_images_per_sec": pytest.approx(4 / 0.6),
+        "top1_index": 285,
+        "top1_label": "Egyptian cat",
+        "top5": [
+            {
+                "index": 285,
+                "label": "Egyptian cat",
+                "score": 0.9,
+            }
+        ],
+    }
+
+
+def test_build_manifest_image_metrics_contains_batch_position_not_timing() -> None:
+    module = load_vit_example_module()
+
+    metrics = module.build_manifest_image_metrics(
+        image_path=Path("private/image_a.jpg"),
+        input_shape=(3, 224, 224),
+        batch_index=1,
+        position_in_batch=2,
+        prediction={
+            "top1_index": 1,
+            "top1_label": "class one",
+            "top5": [{"index": 1, "label": "class one", "score": 0.8}],
+        },
+    )
+
+    assert metrics == {
+        "image_path": "private/image_a.jpg",
+        "input_shape": [3, 224, 224],
+        "batch_index": 1,
+        "position_in_batch": 2,
+        "top1_index": 1,
+        "top1_label": "class one",
+        "top5": [{"index": 1, "label": "class one", "score": 0.8}],
+    }
+    assert "mean_step_time_sec" not in metrics
+
+
+def test_build_run_metrics_single_image_schema_keeps_image_fields() -> None:
+    module = load_vit_example_module()
+
+    image_metrics = module.build_image_metrics(
+        image_path=SAMPLE_IMAGE_PATH,
+        input_shape=(2, 3, 224, 224),
+        batch_size=2,
+        benchmark_steps=2,
+        step_times=[0.2, 0.4],
+        prediction={
+            "top1_index": 285,
+            "top1_label": "Egyptian cat",
+            "top5": [
+                {
+                    "index": 285,
+                    "label": "Egyptian cat",
+                    "score": 0.9,
+                }
+            ],
+        },
+    )
+    image_metrics["predicted_index"] = 285
+    image_metrics["predicted_label"] = "Egyptian cat"
+
+    metrics = module.build_run_metrics(
         model_name="google/vit-base-patch16-224",
         selected_jax_platform="cpu",
         backend="cpu",
@@ -111,16 +327,15 @@ def test_build_metrics_computes_throughput_and_preserves_schema() -> None:
                 "repr": "TFRT_CPU_0",
             }
         ],
-        input_shape=(2, 3, 224, 224),
         batch_size=2,
         warmup_steps=1,
         benchmark_steps=2,
-        step_times=[0.2, 0.4],
-        predicted_index=285,
-        predicted_label="Egyptian cat",
+        image_results=[image_metrics],
+        manifest_path=None,
     )
 
     assert metrics == {
+        "mode": "single_image",
         "model_name": "google/vit-base-patch16-224",
         "selected_jax_platform": "cpu",
         "backend": "cpu",
@@ -132,15 +347,90 @@ def test_build_metrics_computes_throughput_and_preserves_schema() -> None:
                 "repr": "TFRT_CPU_0",
             }
         ],
+        "image_path": str(SAMPLE_IMAGE_PATH),
         "input_shape": [2, 3, 224, 224],
         "batch_size": 2,
         "warmup_steps": 1,
         "benchmark_steps": 2,
         "mean_step_time_sec": pytest.approx(0.3),
-        "throughput_images_per_sec": pytest.approx(2 / 0.3),
+        "total_timed_inference_sec": pytest.approx(0.6),
+        "throughput_images_per_sec": pytest.approx(4 / 0.6),
+        "top1_index": 285,
+        "top1_label": "Egyptian cat",
+        "top5": [
+            {
+                "index": 285,
+                "label": "Egyptian cat",
+                "score": 0.9,
+            }
+        ],
         "predicted_index": 285,
         "predicted_label": "Egyptian cat",
     }
+
+
+def test_build_run_metrics_manifest_schema_uses_aggregate_fields() -> None:
+    module = load_vit_example_module()
+
+    image_results = [
+        module.build_manifest_image_metrics(
+            image_path=Path("private/image_a.jpg"),
+            input_shape=(3, 224, 224),
+            batch_index=0,
+            position_in_batch=0,
+            prediction={
+                "top1_index": 1,
+                "top1_label": "class one",
+                "top5": [{"index": 1, "label": "class one", "score": 0.8}],
+            },
+        ),
+        module.build_manifest_image_metrics(
+            image_path=Path("private/image_b.jpg"),
+            input_shape=(3, 224, 224),
+            batch_index=0,
+            position_in_batch=1,
+            prediction={
+                "top1_index": 2,
+                "top1_label": "class two",
+                "top5": [{"index": 2, "label": "class two", "score": 0.7}],
+            },
+        ),
+    ]
+
+    metrics = module.build_run_metrics(
+        model_name="google/vit-base-patch16-224",
+        selected_jax_platform="cpu",
+        backend="cpu",
+        devices=[],
+        batch_size=1,
+        warmup_steps=1,
+        benchmark_steps=2,
+        image_results=image_results,
+        manifest_path=PRIVATE_MANIFEST_PATH,
+        input_shape=(2, 3, 224, 224),
+        processing_mode="batched_manifest",
+        num_batches=1,
+        num_padded_images=0,
+        last_batch_policy="pad_with_last_image",
+        step_times=[0.1, 0.2],
+    )
+
+    assert metrics["mode"] == "image_manifest"
+    assert metrics["manifest_path"] == str(PRIVATE_MANIFEST_PATH)
+    assert metrics["input_shape"] == [2, 3, 224, 224]
+    assert metrics["processing_mode"] == "batched_manifest"
+    assert metrics["num_images"] == 2
+    assert metrics["num_batches"] == 1
+    assert metrics["timed_batch_runs"] == 2
+    assert metrics["num_padded_images"] == 0
+    assert metrics["last_batch_policy"] == "pad_with_last_image"
+    assert metrics["mean_step_time_sec"] == pytest.approx(0.15)
+    assert metrics["total_timed_inference_sec"] == pytest.approx(0.3)
+    assert metrics["throughput_images_per_sec"] == pytest.approx(4 / 0.3)
+    assert metrics["image_results"] == image_results
+    assert "image_path" not in metrics
+    assert "predicted_label" not in metrics
+    assert "top1_label" not in metrics
 
 
 def test_lookup_label_accepts_string_or_integer_keys() -> None:

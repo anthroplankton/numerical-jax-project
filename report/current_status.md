@@ -40,6 +40,14 @@ cleanup evidence exist.
 - Local CPU classroom sample image:
   - `examples/assets/chihuahua_pet_licorice.jpg`
   - `examples/assets/README.md`
+- Optional private live-demo image set support:
+  - recommended local-only path: `data/local/demo2_vit_images/`
+  - optional manifest: `data/local/demo2_vit_images/manifest.txt`
+  - manifest mode uses real mixed-image batches
+  - the final partial batch is padded by repeating its last real image; padded
+    entries are ignored for predictions and throughput, and `num_padded_images`
+    records the padding count
+  - qualitative live predictions only; not a public dataset or accuracy benchmark
 - Demo 2 documentation:
   - `docs/pretrained_vit_demo.md`
 - Planned TPU workflow documentation:
@@ -70,6 +78,9 @@ Observed local CPU throughput:
 
 These are single-image repeated-batch inference results. They are not
 dataset-level accuracy evaluation, not GPU results, and not TPU results.
+Private manifest runs follow the same qualitative-inference framing unless
+explicit labels and top-k evaluation are added later, but they now measure true
+batched manifest inference over the listed images.
 
 ## Local CUDA Limitation
 
