@@ -15,6 +15,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
+import sys
 import time
 from pathlib import Path
 from statistics import fmean
@@ -590,6 +592,17 @@ def write_metrics(metrics: Mapping[str, Any], output_path: Path) -> None:
     output_path.write_text(json.dumps(metrics, indent=2, sort_keys=True) + "\n")
 
 
+def add_cli_run_metadata(
+    metrics: Mapping[str, Any], *, argv: Sequence[str], output_path: Path
+) -> dict[str, Any]:
+    """Add reproducibility metadata available only at CLI execution time."""
+    return {
+        **dict(metrics),
+        "command_used": shlex.join(["python", *argv]),
+        "output_path": str(output_path),
+    }
+
+
 def _positive_int(raw_value: str) -> int:
     value = int(raw_value)
     if value < 1:
@@ -619,6 +632,11 @@ def main() -> None:
         selected_jax_platform=args.jax_platform,
         top_k=args.top_k,
         manifest_path=args.image_manifest,
+    )
+    metrics = add_cli_run_metadata(
+        metrics,
+        argv=sys.argv,
+        output_path=args.output,
     )
     write_metrics(metrics, args.output)
     print(json.dumps(metrics, indent=2, sort_keys=True))

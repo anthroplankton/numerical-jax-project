@@ -150,6 +150,8 @@ that count.
 ```json
 {
   "mode": "single_image",
+  "command_used": "python examples/pretrained_vit_inference.py --jax-platform cpu ...",
+  "output_path": "runs/vit-inference/metrics.json",
   "model_name": "google/vit-base-patch16-224",
   "selected_jax_platform": "cpu",
   "backend": "cpu",
@@ -190,6 +192,8 @@ mistaken for whole-run predictions:
 ```json
 {
   "mode": "image_manifest",
+  "command_used": "python examples/pretrained_vit_inference.py --jax-platform cpu ...",
+  "output_path": "runs/vit-inference/demo2_private_local_b4.json",
   "manifest_path": "data/local/demo2_vit_images/manifest.txt",
   "input_shape": [4, 3, 224, 224],
   "processing_mode": "batched_manifest",
@@ -224,6 +228,9 @@ mistaken for whole-run predictions:
 Each `image_results` entry includes that image's input shape, batch index,
 position inside its batch, and qualitative top-k predictions. Manifest timing is
 reported at the batch/run level rather than as separate per-image timing.
+New CLI-generated outputs also include `command_used` and `output_path` so local
+CPU and future TPU artifacts can be compared with clearer provenance. Older
+curated files under `report/results/` may not contain those two fields.
 
 Expected manifest metadata for the current image sets:
 
@@ -281,6 +288,21 @@ On the laptop used for this local spike, a simple JAX GPU matrix multiplication
 worked. The ViT-like convolution path failed during cuDNN autotuning, so local
 CUDA is not used as Demo 2 benchmark evidence. This project does not claim GPU
 ViT inference success for Demo 2.
+
+## Compare Result JSON Files
+
+Use the local comparison helper after a TPU JSON artifact has been retrieved:
+
+```bash
+uv run python scripts/compare_vit_results.py \
+  report/results/demo2_vit_local_cpu_b1.json \
+  runs/vit-inference/demo2_tpu_b1.json \
+  --output runs/vit-inference/demo2_cpu_vs_tpu_b1_compare.json
+```
+
+The helper only reads existing JSON files. It summarizes command metadata when
+available, input image or manifest, backend, devices, batch size, image count,
+total timed runtime, throughput, derived per-image time, and output path.
 
 ## Limitations
 

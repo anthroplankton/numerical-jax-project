@@ -528,3 +528,24 @@ def test_apply_jax_platform_rejects_invalid_value() -> None:
 
     with pytest.raises(ValueError):
         module.apply_jax_platform("gpu")
+
+
+def test_add_cli_run_metadata_records_command_and_output_path() -> None:
+    module = load_vit_example_module()
+
+    metrics = module.add_cli_run_metadata(
+        {"backend": "cpu"},
+        argv=[
+            "examples/pretrained_vit_inference.py",
+            "--image",
+            "examples/assets/chihuahua_pet_licorice.jpg",
+        ],
+        output_path=Path("runs/vit-inference/demo2_cpu_b1.json"),
+    )
+
+    assert metrics["backend"] == "cpu"
+    assert metrics["command_used"] == (
+        "python examples/pretrained_vit_inference.py "
+        "--image examples/assets/chihuahua_pet_licorice.jpg"
+    )
+    assert metrics["output_path"] == "runs/vit-inference/demo2_cpu_b1.json"
