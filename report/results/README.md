@@ -5,88 +5,62 @@ from the course report.
 
 ## Demo 2: Current Curated Result Artifacts
 
-This directory currently contains small, report-ready Demo 2 local CPU
-artifacts. They are local evidence only: they are not TPU results and they are
-not classification accuracy evaluations.
+This directory contains report-ready Markdown summaries for Demo 2 CPU evidence.
+The raw JSON benchmark outputs live under ignored `runs/vit-inference/` and are
+treated as generated local artifacts. Do not normally commit raw JSON outputs.
 
-### Legacy Single-Image JSON Artifacts
-
-The original Demo 2 JSON files are legacy single-image repeated-batch local CPU
-artifacts for pretrained ViT inference with `google/vit-base-patch16-224`:
-
-- `demo2_vit_local_cpu_b1.json`
-- `demo2_vit_local_cpu_b4.json`
-- `demo2_vit_local_cpu_b8.json`
-
-These runs used the sample image:
-
-```text
-examples/assets/chihuahua_pet_licorice.jpg
-```
-
-These runs repeat the same sample image along the batch dimension and time
-JAX/Flax inference after warmup steps. They are useful for local runtime and
-throughput comparison, but they are not dataset-level accuracy evaluation.
-
-The report-ready table generated from these legacy JSON files is:
-
-- `demo2_vit_single_image_local_cpu.md`
-
-Regenerate it with:
+Each Markdown table in this directory should correspond to real JSON artifacts
+and should be generated with `scripts/compare_vit_results.py --markdown-output`.
+For example:
 
 ```bash
 uv run python scripts/compare_vit_results.py \
-  report/results/demo2_vit_local_cpu_b1.json \
-  report/results/demo2_vit_local_cpu_b4.json \
-  report/results/demo2_vit_local_cpu_b8.json \
-  --markdown-output report/results/demo2_vit_single_image_local_cpu.md
+  runs/vit-inference/demo2_local_public_examples_cpu_b1.json \
+  runs/vit-inference/demo2_local_public_examples_cpu_b4.json \
+  runs/vit-inference/demo2_local_public_examples_cpu_b8.json \
+  --markdown-output report/results/demo2_local_public_examples_cpu.md
 ```
 
-The current curated JSON files are legacy local CPU artifacts and may not
-include every field emitted by newer Demo 2 runs. The comparison helper infers
-stable summary fields where possible without changing the original artifacts.
+These tables summarize inference timing and throughput. They are not
+classification accuracy evaluations, GPU results, or TPU results.
 
-### Imagenette 320 Local CPU Tables
+### Primary Local CPU Tables
 
-Imagenette 320 (`imagenette2-320`) is the recommended optional local benchmark
-dataset for later Demo 2 work. Keep the dataset and generated manifests under
-ignored `data/local/imagenette2-320/`.
+The local-machine CPU tables are the primary current-machine evidence:
 
-- `demo2_imagenette320_val64_cpu.md`: primary current local Imagenette CPU
-  benchmark table using `manifest_val_64.txt`.
-- `demo2_imagenette320_val256_cpu.md`: extended local Imagenette CPU benchmark
-  table using `manifest_val_256.txt`.
+- `demo2_local_public_examples_cpu.md`: public example image set, `b1`, `b4`,
+  and `b8`.
+- `demo2_local_imagenette320_val64_cpu.md`: local Imagenette 320 validation
+  manifest with 64 images, `b1`, `b4`, and `b8`.
+- `demo2_local_imagenette320_val256_cpu.md`: local Imagenette 320 validation
+  manifest with 256 images, `b1`, `b4`, and `b8`.
+- `demo2_local_private_examples_cpu.md`: private local live-demo image set,
+  `b1`, `b4`, and `b8`.
 
-Regenerate the primary val64 table after the JSON files exist with:
+The Imagenette and private inputs live under ignored `data/local/` paths. Do not
+commit Imagenette images, private images, or local manifests. For private local
+examples, only the curated Markdown table may be committed.
 
-```bash
-uv run python scripts/compare_vit_results.py \
-  runs/vit-inference/demo2_imagenette320_val64_cpu_b1.json \
-  runs/vit-inference/demo2_imagenette320_val64_cpu_b4.json \
-  runs/vit-inference/demo2_imagenette320_val64_cpu_b8.json \
-  --markdown-output report/results/demo2_imagenette320_val64_cpu.md
-```
+### Supplementary External CPU Tables
 
-Raw JSON outputs under `runs/vit-inference/` are not committed by default.
-Curate small report tables under this directory when they are ready to cite.
+The external Ryzen 7735HS WSL tables are supplementary CPU evidence. Keep them
+separate from the local-machine tables:
 
-### External-Machine Naming
+- `demo2_external_ryzen7735hs_wsl_public_examples_cpu.md`: public example image
+  set, `b1` and `b4` only. External public `b8` is pending and should not be
+  fabricated.
+- `demo2_external_ryzen7735hs_wsl_imagenette320_val64_cpu.md`: Imagenette 320
+  validation manifest with 64 images, `b1`, `b4`, and `b8`.
+- `demo2_external_ryzen7735hs_wsl_imagenette320_val256_cpu.md`: Imagenette 320
+  validation manifest with 256 images, `b1`, `b4`, and `b8`.
 
-Keep standard curated baseline names generic, such as
-`demo2_imagenette320_val64_cpu.md`. Exploratory external-machine artifacts may
-include a neutral machine or environment label, for example
-`demo2_asus_a16_ryzen7735hs_wsl_imagenette320_val64_cpu.md`.
+External-machine labels should stay neutral and environment-based, such as
+`external_ryzen7735hs_wsl`. CPU artifacts should not include a GPU model such as
+`rx7600s`. Reserve `rx7600s` and `rocm` labels for explicit ROCm/GPU
+sanity-check artifacts, and only when actual ROCm/GPU evidence exists.
 
-CPU artifacts should not include a GPU model such as `rx7600s`. Reserve
-`rx7600s` and `rocm` labels for explicit ROCm/GPU sanity-check artifacts, and
-only when actual ROCm/GPU evidence exists.
+### Pending TPU Evidence
 
-### Private Local Live-Demo Table
-
-- `demo2_private_local_cpu.md`: private local live-demo evidence from local
-  images under ignored `data/local/`. This is qualitative local evidence, not a
-  public reproducible benchmark dataset and not an accuracy evaluation.
-
-Do not commit Imagenette images, private images, local manifests, raw logs, or
-`runs/` artifacts. TPU execution, monitoring, cleanup, and local-vs-TPU
-comparison remain planned work.
+TPU execution, TPU JSON artifacts, cloud monitoring evidence, cleanup evidence,
+and CPU-vs-TPU comparison tables remain pending. Do not claim CPU-vs-TPU
+comparison results until a real TPU JSON artifact exists.

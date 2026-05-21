@@ -13,16 +13,17 @@ pretrained ViT inference benchmark with JAX/Flax**。
 - stable classroom backend：local CPU
 - public image set：5 tracked images under `examples/assets/`
 - single-image smoke input：`examples/assets/chihuahua_pet_licorice.jpg`
-- curated local CPU result artifacts：`report/results/`
+- raw JSON benchmark outputs：ignored/generated `runs/vit-inference/`
+- curated report-ready Markdown tables：`report/results/`
 - Google Cloud / TRC setup state：dedicated Google Cloud project 已建立，
   billing 已 linked，budget alerts 已設定，Cloud TPU API 已啟用，
   project number 已提交到 TRC form；目前等待 TRC confirmation / quota /
   instructions，之後才建立 TPU resources
 - report-ready setup record：`report/google_cloud_trc_setup.md`
 - next development work while waiting for TRC：繼續整理 Demo 2 documentation
-  and evidence；Imagenette 320 (`imagenette2-320`) 是後續 Demo 2 local
-  benchmark 的 recommended optional dataset，但 workflow 仍維持 local-only，
-  不自動下載、不進 pytest/CI，也不提交 `data/local/` 內容
+  and evidence；Imagenette 320 (`imagenette2-320`) 已有 local/external CPU
+  curated Markdown tables，但 dataset workflow 仍維持 local-only，不自動下載、
+  不進 pytest/CI，也不提交 `data/local/` 內容
 
 TPU execution has not been attempted or completed yet. No TPU performance claim
 should be made until a real TPU VM run, metrics, logs, monitoring notes, and
@@ -79,6 +80,13 @@ cleanup evidence exist.
   - does not download datasets or inspect image contents
   - requires `data/local/imagenette2-320/val` to exist before Imagenette
     manifests can be generated
+- Curated Demo 2 CPU tables:
+  - local public examples, Imagenette val64, Imagenette val256, and private
+    local examples
+  - supplementary external Ryzen 7735HS WSL public examples, Imagenette val64,
+    and Imagenette val256
+  - external public examples currently include `b1` and `b4` only; external
+    public `b8` remains pending
 - Google Cloud / TRC setup status:
   - local CPU Demo 2 and JSON comparison helper are prepared
   - Cloud TPU workflow is documented with placeholders only
@@ -98,46 +106,44 @@ cleanup evidence exist.
 - Lightweight tests that do not download model weights:
   - `tests/test_pretrained_vit_inference.py`
 
-## Demo 2 Local CPU Evidence
+## Demo 2 CPU Evidence
 
 Manual local checks completed:
 
 - Hugging Face model download succeeded for `google/vit-base-patch16-224`。
 - Local CPU inference succeeded。
 - Prediction for the sample image was `Chihuahua`。
-- Curated JSON artifacts:
-  - `report/results/demo2_vit_local_cpu_b1.json`
-  - `report/results/demo2_vit_local_cpu_b4.json`
-  - `report/results/demo2_vit_local_cpu_b8.json`
-- Curated Markdown tables:
-  - `report/results/demo2_vit_single_image_local_cpu.md`
-  - `report/results/demo2_imagenette320_val64_cpu.md`
-  - `report/results/demo2_imagenette320_val256_cpu.md`
-  - `report/results/demo2_private_local_cpu.md`
-  - `report/results/README.md`
+- Raw JSON benchmark outputs are generated under ignored `runs/vit-inference/`
+  and are not committed by default。
+- Curated Markdown tables under `report/results/` are generated from real JSON
+  artifacts with `scripts/compare_vit_results.py --markdown-output`。
 
-Observed local CPU throughput:
+Primary local-machine CPU tables:
 
-| Artifact | Batch size | Mean step time | Throughput |
-| --- | ---: | ---: | ---: |
-| `demo2_vit_local_cpu_b1.json` | 1 | 0.18744530999993003 s | 5.334889413879565 images/s |
-| `demo2_vit_local_cpu_b4.json` | 4 | 0.8838171279999187 s | 4.5258231293299485 images/s |
-| `demo2_vit_local_cpu_b8.json` | 8 | 1.973294752699894 s | 4.054133316401044 images/s |
+- `report/results/demo2_local_public_examples_cpu.md`
+- `report/results/demo2_local_imagenette320_val64_cpu.md`
+- `report/results/demo2_local_imagenette320_val256_cpu.md`
+- `report/results/demo2_local_private_examples_cpu.md`
 
-These are single-image repeated-batch inference results. They are not
-dataset-level accuracy evaluation, not GPU results, and not TPU results.
-The Imagenette 320 tables are local CPU benchmark summaries only; raw JSON
-outputs under `runs/vit-inference/` are not committed by default. The private
-local table is live-demo evidence, not a public reproducible benchmark dataset.
+Supplementary external Ryzen 7735HS WSL CPU tables:
+
+- `report/results/demo2_external_ryzen7735hs_wsl_public_examples_cpu.md`
+  contains `b1` and `b4` only; external public `b8` is pending.
+- `report/results/demo2_external_ryzen7735hs_wsl_imagenette320_val64_cpu.md`
+- `report/results/demo2_external_ryzen7735hs_wsl_imagenette320_val256_cpu.md`
+
+These are CPU inference timing/throughput summaries. They are not dataset-level
+accuracy evaluations, not GPU results, and not TPU results. External CPU
+evidence is supplementary and should stay separate from local-machine evidence.
+The private local table is live-demo evidence, not a public reproducible
+benchmark dataset.
 Private manifest runs follow the same qualitative-inference framing unless
 explicit labels and top-k evaluation are added later, but they now measure true
 batched manifest inference over the listed images.
 
 New Demo 2 JSON outputs include stable result fields for mode, processing mode,
 batch size, image count, batch count, padding count, timed batch runs, timing,
-throughput, backend/devices, and manifest kind when applicable. The existing
-curated local CPU JSON artifacts remain legacy evidence and can be summarized
-with `scripts/compare_vit_results.py`.
+throughput, backend/devices, and manifest kind when applicable.
 
 ## Local CUDA Limitation
 

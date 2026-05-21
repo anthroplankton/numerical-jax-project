@@ -4,7 +4,8 @@ Course project repository for Numerical Computation with JAX.
 
 The current course presentation focus is **Demo 2: pretrained ViT inference
 with JAX/Flax** using `google/vit-base-patch16-224`. Local CPU inference has
-been run successfully and curated JSON baseline artifacts are stored under
+been run successfully. Raw JSON benchmark outputs live under ignored
+`runs/vit-inference/`, and curated report-ready Markdown tables live under
 `report/results/`. Google Cloud TPU execution is the next planned workflow and
 has not been completed yet.
 
@@ -79,17 +80,17 @@ Hugging Face Transformers, Flax, and JAX. Pretrained dependencies are optional:
 uv sync --frozen --group pretrained
 ```
 
-Run the stable local CPU classroom benchmark. This is the formal Demo 2 `b1`
-baseline command:
+Run the stable local CPU public examples benchmark. This is the formal Demo 2
+local public `b1` baseline command:
 
 ```bash
 uv run --group pretrained python examples/pretrained_vit_inference.py \
   --jax-platform cpu \
-  --image examples/assets/chihuahua_pet_licorice.jpg \
+  --image-manifest examples/assets/manifest.txt \
   --batch-size 1 \
   --warmup-steps 1 \
   --benchmark-steps 5 \
-  --output runs/vit-inference/demo2_cpu_b1.json
+  --output runs/vit-inference/demo2_local_public_examples_cpu_b1.json
 ```
 
 The script writes JSON metrics with the selected JAX platform, actual backend,
@@ -107,7 +108,7 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --batch-size 4 \
   --warmup-steps 1 \
   --benchmark-steps 5 \
-  --output runs/vit-inference/demo2_public_examples_b4.json
+  --output runs/vit-inference/demo2_local_public_examples_cpu_b4.json
 ```
 
 For a private live demo, keep local photos and the optional manifest under
@@ -120,12 +121,13 @@ padding. The current local live-demo manifest is expected to contain 15 images.
 The private manifest workflow is for qualitative live predictions only; it is
 not a public benchmark dataset or an accuracy benchmark.
 
-For later local benchmark work, use Imagenette 320 (`imagenette2-320`) as an
-optional local-only dataset. Keep extracted files and generated manifests under
-ignored `data/local/imagenette2-320/`, and build a manifest before running a
-benchmark. `scripts/build_image_manifest.py` scans existing local images only;
-it does not download Imagenette. The primary documented path is the 64-image
-validation manifest:
+For optional local benchmark work, use Imagenette 320 (`imagenette2-320`) as a
+local-only dataset. Current curated tables exist for local and supplementary
+external CPU Imagenette runs, but the extracted dataset and generated manifests
+remain under ignored `data/local/imagenette2-320/`. Build a manifest before
+running a benchmark. `scripts/build_image_manifest.py` scans existing local
+images only; it does not download Imagenette. The primary documented path is the
+64-image validation manifest:
 
 ```bash
 uv run python scripts/build_image_manifest.py \
@@ -137,13 +139,20 @@ wc -l data/local/imagenette2-320/val/manifest_val_64.txt
 head data/local/imagenette2-320/val/manifest_val_64.txt
 ```
 
-Curated local CPU baseline artifacts:
+Curated Demo 2 Markdown tables:
 
 ```text
-report/results/demo2_vit_local_cpu_b1.json
-report/results/demo2_vit_local_cpu_b4.json
-report/results/demo2_vit_local_cpu_b8.json
+report/results/demo2_local_public_examples_cpu.md
+report/results/demo2_external_ryzen7735hs_wsl_public_examples_cpu.md
+report/results/demo2_local_imagenette320_val64_cpu.md
+report/results/demo2_external_ryzen7735hs_wsl_imagenette320_val64_cpu.md
+report/results/demo2_local_imagenette320_val256_cpu.md
+report/results/demo2_external_ryzen7735hs_wsl_imagenette320_val256_cpu.md
+report/results/demo2_local_private_examples_cpu.md
 ```
+
+Local CPU tables are the primary current-machine evidence. External Ryzen
+7735HS WSL CPU tables are supplementary and are kept separate.
 
 For full local instructions, expected output, model notes, and limitations, see
 [docs/pretrained_vit_demo.md](docs/pretrained_vit_demo.md).
@@ -160,10 +169,10 @@ without TPU access:
 
 ```bash
 uv run python scripts/compare_vit_results.py \
-  report/results/demo2_vit_local_cpu_b1.json \
-  runs/vit-inference/demo2_tpu_b1.json \
-  --output runs/vit-inference/demo2_cpu_vs_tpu_b1_compare.json \
-  --markdown-output runs/vit-inference/demo2_cpu_vs_tpu_b1_table.md
+  runs/vit-inference/demo2_local_public_examples_cpu_b4.json \
+  runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json \
+  --output runs/vit-inference/demo2_cpu_vs_tpu_public_examples_b4_compare.json \
+  --markdown-output runs/vit-inference/demo2_cpu_vs_tpu_public_examples_b4_table.md
 ```
 
 ## Demo 1: Preserved Raw-JAX CNN Foundation

@@ -78,21 +78,21 @@ uv run ruff format --check .
 uv run pytest
 ```
 
-Confirm the local CPU baseline artifacts exist:
+Confirm the local CPU raw JSON artifact and curated Markdown table exist for the
+comparison you plan to run:
 
 ```text
-report/results/demo2_vit_local_cpu_b1.json
-report/results/demo2_vit_local_cpu_b4.json
-report/results/demo2_vit_local_cpu_b8.json
+runs/vit-inference/demo2_local_public_examples_cpu_b4.json
+report/results/demo2_local_public_examples_cpu.md
 ```
 
 Optional local comparison dry run:
 
 ```bash
 uv run python scripts/compare_vit_results.py \
-  report/results/demo2_vit_local_cpu_b1.json \
-  report/results/demo2_vit_local_cpu_b4.json \
-  --output runs/vit-inference/demo2_local_compare.json
+  runs/vit-inference/demo2_local_public_examples_cpu_b1.json \
+  runs/vit-inference/demo2_local_public_examples_cpu_b4.json \
+  --output runs/vit-inference/demo2_local_public_examples_compare.json
 ```
 
 The helper reads existing JSON files only. It does not need TPU access, model
@@ -217,19 +217,19 @@ benchmark command actually complete on the TPU VM.
 
 Run inside the TPU VM shell after backend verification.
 
-Single public image:
+Public five-image manifest, `b1`:
 
 ```bash
 uv run --group pretrained python examples/pretrained_vit_inference.py \
   --jax-platform tpu \
-  --image examples/assets/chihuahua_pet_licorice.jpg \
+  --image-manifest examples/assets/manifest.txt \
   --batch-size 1 \
   --warmup-steps 1 \
   --benchmark-steps 5 \
-  --output runs/vit-inference/demo2_tpu_b1.json
+  --output runs/vit-inference/demo2_cloud_public_examples_tpu_b1.json
 ```
 
-Public five-image manifest:
+Public five-image manifest, `b4`:
 
 ```bash
 uv run --group pretrained python examples/pretrained_vit_inference.py \
@@ -238,7 +238,7 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --batch-size 4 \
   --warmup-steps 1 \
   --benchmark-steps 5 \
-  --output runs/vit-inference/demo2_tpu_public_b4.json
+  --output runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json
 ```
 
 Private live-demo images under `data/local/demo2_vit_images/` are ignored by
@@ -271,8 +271,8 @@ Run from Google Cloud Shell or local `gcloud` terminal:
 
 ```bash
 gcloud compute tpus tpu-vm scp \
-  <TPU_NAME>:~/numerical-jax-project/runs/vit-inference/demo2_tpu_b1.json \
-  ./runs/vit-inference/demo2_tpu_b1.json \
+  <TPU_NAME>:~/numerical-jax-project/runs/vit-inference/demo2_cloud_public_examples_tpu_b1.json \
+  ./runs/vit-inference/demo2_cloud_public_examples_tpu_b1.json \
   --zone=<ZONE>
 ```
 
@@ -280,8 +280,8 @@ For the public manifest run:
 
 ```bash
 gcloud compute tpus tpu-vm scp \
-  <TPU_NAME>:~/numerical-jax-project/runs/vit-inference/demo2_tpu_public_b4.json \
-  ./runs/vit-inference/demo2_tpu_public_b4.json \
+  <TPU_NAME>:~/numerical-jax-project/runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json \
+  ./runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json \
   --zone=<ZONE>
 ```
 
@@ -294,14 +294,14 @@ Run on the local machine / Ubuntu WSL after TPU JSON files are retrieved:
 
 ```bash
 uv run python scripts/compare_vit_results.py \
-  report/results/demo2_vit_local_cpu_b1.json \
-  runs/vit-inference/demo2_tpu_b1.json \
-  --output runs/vit-inference/demo2_cpu_vs_tpu_b1_compare.json \
-  --markdown-output runs/vit-inference/demo2_cpu_vs_tpu_b1_table.md
+  runs/vit-inference/demo2_local_public_examples_cpu_b4.json \
+  runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json \
+  --output runs/vit-inference/demo2_cpu_vs_tpu_public_examples_b4_compare.json \
+  --markdown-output runs/vit-inference/demo2_cpu_vs_tpu_public_examples_b4_table.md
 ```
 
-For the public manifest comparison, first create or choose a local CPU manifest
-artifact with the same image set and batch size:
+If a matching local CPU manifest artifact does not already exist, create it with
+the same image set and batch size before comparing:
 
 ```bash
 uv run --group pretrained python examples/pretrained_vit_inference.py \
@@ -310,17 +310,17 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --batch-size 4 \
   --warmup-steps 1 \
   --benchmark-steps 5 \
-  --output runs/vit-inference/demo2_cpu_public_b4.json
+  --output runs/vit-inference/demo2_local_public_examples_cpu_b4.json
 ```
 
 Then compare:
 
 ```bash
 uv run python scripts/compare_vit_results.py \
-  runs/vit-inference/demo2_cpu_public_b4.json \
-  runs/vit-inference/demo2_tpu_public_b4.json \
-  --output runs/vit-inference/demo2_cpu_vs_tpu_public_b4_compare.json \
-  --markdown-output runs/vit-inference/demo2_cpu_vs_tpu_public_b4_table.md
+  runs/vit-inference/demo2_local_public_examples_cpu_b4.json \
+  runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json \
+  --output runs/vit-inference/demo2_cpu_vs_tpu_public_examples_b4_compare.json \
+  --markdown-output runs/vit-inference/demo2_cpu_vs_tpu_public_examples_b4_table.md
 ```
 
 The comparison helper summarizes command, input path or manifest, backend,

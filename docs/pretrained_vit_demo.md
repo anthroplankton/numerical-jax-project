@@ -1,9 +1,11 @@
 # Demo 2: Pretrained ViT Inference Benchmark
 
 Demo 2 is now a local CPU Vision Transformer inference benchmark baseline with
-JAX/Flax. It uses curated local CPU artifacts, manifest batching, public example
-assets, and a documented pre-TRC Google Cloud TPU workflow. The default model is
-`google/vit-base-patch16-224` from Hugging Face.
+JAX/Flax. It uses raw JSON outputs under ignored `runs/vit-inference/`, curated
+report-ready Markdown tables under `report/results/`, manifest batching, public
+example assets, supplementary external CPU evidence, and a documented pre-TRC
+Google Cloud TPU workflow. The default model is `google/vit-base-patch16-224`
+from Hugging Face.
 
 Because of current course presentation constraints, this is the primary demo
 path for the project. Demo 1 remains preserved as background raw-JAX CNN work,
@@ -58,9 +60,10 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --output runs/vit-inference/demo2_public_examples_smoke_cpu_b4.json
 ```
 
-Optional Imagenette benchmarks require separately prepared local data. Project
-scripts and tests do not download Imagenette, and pytest/CI should not depend
-on that dataset.
+Optional Imagenette benchmarks require separately prepared local data. Current
+curated local and supplementary external CPU tables exist, but project scripts
+and tests do not download Imagenette, and pytest/CI should not depend on that
+dataset.
 
 ## Public Example Images
 
@@ -127,7 +130,7 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --batch-size 4 \
   --warmup-steps 1 \
   --benchmark-steps 5 \
-  --output runs/vit-inference/demo2_private_local_b4.json
+  --output runs/vit-inference/demo2_local_private_examples_cpu_b4.json
 ```
 
 The public `--image examples/assets/chihuahua_pet_licorice.jpg` path remains the
@@ -141,10 +144,11 @@ ground-truth labels and top-k evaluation are added later.
 ## Optional Local Imagenette 320 Benchmark Data
 
 Imagenette 320 (`imagenette2-320`) is the recommended local benchmark dataset
-for later Demo 2 work. This workflow is optional and local-only: the repository
-does not download Imagenette automatically, default tests do not depend on it,
-and CI should not require it. Keep extracted files and generated manifests under
-ignored `data/local/imagenette2-320/`:
+for optional Demo 2 CPU evidence. Current curated local and supplementary
+external CPU Markdown tables exist for `val64` and `val256`, but the workflow is
+still local-only: the repository does not download Imagenette automatically,
+default tests do not depend on it, and CI should not require it. Keep extracted
+files and generated manifests under ignored `data/local/imagenette2-320/`:
 
 ```text
 data/local/imagenette2-320/
@@ -226,7 +230,7 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --batch-size 1 \
   --warmup-steps 1 \
   --benchmark-steps 5 \
-  --output runs/vit-inference/demo2_imagenette320_val64_cpu_b1.json
+  --output runs/vit-inference/demo2_local_imagenette320_val64_cpu_b1.json
 ```
 
 Val64 `b4`:
@@ -238,7 +242,7 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --batch-size 4 \
   --warmup-steps 1 \
   --benchmark-steps 5 \
-  --output runs/vit-inference/demo2_imagenette320_val64_cpu_b4.json
+  --output runs/vit-inference/demo2_local_imagenette320_val64_cpu_b4.json
 ```
 
 Val64 `b8`:
@@ -250,7 +254,7 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --batch-size 8 \
   --warmup-steps 1 \
   --benchmark-steps 5 \
-  --output runs/vit-inference/demo2_imagenette320_val64_cpu_b8.json
+  --output runs/vit-inference/demo2_local_imagenette320_val64_cpu_b8.json
 ```
 
 When local runtime is acceptable, `manifest_val_256.txt` can use the same `b1`,
@@ -261,10 +265,10 @@ Generate a report-ready local CPU table after the JSON files exist:
 
 ```bash
 uv run python scripts/compare_vit_results.py \
-  runs/vit-inference/demo2_imagenette320_val64_cpu_b1.json \
-  runs/vit-inference/demo2_imagenette320_val64_cpu_b4.json \
-  runs/vit-inference/demo2_imagenette320_val64_cpu_b8.json \
-  --markdown-output report/results/demo2_imagenette320_val64_cpu.md
+  runs/vit-inference/demo2_local_imagenette320_val64_cpu_b1.json \
+  runs/vit-inference/demo2_local_imagenette320_val64_cpu_b4.json \
+  runs/vit-inference/demo2_local_imagenette320_val64_cpu_b8.json \
+  --markdown-output report/results/demo2_local_imagenette320_val64_cpu.md
 ```
 
 Only commit the generated Markdown table if it is intentionally curated for the
@@ -272,11 +276,13 @@ report. Do not commit raw `runs/` outputs, Imagenette images, or local manifests
 
 ## External-Machine Artifact Names
 
-Standard curated baseline table names should stay generic, for example
-`demo2_imagenette320_val64_cpu.md`. Exploratory external-machine artifacts may
-include a neutral machine or environment label, such as
-`demo2_asus_a16_ryzen7735hs_wsl_imagenette320_val64_cpu.md` or
+Standard curated table names should include the evidence scope, input set, and
+platform, for example `demo2_local_imagenette320_val64_cpu.md`. Supplementary
+external-machine artifacts should use a neutral environment label, such as
 `demo2_external_ryzen7735hs_wsl_imagenette320_val64_cpu.md`.
+
+The current supplementary external public examples table has `b1` and `b4`
+only. External public `b8` is pending and should not be fabricated.
 
 For CPU artifacts, avoid including a GPU model in the file name. Reserve labels
 such as `rx7600s` and `rocm` for explicit ROCm/GPU sanity-check artifacts with
@@ -285,28 +291,16 @@ sanity-check work, not part of the default local CPU benchmark setup.
 
 ## Run Command
 
-Run the formal local CPU `b1` benchmark:
+Run the formal local public examples `b1` benchmark:
 
 ```bash
 uv run --group pretrained python examples/pretrained_vit_inference.py \
   --jax-platform cpu \
-  --image examples/assets/chihuahua_pet_licorice.jpg \
+  --image-manifest examples/assets/manifest.txt \
   --batch-size 1 \
   --warmup-steps 1 \
   --benchmark-steps 5 \
-  --output runs/vit-inference/metrics.json
-```
-
-For a larger repeated-image batch on the same public image:
-
-```bash
-uv run --group pretrained python examples/pretrained_vit_inference.py \
-  --jax-platform cpu \
-  --image examples/assets/chihuahua_pet_licorice.jpg \
-  --batch-size 4 \
-  --warmup-steps 2 \
-  --benchmark-steps 10 \
-  --output runs/vit-inference/batch4_metrics.json
+  --output runs/vit-inference/demo2_local_public_examples_cpu_b1.json
 ```
 
 Run the formal public five-image manifest `b4` benchmark:
@@ -318,7 +312,7 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --batch-size 4 \
   --warmup-steps 1 \
   --benchmark-steps 5 \
-  --output runs/vit-inference/demo2_public_examples_b4.json
+  --output runs/vit-inference/demo2_local_public_examples_cpu_b4.json
 ```
 
 ## Expected Output
@@ -381,7 +375,7 @@ mistaken for whole-run predictions:
 {
   "mode": "image_manifest",
   "command_used": "python examples/pretrained_vit_inference.py --jax-platform cpu ...",
-  "output_path": "runs/vit-inference/demo2_private_local_b4.json",
+  "output_path": "runs/vit-inference/demo2_local_private_examples_cpu_b4.json",
   "manifest_path": "data/local/demo2_vit_images/manifest.txt",
   "manifest_kind": "local_private",
   "input_shape": [4, 3, 224, 224],
@@ -418,9 +412,10 @@ mistaken for whole-run predictions:
 Each `image_results` entry includes that image's input shape, batch index,
 position inside its batch, and qualitative top-k predictions. Manifest timing is
 reported at the batch/run level rather than as separate per-image timing.
-New CLI-generated outputs also include `command_used` and `output_path` so local
-CPU and future TPU artifacts can be compared with clearer provenance. Older
-curated files under `report/results/` may not contain those two fields.
+New CLI-generated JSON outputs also include `command_used` and `output_path` so
+local CPU and future TPU artifacts can be compared with clearer provenance.
+Curated Markdown tables under `report/results/` summarize selected fields from
+the raw JSON files.
 
 ## Result JSON Fields
 
@@ -480,19 +475,22 @@ Expected manifest metadata for the current image sets:
   classroom command uses `cpu` for stable local evidence. The actual backend and
   devices are still recorded from JAX at runtime.
 
-## Observed Local CPU Runs
+## Curated CPU Result Tables
 
-The following curated local CPU artifacts were produced after the model download
-succeeded:
+The following report-ready Markdown tables summarize real JSON artifacts from
+`runs/vit-inference/`:
 
-| Artifact | Batch size | Predicted label | Mean step time | Throughput |
-| --- | ---: | --- | ---: | ---: |
-| `report/results/demo2_vit_local_cpu_b1.json` | 1 | Chihuahua | 0.18744530999993003 s | 5.334889413879565 images/s |
-| `report/results/demo2_vit_local_cpu_b4.json` | 4 | Chihuahua | 0.8838171279999187 s | 4.5258231293299485 images/s |
-| `report/results/demo2_vit_local_cpu_b8.json` | 8 | Chihuahua | 1.973294752699894 s | 4.054133316401044 images/s |
+- `report/results/demo2_local_public_examples_cpu.md`
+- `report/results/demo2_external_ryzen7735hs_wsl_public_examples_cpu.md`
+- `report/results/demo2_local_imagenette320_val64_cpu.md`
+- `report/results/demo2_external_ryzen7735hs_wsl_imagenette320_val64_cpu.md`
+- `report/results/demo2_local_imagenette320_val256_cpu.md`
+- `report/results/demo2_external_ryzen7735hs_wsl_imagenette320_val256_cpu.md`
+- `report/results/demo2_local_private_examples_cpu.md`
 
-These runs are single-image repeated-batch inference baselines, not
-dataset-level accuracy evaluation.
+Local CPU tables are the primary current-machine evidence. External Ryzen 7735HS
+WSL CPU tables are supplementary and kept separate. The external public examples
+table currently has `b1` and `b4` only; external public `b8` is pending.
 
 ## Local CUDA Limitation
 
@@ -507,10 +505,10 @@ Use the local comparison helper after a TPU JSON artifact has been retrieved:
 
 ```bash
 uv run python scripts/compare_vit_results.py \
-  report/results/demo2_vit_local_cpu_b1.json \
-  runs/vit-inference/demo2_tpu_b1.json \
-  --output runs/vit-inference/demo2_cpu_vs_tpu_b1_compare.json \
-  --markdown-output runs/vit-inference/demo2_cpu_vs_tpu_b1_table.md
+  runs/vit-inference/demo2_local_public_examples_cpu_b4.json \
+  runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json \
+  --output runs/vit-inference/demo2_cpu_vs_tpu_public_examples_b4_compare.json \
+  --markdown-output runs/vit-inference/demo2_cpu_vs_tpu_public_examples_b4_table.md
 ```
 
 The helper only reads existing JSON files. It summarizes command metadata when

@@ -145,9 +145,8 @@
   - `examples/assets/README.md`
   - `docs/pretrained_vit_demo.md`
   - `report/results/README.md`
-  - `report/results/demo2_vit_local_cpu_b1.json`
-  - `report/results/demo2_vit_local_cpu_b4.json`
-  - `report/results/demo2_vit_local_cpu_b8.json`
+  - legacy single-image local CPU JSON artifacts under `report/results/`,
+    later superseded by the regenerated artifact policy in Phase 5.5
   - `tests/test_pretrained_vit_inference.py`
   - `report/progress_log.md`
 - Current expected output：
@@ -157,9 +156,11 @@
 - Current evidence/results：
   - Hugging Face model download for `google/vit-base-patch16-224` succeeded during manual local checking。
   - Local CPU ViT inference succeeded using the sample image `examples/assets/chihuahua_pet_licorice.jpg`。
-  - `report/results/demo2_vit_local_cpu_b1.json` records backend `cpu`, batch size `1`, predicted label `Chihuahua`, mean step time `0.18744530999993003` seconds, and throughput `5.334889413879565` images/s。
-  - `report/results/demo2_vit_local_cpu_b4.json` records backend `cpu`, batch size `4`, predicted label `Chihuahua`, mean step time `0.8838171279999187` seconds, and throughput `4.5258231293299485` images/s。
-  - `report/results/demo2_vit_local_cpu_b8.json` records backend `cpu`, batch size `8`, predicted label `Chihuahua`, mean step time `1.973294752699894` seconds, and throughput `4.054133316401044` images/s。
+  - At that phase, legacy local CPU JSON artifacts under `report/results/`
+    recorded `b1`, `b4`, and `b8` single-image repeated-batch timings. These
+    legacy JSON artifacts were later superseded by the current policy: raw JSON
+    under ignored `runs/vit-inference/` and curated Markdown tables under
+    `report/results/`。
 - Limitations：
   - This phase created the local CPU Demo 2 baseline and compatibility evidence, not final local-vs-TPU benchmark evidence。
   - The first real run downloads model weights and processor files from Hugging Face unless they are already cached。
@@ -192,7 +193,7 @@
   - `report/current_status.md`
   - `report/presentation_plan.md`
   - `report/progress_log.md`
-- Current evidence/results：
+- Evidence/results at that phase：
   - Demo 2 local CPU baseline exists under `report/results/`。
   - The curated local CPU artifacts remain the only completed Demo 2 benchmark evidence。
   - Local CUDA remains a documented laptop limitation, not a completed benchmark。
@@ -265,11 +266,11 @@
     local-only evidence。
   - Clarified that raw JSON files under `runs/vit-inference/` are not committed
     by default。
-- Current evidence/results：
-  - `report/results/demo2_vit_single_image_local_cpu.md`
-  - `report/results/demo2_imagenette320_val64_cpu.md`
-  - `report/results/demo2_imagenette320_val256_cpu.md`
-  - `report/results/demo2_private_local_cpu.md`
+- Evidence/results at that phase：
+  - At that phase, local CPU Markdown tables existed for legacy single-image,
+    Imagenette val64, Imagenette val256, and private local evidence. These names
+    were later superseded by the regenerated scope-specific table set recorded in
+    Phase 5.5。
 - Limitations：
   - These are local CPU tables only, not TPU results。
   - The tables summarize inference timing/throughput, not classification
@@ -327,6 +328,41 @@
   - Wait for TRC confirmation / quota / instructions, then use
     `cloud/demo2_vit_tpu_workflow.md` for a controlled manual TPU VM attempt and
     record real execution evidence only after it occurs。
+
+## Phase 5.5: Demo 2 Regenerated CPU Artifact Set
+
+- Date / phase label：2026-05-21 Demo 2 regenerated CPU artifact alignment
+- What changed：
+  - Regenerated the current Demo 2 Markdown result tables from raw JSON artifacts。
+  - Aligned the artifact policy：raw JSON benchmark outputs live under ignored
+    `runs/vit-inference/`; curated report-ready Markdown tables live under
+    `report/results/`。
+  - Separated primary local-machine CPU evidence from supplementary external
+    Ryzen 7735HS WSL CPU evidence。
+  - Kept private input files and manifests local-only under ignored `data/local/`；
+    only the curated private table is report-ready。
+- Current evidence/results：
+  - Local public examples table：
+    `report/results/demo2_local_public_examples_cpu.md`。
+  - Local Imagenette tables：
+    `report/results/demo2_local_imagenette320_val64_cpu.md` and
+    `report/results/demo2_local_imagenette320_val256_cpu.md`。
+  - Local private examples table：
+    `report/results/demo2_local_private_examples_cpu.md`。
+  - Supplementary external Ryzen 7735HS WSL public examples table：
+    `report/results/demo2_external_ryzen7735hs_wsl_public_examples_cpu.md`。
+    It currently contains `b1` and `b4` only; external public `b8` is pending。
+  - Supplementary external Ryzen 7735HS WSL Imagenette tables：
+    `report/results/demo2_external_ryzen7735hs_wsl_imagenette320_val64_cpu.md`
+    and
+    `report/results/demo2_external_ryzen7735hs_wsl_imagenette320_val256_cpu.md`。
+- Limitations：
+  - These are CPU inference timing/throughput tables only, not TPU results and
+    not classification-accuracy evaluation。
+  - External CPU evidence is supplementary and should not be merged into the
+    primary local-machine evidence。
+  - TPU execution, TPU JSON artifacts, cloud monitoring evidence, cleanup
+    evidence, and CPU-vs-TPU comparison remain pending。
 
 ## Planned Phases
 
