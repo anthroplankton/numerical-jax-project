@@ -13,13 +13,17 @@ pretrained ViT inference benchmark with JAX/Flax**。
 - stable classroom backend：local CPU
 - public image set：5 tracked images under `examples/assets/`
 - single-image smoke input：`examples/assets/chihuahua_pet_licorice.jpg`
-- curated local CPU result artifacts：`report/results/`
-- next major Google Cloud step：建立 dedicated Google Cloud project，將
-  project number 提交到 TRC form，等待 TRC confirmation / quota /
-  instructions，之後才建立 TPU resources
+- raw JSON benchmark outputs：ignored/generated `runs/vit-inference/`
+- curated report-ready Markdown tables：`report/results/`
+- Google Cloud / TRC setup state：dedicated Google Cloud project 已建立，
+  billing 已 linked，budget alerts 已設定，Cloud TPU API 已啟用，
+  project number 已提交到 TRC form；目前等待 TRC confirmation，之後才建立
+  TPU resources
+- report-ready setup record：`report/google_cloud_trc_setup.md`
 - next development work while waiting for TRC：繼續整理 Demo 2 documentation
-  and evidence；Imagenette 只保留為 optional future dataset direction，不是目前
-  主要 next step
+  and evidence；Imagenette 320 (`imagenette2-320`) 已有 local/external CPU
+  curated Markdown tables，但 dataset workflow 仍維持 local-only，不自動下載、
+  不進 pytest/CI，也不提交 `data/local/` 內容
 
 TPU execution has not been attempted or completed yet. No TPU performance claim
 should be made until a real TPU VM run, metrics, logs, monitoring notes, and
@@ -36,6 +40,8 @@ cleanup evidence exist.
   - `src/jax_tpu_project/runtime.py`
   - `src/jax_tpu_project/cli.py`
   - `scripts/check_jax_device.sh`
+  - local sanity script defaults `JAX_PLATFORMS` to `cpu` unless the caller
+    already set it, so CPU evidence remains explicit on benchmark machines
 
 已完成的 Demo 2 重點：
 
@@ -61,45 +67,86 @@ cleanup evidence exist.
     records the padding count
   - qualitative live predictions only; not a public dataset or accuracy benchmark
 - Demo 2 documentation:
-  - `docs/pretrained_vit_demo.md`
+  - `docs/demo2_pretrained_vit.md`
 - Planned TPU workflow documentation:
-  - `cloud/demo2_vit_tpu_workflow.md`
+  - `cloud/demo2_pretrained_vit_tpu_workflow.md`
 - Local result comparison helper:
   - `scripts/compare_vit_results.py`
-- Pre-TRC Google Cloud status:
+  - optional `--markdown-output` for report-ready benchmark tables
+- Local image manifest builder:
+  - `scripts/build_image_manifest.py`
+  - intended for existing local-only image directories such as optional
+    Imagenette 320 data under ignored `data/local/imagenette2-320/`
+  - does not download datasets or inspect image contents
+  - requires `data/local/imagenette2-320/val` to exist before Imagenette
+    manifests can be generated
+- Curated Demo 2 CPU tables:
+  - local public examples, Imagenette val64, Imagenette val256, and private
+    local examples
+  - supplementary external Ryzen 7735HS WSL public examples, Imagenette val64,
+    and Imagenette val256
+  - external public examples currently include `b1` and `b4` only; external
+    public `b8` remains pending
+- Google Cloud / TRC setup status:
   - local CPU Demo 2 and JSON comparison helper are prepared
   - Cloud TPU workflow is documented with placeholders only
-  - TRC project-number submission is the next external Google Cloud step
+  - dedicated Google Cloud project was created outside the repository
+  - project ID and project number were verified with `gcloud projects describe`
+    and kept private
+  - billing account was linked outside the repository
+  - budget alerts were configured:
+    `numerical-jax-first-warning` at 10 USD and
+    `numerical-jax-main-limit` at 60 USD
+  - Cloud TPU API was enabled outside the repository
+  - project number was submitted to TRC; TRC confirmation is still pending
+  - setup record is documented in `report/google_cloud_trc_setup.md`
+  - no Cloud TPU VM has been created
   - TPU execution and CPU-vs-TPU result collection are not completed yet
 - Lightweight tests that do not download model weights:
   - `tests/test_pretrained_vit_inference.py`
 
-## Demo 2 Local CPU Evidence
+## Demo 2 CPU Evidence
 
 Manual local checks completed:
 
 - Hugging Face model download succeeded for `google/vit-base-patch16-224`。
 - Local CPU inference succeeded。
 - Prediction for the sample image was `Chihuahua`。
-- Curated JSON artifacts:
-  - `report/results/demo2_vit_local_cpu_b1.json`
-  - `report/results/demo2_vit_local_cpu_b4.json`
-  - `report/results/demo2_vit_local_cpu_b8.json`
-  - `report/results/README.md`
+- Raw JSON benchmark outputs are generated under ignored `runs/vit-inference/`
+  and are not committed by default。
+- Curated Markdown tables under `report/results/` are generated from real JSON
+  artifacts with `scripts/compare_vit_results.py --markdown-output`。
 
-Observed local CPU throughput:
+Primary local-machine CPU tables:
 
-| Artifact | Batch size | Mean step time | Throughput |
-| --- | ---: | ---: | ---: |
-| `demo2_vit_local_cpu_b1.json` | 1 | 0.18744530999993003 s | 5.334889413879565 images/s |
-| `demo2_vit_local_cpu_b4.json` | 4 | 0.8838171279999187 s | 4.5258231293299485 images/s |
-| `demo2_vit_local_cpu_b8.json` | 8 | 1.973294752699894 s | 4.054133316401044 images/s |
+- `report/results/demo2_local_public_examples_cpu.md`
+- `report/results/demo2_local_imagenette320_val64_cpu.md`
+- `report/results/demo2_local_imagenette320_val256_cpu.md`
+- `report/results/demo2_local_private_examples_cpu.md`
 
-These are single-image repeated-batch inference results. They are not
-dataset-level accuracy evaluation, not GPU results, and not TPU results.
+Supplementary external Ryzen 7735HS WSL CPU tables:
+
+- `report/results/demo2_external_ryzen7735hs_wsl_public_examples_cpu.md`
+  contains `b1` and `b4` only; external public `b8` is pending.
+- `report/results/demo2_external_ryzen7735hs_wsl_imagenette320_val64_cpu.md`
+- `report/results/demo2_external_ryzen7735hs_wsl_imagenette320_val256_cpu.md`
+
+These are CPU inference timing/throughput summaries. They are not dataset-level
+accuracy evaluations, not GPU results, and not TPU results. External CPU
+evidence is supplementary and should stay separate from local-machine evidence.
+For the current pre-TPU progress report, Imagenette `val256` is the main CPU
+benchmark evidence because b1/b4/b8 all use 256 real images with 0 padded
+images. Imagenette `val64` remains a lightweight documented benchmark path and
+supporting CPU result.
+The private local table is live-demo evidence, not a public reproducible
+benchmark dataset.
 Private manifest runs follow the same qualitative-inference framing unless
 explicit labels and top-k evaluation are added later, but they now measure true
 batched manifest inference over the listed images.
+
+New Demo 2 JSON outputs include stable result fields for mode, processing mode,
+batch size, image count, batch count, padding count, timed batch runs, timing,
+throughput, backend/devices, and manifest kind when applicable.
 
 ## Local CUDA Limitation
 
@@ -142,6 +189,8 @@ Default tests remain lightweight and offline:
 - `tests/test_runtime.py`
 - `tests/test_cnn_mnist.py`
 - `tests/test_pretrained_vit_inference.py`
+- `tests/test_compare_vit_results.py`
+- `tests/test_build_image_manifest.py`
 
 The Demo 2 tests check argument parsing, metrics helper behavior, and platform
 environment helper behavior. They do not require GPU, TPU, network access,
@@ -149,20 +198,19 @@ Hugging Face access, image opening, or model weight download.
 
 ## Next Technical Milestones
 
-1. Create a dedicated Google Cloud project for the course project, record the
-   project ID and project number locally, and submit the project number to the
-   TRC form without committing real identifiers.
-2. Wait for TRC confirmation, quota, and instructions before creating TPU
-   resources.
-3. Review `cloud/demo2_vit_tpu_workflow.md` and confirm zone, TPU accelerator
+1. Wait for TRC confirmation before creating TPU resources.
+2. Review `cloud/demo2_pretrained_vit_tpu_workflow.md` and confirm zone, TPU accelerator
    type, runtime version, quota, cost constraints, and cleanup command.
-4. While waiting for TRC, continue Demo 2 documentation/evidence preparation
-   that does not require cloud resources; treat Imagenette as an optional future
-   dataset direction rather than the current next step.
-5. Run JAX backend/device verification on a TPU VM only after the cloud
+3. While waiting for TRC, continue Demo 2 documentation/evidence preparation
+   that does not require cloud resources; Imagenette 320 preparation should stay
+   local-only under ignored `data/local/imagenette2-320/`, keep
+   `manifest_val_64.txt` as the lightweight documented benchmark path, use
+   `val256` curated tables as the current progress report's main CPU benchmark
+   evidence, and avoid automatic downloads.
+4. Run JAX backend/device verification on a TPU VM only after the cloud
    experiment is ready.
-6. Run Demo 2 on TPU with `--jax-platform tpu`.
-7. Save TPU JSON metrics, logs, monitoring notes, and cleanup evidence.
-8. Compare Demo 2 local CPU and TPU JSON files with
+5. Run Demo 2 on TPU with `--jax-platform tpu`.
+6. Save TPU JSON metrics, logs, monitoring notes, and cleanup evidence.
+7. Compare Demo 2 local CPU and TPU JSON files with
    `scripts/compare_vit_results.py`.
-9. Keep Demo 1 and Demo 3 preserved as future work unless course scope changes.
+8. Keep Demo 1 and Demo 3 preserved as future work unless course scope changes.

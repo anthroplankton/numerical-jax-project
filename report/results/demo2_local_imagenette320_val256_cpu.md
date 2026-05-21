@@ -1,0 +1,5 @@
+| Result | Mode | Backend | Batch | Images | Padded | Mean step (s) | Throughput (img/s) | Speedup |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| demo2_local_imagenette320_val256_cpu_b1.json | image_manifest | cpu | 1 | 256 | 0 | 0.449014 | 2.2271 | 1x |
+| demo2_local_imagenette320_val256_cpu_b4.json | image_manifest | cpu | 4 | 256 | 0 | 1.51115 | 2.64698 | 1.19x |
+| demo2_local_imagenette320_val256_cpu_b8.json | image_manifest | cpu | 8 | 256 | 0 | 2.53903 | 3.15081 | 1.41x |

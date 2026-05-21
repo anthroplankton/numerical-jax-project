@@ -1,13 +1,17 @@
 # Demo 2: Pretrained ViT TPU VM Workflow
 
 This is a safe, documentation-first workflow for moving Demo 2 from local CPU
-execution to Google Cloud TPU VM execution. It uses placeholders and example
-commands only. Do not create, modify, or delete cloud resources until project,
-zone, quota, cost, and cleanup plans are confirmed.
+execution to Google Cloud TPU VM execution. It is a pre-execution workflow with
+placeholders and example commands only. Do not create, modify, or delete cloud
+resources until project, zone, quota, cost, funding, and cleanup plans are
+confirmed.
 
 Current status: local CPU Demo 2 is completed, the Google Cloud TPU workflow is
-documented, TRC project-number submission is pending outside the repository,
-and TPU execution is not completed.
+documented, Google Cloud / TRC setup is recorded in
+`report/google_cloud_trc_setup.md`, TRC confirmation is pending, and TPU
+execution is not completed. CPU-vs-TPU comparison, TPU monitoring evidence,
+cleanup evidence, and TPU performance evidence remain pending until a real TPU
+run occurs and its JSON artifact is retrieved.
 
 ## Placeholders
 
@@ -19,8 +23,11 @@ Use placeholders until safe project-specific values are known:
 - `<TPU_NAME>`: TPU VM resource name.
 - `<ACCELERATOR_TYPE>`: TPU accelerator type.
 - `<RUNTIME_VERSION>`: TPU VM runtime version.
+- `<QUEUED_RESOURCE_ID>`: optional queued-resource identifier, if that creation
+  path is used.
 - `<REPO_URL>`: Git URL for this repository.
 - `<BRANCH>`: branch to test.
+- `<COMMIT_SHA>`: exact commit hash to test on the TPU VM.
 
 ## Pre-TRC Google Cloud Setup Checklist
 
@@ -30,8 +37,7 @@ Complete these steps before attempting TPU execution:
 - Record the project ID locally as `<PROJECT_ID>`.
 - Record the project number locally as `<PROJECT_NUMBER>`.
 - Submit the project number to the Google TPU Research Cloud / TRC form.
-- Wait for TRC confirmation, quota, and instructions before creating TPU
-  resources.
+- Wait for TRC confirmation before creating TPU resources.
 - Avoid committing real project IDs, project numbers, billing details, service
   account keys, `.env` files, credential files, or local cloud config files.
 - Keep repository documentation on placeholders such as `<PROJECT_ID>`,
@@ -77,21 +83,21 @@ uv run ruff format --check .
 uv run pytest
 ```
 
-Confirm the local CPU baseline artifacts exist:
+Confirm the local CPU raw JSON artifact and curated Markdown table exist for the
+comparison you plan to run:
 
 ```text
-report/results/demo2_vit_local_cpu_b1.json
-report/results/demo2_vit_local_cpu_b4.json
-report/results/demo2_vit_local_cpu_b8.json
+runs/vit-inference/demo2_local_public_examples_cpu_b4.json
+report/results/demo2_local_public_examples_cpu.md
 ```
 
 Optional local comparison dry run:
 
 ```bash
 uv run python scripts/compare_vit_results.py \
-  report/results/demo2_vit_local_cpu_b1.json \
-  report/results/demo2_vit_local_cpu_b4.json \
-  --output runs/vit-inference/demo2_local_compare.json
+  runs/vit-inference/demo2_local_public_examples_cpu_b1.json \
+  runs/vit-inference/demo2_local_public_examples_cpu_b4.json \
+  --output runs/vit-inference/demo2_local_public_examples_compare.json
 ```
 
 The helper reads existing JSON files only. It does not need TPU access, model
@@ -113,12 +119,172 @@ gcloud services enable tpu.googleapis.com
 Before creating resources, verify:
 
 - Billing and TPU quota are available for `<PROJECT_ID>`.
-- TRC confirmation, quota, or fallback funding is ready for the experiment.
+- TRC confirmation or fallback funding is ready for the experiment.
 - `<ACCELERATOR_TYPE>` is available in `<ZONE>`.
 - `<RUNTIME_VERSION>` is appropriate for the selected TPU VM.
+- `<TPU_NAME>` and optional `<QUEUED_RESOURCE_ID>` are unique and safe to use.
+- The cleanup command for the chosen creation path is visible and ready.
 - The TPU VM may incur cost until it is deleted.
 - No service account keys, `.env` files, model caches, or credentials are
   committed to Git.
+
+## First TPU Smoke-Run Sequence
+
+Use this as the first Demo 2 TPU runbook after TRC confirmation, zone,
+accelerator type, runtime version, funding, and cleanup readiness are confirmed.
+Choose either direct TPU VM creation or queued-resource creation; do not run both
+unless there is a deliberate reason.
+
+Record the placeholders before creating resources:
+
+```text
+PROJECT_ID=<PROJECT_ID>
+ZONE=<ZONE>
+TPU_NAME=<TPU_NAME>
+ACCELERATOR_TYPE=<ACCELERATOR_TYPE>
+RUNTIME_VERSION=<RUNTIME_VERSION>
+QUEUED_RESOURCE_ID=<QUEUED_RESOURCE_ID>  # optional
+REPO_URL=<REPO_URL>
+BRANCH=<BRANCH>
+COMMIT_SHA=<COMMIT_SHA>
+```
+
+Direct TPU VM creation path, example only:
+
+```bash
+gcloud compute tpus tpu-vm create <TPU_NAME> \
+  --project=<PROJECT_ID> \
+  --zone=<ZONE> \
+  --accelerator-type=<ACCELERATOR_TYPE> \
+  --version=<RUNTIME_VERSION>
+
+# Cleanup command to keep ready before creation:
+gcloud compute tpus tpu-vm delete <TPU_NAME> --project=<PROJECT_ID> --zone=<ZONE>
+```
+
+Queued-resource creation path, example only:
+
+```bash
+gcloud compute tpus queued-resources create <QUEUED_RESOURCE_ID> \
+  --project=<PROJECT_ID> \
+  --zone=<ZONE> \
+  --node-id=<TPU_NAME> \
+  --accelerator-type=<ACCELERATOR_TYPE> \
+  --runtime-version=<RUNTIME_VERSION>
+
+# Cleanup command to keep ready before creation:
+gcloud compute tpus queued-resources delete <QUEUED_RESOURCE_ID> \
+  --project=<PROJECT_ID> \
+  --zone=<ZONE>
+```
+
+Inspect the created VM and connect to it:
+
+```bash
+gcloud compute tpus tpu-vm describe <TPU_NAME> \
+  --project=<PROJECT_ID> \
+  --zone=<ZONE>
+
+gcloud compute tpus tpu-vm ssh <TPU_NAME> \
+  --project=<PROJECT_ID> \
+  --zone=<ZONE>
+```
+
+Inside the TPU VM, clone the repository and pin the exact branch and commit:
+
+```bash
+git clone <REPO_URL> numerical-jax-project
+cd numerical-jax-project
+git fetch --all --prune
+git switch <BRANCH>
+git checkout <COMMIT_SHA>
+git status --short --branch
+git rev-parse HEAD
+```
+
+Install project dependencies and TPU-compatible JAX support:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+uv --version
+uv sync --group pretrained
+
+uv pip install -U "jax[tpu]" \
+  -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
+```
+
+The exact TPU JAX installation may need adjustment based on the TPU runtime.
+Do not proceed to the benchmark until the sanity command below reports a TPU
+backend and TPU devices.
+
+Run a JAX TPU sanity command inside the TPU VM:
+
+```bash
+uv run python -c "import jax; print('jax_version=', jax.__version__); print('default_backend=', jax.default_backend()); print('device_count=', jax.device_count()); print('local_device_count=', jax.local_device_count()); print('devices=', jax.devices())"
+```
+
+Run the first Demo 2 public examples TPU smoke benchmark inside the TPU VM:
+
+```bash
+uv run --group pretrained python examples/pretrained_vit_inference.py \
+  --jax-platform tpu \
+  --image-manifest examples/assets/manifest.txt \
+  --batch-size 4 \
+  --warmup-steps 1 \
+  --benchmark-steps 5 \
+  --output runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json
+```
+
+Copy the TPU JSON artifact back to the local machine or Cloud Shell:
+
+```bash
+gcloud compute tpus tpu-vm scp \
+  <TPU_NAME>:~/numerical-jax-project/runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json \
+  ./runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json \
+  --project=<PROJECT_ID> \
+  --zone=<ZONE>
+```
+
+Only after the real TPU JSON exists locally, generate the future local CPU vs
+cloud TPU comparison artifacts:
+
+```bash
+uv run python scripts/compare_vit_results.py \
+  runs/vit-inference/demo2_local_public_examples_cpu_b4.json \
+  runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json \
+  --output runs/vit-inference/demo2_local_cpu_vs_cloud_tpu_public_examples_b4_compare.json \
+  --markdown-output report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md
+```
+
+Do not create placeholder comparison JSON or Markdown files before a real TPU
+JSON artifact exists.
+
+Collect monitoring and logging notes only after the real run:
+
+- Cloud Monitoring note or screenshot placeholder for TPU utilization, host CPU,
+  memory, or idle time if available.
+- Cloud Logging note if useful for the run timeline or errors.
+- Terminal transcript or command log covering setup, sanity check, benchmark,
+  artifact copy, comparison generation, and cleanup.
+
+Delete resources after artifact retrieval and note the transcript:
+
+```bash
+gcloud compute tpus tpu-vm delete <TPU_NAME> --project=<PROJECT_ID> --zone=<ZONE>
+
+# If a queued resource was used, delete it too:
+gcloud compute tpus queued-resources delete <QUEUED_RESOURCE_ID> \
+  --project=<PROJECT_ID> \
+  --zone=<ZONE>
+```
+
+Verify deletion:
+
+```bash
+gcloud compute tpus tpu-vm list --project=<PROJECT_ID> --zone=<ZONE>
+gcloud compute tpus queued-resources list --project=<PROJECT_ID> --zone=<ZONE>
+```
 
 ## Create And Inspect A TPU VM
 
@@ -216,19 +382,19 @@ benchmark command actually complete on the TPU VM.
 
 Run inside the TPU VM shell after backend verification.
 
-Single public image:
+Public five-image manifest, `b1`:
 
 ```bash
 uv run --group pretrained python examples/pretrained_vit_inference.py \
   --jax-platform tpu \
-  --image examples/assets/chihuahua_pet_licorice.jpg \
+  --image-manifest examples/assets/manifest.txt \
   --batch-size 1 \
   --warmup-steps 1 \
   --benchmark-steps 5 \
-  --output runs/vit-inference/demo2_tpu_b1.json
+  --output runs/vit-inference/demo2_cloud_public_examples_tpu_b1.json
 ```
 
-Public five-image manifest:
+Public five-image manifest, `b4`:
 
 ```bash
 uv run --group pretrained python examples/pretrained_vit_inference.py \
@@ -237,7 +403,7 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --batch-size 4 \
   --warmup-steps 1 \
   --benchmark-steps 5 \
-  --output runs/vit-inference/demo2_tpu_public_b4.json
+  --output runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json
 ```
 
 Private live-demo images under `data/local/demo2_vit_images/` are ignored by
@@ -250,12 +416,14 @@ The Demo 2 JSON output records:
 - `command_used`
 - `output_path`
 - `image_path` or `manifest_path`
+- `mode` and `processing_mode`
 - `backend`
 - `devices`
 - `batch_size`
-- `num_images` for manifest mode
+- `num_images`, `num_batches`, `timed_batch_runs`, and `num_padded_images`
 - `total_timed_inference_sec`
 - `mean_step_time_sec`
+- `throughput_counted_images`
 - `throughput_images_per_sec`
 - per-image predictions under `image_results` for manifest mode
 
@@ -268,8 +436,8 @@ Run from Google Cloud Shell or local `gcloud` terminal:
 
 ```bash
 gcloud compute tpus tpu-vm scp \
-  <TPU_NAME>:~/numerical-jax-project/runs/vit-inference/demo2_tpu_b1.json \
-  ./runs/vit-inference/demo2_tpu_b1.json \
+  <TPU_NAME>:~/numerical-jax-project/runs/vit-inference/demo2_cloud_public_examples_tpu_b1.json \
+  ./runs/vit-inference/demo2_cloud_public_examples_tpu_b1.json \
   --zone=<ZONE>
 ```
 
@@ -277,8 +445,8 @@ For the public manifest run:
 
 ```bash
 gcloud compute tpus tpu-vm scp \
-  <TPU_NAME>:~/numerical-jax-project/runs/vit-inference/demo2_tpu_public_b4.json \
-  ./runs/vit-inference/demo2_tpu_public_b4.json \
+  <TPU_NAME>:~/numerical-jax-project/runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json \
+  ./runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json \
   --zone=<ZONE>
 ```
 
@@ -291,13 +459,14 @@ Run on the local machine / Ubuntu WSL after TPU JSON files are retrieved:
 
 ```bash
 uv run python scripts/compare_vit_results.py \
-  report/results/demo2_vit_local_cpu_b1.json \
-  runs/vit-inference/demo2_tpu_b1.json \
-  --output runs/vit-inference/demo2_cpu_vs_tpu_b1_compare.json
+  runs/vit-inference/demo2_local_public_examples_cpu_b4.json \
+  runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json \
+  --output runs/vit-inference/demo2_local_cpu_vs_cloud_tpu_public_examples_b4_compare.json \
+  --markdown-output report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md
 ```
 
-For the public manifest comparison, first create or choose a local CPU manifest
-artifact with the same image set and batch size:
+If a matching local CPU manifest artifact does not already exist, create it with
+the same image set and batch size before comparing:
 
 ```bash
 uv run --group pretrained python examples/pretrained_vit_inference.py \
@@ -306,21 +475,23 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --batch-size 4 \
   --warmup-steps 1 \
   --benchmark-steps 5 \
-  --output runs/vit-inference/demo2_cpu_public_b4.json
+  --output runs/vit-inference/demo2_local_public_examples_cpu_b4.json
 ```
 
 Then compare:
 
 ```bash
 uv run python scripts/compare_vit_results.py \
-  runs/vit-inference/demo2_cpu_public_b4.json \
-  runs/vit-inference/demo2_tpu_public_b4.json \
-  --output runs/vit-inference/demo2_cpu_vs_tpu_public_b4_compare.json
+  runs/vit-inference/demo2_local_public_examples_cpu_b4.json \
+  runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json \
+  --output runs/vit-inference/demo2_local_cpu_vs_cloud_tpu_public_examples_b4_compare.json \
+  --markdown-output report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md
 ```
 
 The comparison helper summarizes command, input path or manifest, backend,
 devices, batch size, image count, total runtime, throughput, per-image time
-derived from throughput, and output path when those fields are present.
+derived from throughput, and output path when those fields are present. This
+comparison remains pending until a real TPU JSON artifact exists.
 
 ## Monitoring Evidence
 
@@ -333,19 +504,50 @@ Collect monitoring evidence only after a real TPU run is attempted:
 - Screenshots only when they add report-ready evidence and do not expose
   project identifiers, secrets, private images, or credentials.
 
+## Evidence Checklist
+
+Capture these items only after a real TPU attempt. Until then, they remain
+planned evidence placeholders:
+
+- Exact branch and commit hash used on the TPU VM: `<BRANCH>` and
+  `<COMMIT_SHA>`.
+- TPU VM name, zone, accelerator type, and runtime version:
+  `<TPU_NAME>`, `<ZONE>`, `<ACCELERATOR_TYPE>`, and `<RUNTIME_VERSION>`.
+- Terminal transcript or command log for setup, sanity checks, benchmark,
+  artifact retrieval, comparison generation, cleanup, and deletion verification.
+- JAX backend/device output from the sanity command, including `jax.__version__`,
+  `jax.default_backend()`, `jax.device_count()`, `jax.local_device_count()`, and
+  `jax.devices()`.
+- Demo 2 TPU JSON artifact:
+  `runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json`.
+- Cloud Monitoring note or screenshot placeholder, if available and safe to
+  include.
+- Cloud Logging note, if useful for run timeline or troubleshooting.
+- Cleanup command transcript.
+- Deletion verification output from TPU VM and queued-resource list commands.
+- Generated report-ready CPU-vs-TPU Markdown table path, after the TPU artifact
+  exists:
+  `report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md`.
+
 ## Cleanup
 
 Run from Google Cloud Shell or local `gcloud` terminal when the run and artifact
 retrieval are complete:
 
 ```bash
-gcloud compute tpus tpu-vm delete <TPU_NAME> --zone=<ZONE>
+gcloud compute tpus tpu-vm delete <TPU_NAME> --project=<PROJECT_ID> --zone=<ZONE>
+
+# If a queued resource was used:
+gcloud compute tpus queued-resources delete <QUEUED_RESOURCE_ID> \
+  --project=<PROJECT_ID> \
+  --zone=<ZONE>
 ```
 
 Verify cleanup:
 
 ```bash
-gcloud compute tpus tpu-vm list --zone=<ZONE>
+gcloud compute tpus tpu-vm list --project=<PROJECT_ID> --zone=<ZONE>
+gcloud compute tpus queued-resources list --project=<PROJECT_ID> --zone=<ZONE>
 ```
 
 Record cleanup notes in `report/progress_log.md` or final report material only
