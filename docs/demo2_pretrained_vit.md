@@ -14,8 +14,7 @@ and Demo 3 remains optional future work.
 This demo is inference-only. It does not fine-tune the model, and it does not
 claim TPU execution has been completed. The pre-TRC TPU workflow is documented in
 `cloud/demo2_pretrained_vit_tpu_workflow.md`; the next step is executing that workflow on a
-TPU VM after TRC confirmation, quota, cost, zone, and cleanup readiness are
-confirmed.
+TPU VM after TRC confirmation, cost, zone, and cleanup readiness are confirmed.
 
 ## Setup
 
@@ -174,7 +173,7 @@ data/local/imagenette2-320/val/manifest_val_256.txt
 data/local/imagenette2-320/val/manifest_val_full.txt
 ```
 
-Primary 64-image manifest:
+Lightweight 64-image manifest:
 
 ```bash
 uv run python scripts/build_image_manifest.py \
@@ -217,9 +216,9 @@ count.
 
 ## Imagenette 320 Local CPU Benchmark Commands
 
-Use `manifest_val_64.txt` as the primary local benchmark input. These runs
-measure model inference after preprocessing; they do not include full dataset
-loading time and they do not compute Imagenette accuracy.
+Use `manifest_val_64.txt` as a lightweight documented local benchmark input.
+These runs measure model inference after preprocessing; they do not include full
+dataset loading time and they do not compute Imagenette accuracy.
 
 Val64 `b1`:
 
@@ -259,7 +258,9 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
 
 When local runtime is acceptable, `manifest_val_256.txt` can use the same `b1`,
 `b4`, and `b8` command pattern by replacing `val64` paths and output filenames
-with `val256`.
+with `val256`. The current pre-TPU progress report uses the `val256` curated
+tables as the main CPU benchmark evidence because b1/b4/b8 all use 256 real
+images with 0 padded images.
 
 Generate a report-ready local CPU table after the JSON files exist:
 
@@ -489,8 +490,10 @@ The following report-ready Markdown tables summarize real JSON artifacts from
 - `report/results/demo2_local_private_examples_cpu.md`
 
 Local CPU tables are the primary current-machine evidence. External Ryzen 7735HS
-WSL CPU tables are supplementary and kept separate. The external public examples
-table currently has `b1` and `b4` only; external public `b8` is pending.
+WSL CPU tables are supplementary and kept separate. For the current pre-TPU
+progress report, the `val256` tables are the main CPU benchmark evidence;
+`val64` remains a lighter supporting path. The external public examples table
+currently has `b1` and `b4` only; external public `b8` is pending.
 
 ## Report Table Generation Patterns
 

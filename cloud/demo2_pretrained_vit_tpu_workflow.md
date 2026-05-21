@@ -37,8 +37,7 @@ Complete these steps before attempting TPU execution:
 - Record the project ID locally as `<PROJECT_ID>`.
 - Record the project number locally as `<PROJECT_NUMBER>`.
 - Submit the project number to the Google TPU Research Cloud / TRC form.
-- Wait for TRC confirmation, quota, and instructions before creating TPU
-  resources.
+- Wait for TRC confirmation before creating TPU resources.
 - Avoid committing real project IDs, project numbers, billing details, service
   account keys, `.env` files, credential files, or local cloud config files.
 - Keep repository documentation on placeholders such as `<PROJECT_ID>`,
@@ -120,7 +119,7 @@ gcloud services enable tpu.googleapis.com
 Before creating resources, verify:
 
 - Billing and TPU quota are available for `<PROJECT_ID>`.
-- TRC confirmation, quota, or fallback funding is ready for the experiment.
+- TRC confirmation or fallback funding is ready for the experiment.
 - `<ACCELERATOR_TYPE>` is available in `<ZONE>`.
 - `<RUNTIME_VERSION>` is appropriate for the selected TPU VM.
 - `<TPU_NAME>` and optional `<QUEUED_RESOURCE_ID>` are unique and safe to use.
@@ -131,7 +130,7 @@ Before creating resources, verify:
 
 ## First TPU Smoke-Run Sequence
 
-Use this as the first Demo 2 TPU runbook after TRC confirmation, quota, zone,
+Use this as the first Demo 2 TPU runbook after TRC confirmation, zone,
 accelerator type, runtime version, funding, and cleanup readiness are confirmed.
 Choose either direct TPU VM creation or queued-resource creation; do not run both
 unless there is a deliberate reason.

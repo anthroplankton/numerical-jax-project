@@ -17,8 +17,8 @@ pretrained ViT inference benchmark with JAX/Flax**。
 - curated report-ready Markdown tables：`report/results/`
 - Google Cloud / TRC setup state：dedicated Google Cloud project 已建立，
   billing 已 linked，budget alerts 已設定，Cloud TPU API 已啟用，
-  project number 已提交到 TRC form；目前等待 TRC confirmation / quota /
-  instructions，之後才建立 TPU resources
+  project number 已提交到 TRC form；目前等待 TRC confirmation，之後才建立
+  TPU resources
 - report-ready setup record：`report/google_cloud_trc_setup.md`
 - next development work while waiting for TRC：繼續整理 Demo 2 documentation
   and evidence；Imagenette 320 (`imagenette2-320`) 已有 local/external CPU
@@ -98,8 +98,7 @@ cleanup evidence exist.
     `numerical-jax-first-warning` at 10 USD and
     `numerical-jax-main-limit` at 60 USD
   - Cloud TPU API was enabled outside the repository
-  - project number was submitted to TRC; confirmation, quota, and instructions
-    are still pending
+  - project number was submitted to TRC; TRC confirmation is still pending
   - setup record is documented in `report/google_cloud_trc_setup.md`
   - no Cloud TPU VM has been created
   - TPU execution and CPU-vs-TPU result collection are not completed yet
@@ -135,6 +134,10 @@ Supplementary external Ryzen 7735HS WSL CPU tables:
 These are CPU inference timing/throughput summaries. They are not dataset-level
 accuracy evaluations, not GPU results, and not TPU results. External CPU
 evidence is supplementary and should stay separate from local-machine evidence.
+For the current pre-TPU progress report, Imagenette `val256` is the main CPU
+benchmark evidence because b1/b4/b8 all use 256 real images with 0 padded
+images. Imagenette `val64` remains a lightweight documented benchmark path and
+supporting CPU result.
 The private local table is live-demo evidence, not a public reproducible
 benchmark dataset.
 Private manifest runs follow the same qualitative-inference framing unless
@@ -195,15 +198,15 @@ Hugging Face access, image opening, or model weight download.
 
 ## Next Technical Milestones
 
-1. Wait for TRC confirmation, quota, and instructions before creating TPU
-   resources.
+1. Wait for TRC confirmation before creating TPU resources.
 2. Review `cloud/demo2_pretrained_vit_tpu_workflow.md` and confirm zone, TPU accelerator
    type, runtime version, quota, cost constraints, and cleanup command.
 3. While waiting for TRC, continue Demo 2 documentation/evidence preparation
    that does not require cloud resources; Imagenette 320 preparation should stay
-   local-only under ignored `data/local/imagenette2-320/`, use
-   `manifest_val_64.txt` as the primary benchmark manifest, and avoid automatic
-   downloads.
+   local-only under ignored `data/local/imagenette2-320/`, keep
+   `manifest_val_64.txt` as the lightweight documented benchmark path, use
+   `val256` curated tables as the current progress report's main CPU benchmark
+   evidence, and avoid automatic downloads.
 4. Run JAX backend/device verification on a TPU VM only after the cloud
    experiment is ready.
 5. Run Demo 2 on TPU with `--jax-platform tpu`.

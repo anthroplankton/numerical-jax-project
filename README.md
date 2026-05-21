@@ -126,8 +126,8 @@ local-only dataset. Current curated tables exist for local and supplementary
 external CPU Imagenette runs, but the extracted dataset and generated manifests
 remain under ignored `data/local/imagenette2-320/`. Build a manifest before
 running a benchmark. `scripts/build_image_manifest.py` scans existing local
-images only; it does not download Imagenette. The primary documented path is the
-64-image validation manifest:
+images only; it does not download Imagenette. The lightweight documented path is
+the 64-image validation manifest:
 
 ```bash
 uv run python scripts/build_image_manifest.py \
@@ -153,6 +153,9 @@ report/results/demo2_local_private_examples_cpu.md
 
 Local CPU tables are the primary current-machine evidence. External Ryzen
 7735HS WSL CPU tables are supplementary and are kept separate.
+For the current pre-TPU progress report, the `val256` curated tables are the
+main CPU benchmark evidence because b1/b4/b8 all use 256 real images with 0
+padded images.
 
 For full local instructions, expected output, model notes, and limitations, see
 [docs/demo2_pretrained_vit.md](docs/demo2_pretrained_vit.md).

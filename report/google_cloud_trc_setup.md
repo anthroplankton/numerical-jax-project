@@ -52,13 +52,12 @@ private cloud screenshots。
    | `numerical-jax-main-limit` | 60 USD |
 
 5. 啟用 Cloud TPU API。
-6. 將 `<PROJECT_NUMBER>` 提交到 TRC short form，等待 TRC confirmation、
-   quota 與後續 instructions。
+6. 將 `<PROJECT_NUMBER>` 提交到 TRC short form，等待 TRC confirmation。
 
 ## Current Pending State
 
 - TRC confirmation 仍在等待中。
-- TRC quota 或 instructions 尚未在 repository 中記錄為已核准。
+- repository 尚未記錄可建立 TPU resources 的核准狀態。
 - 尚未建立 Cloud TPU VM。
 - 尚未執行 `examples/pretrained_vit_inference.py --jax-platform tpu`。
 - 尚未產生 cloud TPU benchmark JSON、logs、monitoring notes 或 screenshots。
@@ -69,8 +68,8 @@ private cloud screenshots。
 
 ## Not Done Yet
 
-以下工作尚未進行，需等 TRC confirmation / quota / instructions 或明確的
-fallback funding decision 之後再處理：
+以下工作尚未進行，需等 TRC confirmation 或明確的 fallback funding decision
+之後再處理：
 
 - 選定 `<ZONE>`、`<TPU_NAME>`、`<ACCELERATOR_TYPE>` 與 `<RUNTIME_VERSION>`。
 - 建立或啟動 TPU VM。
@@ -85,9 +84,8 @@ fallback funding decision 之後再處理：
 
 ## Cost-Control Principles
 
-- 在 TRC confirmation、quota、zone、accelerator type、run command、
-  artifact retrieval command 與 cleanup command 都明確之前，不建立 TPU
-  resources。
+- 在 TRC confirmation、zone、accelerator type、run command、artifact retrieval
+  command 與 cleanup command 都明確之前，不建立 TPU resources。
 - 任何 TPU VM 建立前，都先確認 cleanup command：
 
   ```bash
@@ -105,8 +103,8 @@ fallback funding decision 之後再處理：
 
 ## Next Planned Steps After TRC Confirmation
 
-1. 根據 TRC confirmation / quota / instructions，確認可用的 `<ZONE>`、
-   `<ACCELERATOR_TYPE>` 與 `<RUNTIME_VERSION>`。
+1. 根據 TRC confirmation，確認可用的 `<ZONE>`、`<ACCELERATOR_TYPE>` 與
+   `<RUNTIME_VERSION>`。
 2. Review `cloud/demo2_pretrained_vit_tpu_workflow.md`，確認 create、verify、run、
    retrieve、compare、cleanup commands 都仍符合當時環境。
 3. 在 local machine 先執行 local preflight checks，包括 `git status`、

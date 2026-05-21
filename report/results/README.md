@@ -37,6 +37,11 @@ The local-machine CPU tables are the primary current-machine evidence:
 - `demo2_local_private_examples_cpu.md`: private local live-demo image set,
   `b1`, `b4`, and `b8`.
 
+For the current pre-TPU progress report, the Imagenette `val256` tables are the
+main CPU benchmark evidence because b1/b4/b8 all use 256 real images with 0
+padded images. Imagenette `val64` remains a lighter documented benchmark path
+and supporting CPU result.
+
 The Imagenette and private inputs live under ignored `data/local/` paths. Do not
 commit Imagenette images, private images, or local manifests. For private local
 examples, only the curated Markdown table may be committed.
