@@ -1,0 +1,5 @@
+| Result | Mode | Backend | Batch | Images | Padded | Mean step (s) | Throughput (img/s) | Speedup |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| demo2_external_ryzen7735hs_wsl_imagenette320_val256_cpu_b1.json | image_manifest | cpu | 1 | 256 | 0 | 0.0834544 | 11.9826 | 1x |
+| demo2_external_ryzen7735hs_wsl_imagenette320_val256_cpu_b4.json | image_manifest | cpu | 4 | 256 | 0 | 0.284359 | 14.0667 | 1.17x |
+| demo2_external_ryzen7735hs_wsl_imagenette320_val256_cpu_b8.json | image_manifest | cpu | 8 | 256 | 0 | 0.580369 | 13.7843 | 1.15x |
