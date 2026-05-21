@@ -67,9 +67,9 @@ cleanup evidence exist.
     records the padding count
   - qualitative live predictions only; not a public dataset or accuracy benchmark
 - Demo 2 documentation:
-  - `docs/pretrained_vit_demo.md`
+  - `docs/demo2_pretrained_vit.md`
 - Planned TPU workflow documentation:
-  - `cloud/demo2_vit_tpu_workflow.md`
+  - `cloud/demo2_pretrained_vit_tpu_workflow.md`
 - Local result comparison helper:
   - `scripts/compare_vit_results.py`
   - optional `--markdown-output` for report-ready benchmark tables
@@ -197,7 +197,7 @@ Hugging Face access, image opening, or model weight download.
 
 1. Wait for TRC confirmation, quota, and instructions before creating TPU
    resources.
-2. Review `cloud/demo2_vit_tpu_workflow.md` and confirm zone, TPU accelerator
+2. Review `cloud/demo2_pretrained_vit_tpu_workflow.md` and confirm zone, TPU accelerator
    type, runtime version, quota, cost constraints, and cleanup command.
 3. While waiting for TRC, continue Demo 2 documentation/evidence preparation
    that does not require cloud resources; Imagenette 320 preparation should stay

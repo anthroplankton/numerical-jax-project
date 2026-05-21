@@ -113,7 +113,7 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
 
 For a private live demo, keep local photos and the optional manifest under
 `data/local/demo2_vit_images/`. That path is ignored by Git; see
-[docs/pretrained_vit_demo.md](docs/pretrained_vit_demo.md) for the manifest
+[docs/demo2_pretrained_vit.md](docs/demo2_pretrained_vit.md) for the manifest
 format and command. Manifest mode uses true mixed-image batches; the final
 partial batch is padded by repeating its last real image, padded entries are
 ignored for predictions and throughput, and `num_padded_images` records that
@@ -155,10 +155,10 @@ Local CPU tables are the primary current-machine evidence. External Ryzen
 7735HS WSL CPU tables are supplementary and are kept separate.
 
 For full local instructions, expected output, model notes, and limitations, see
-[docs/pretrained_vit_demo.md](docs/pretrained_vit_demo.md).
+[docs/demo2_pretrained_vit.md](docs/demo2_pretrained_vit.md).
 
 For the planned TPU workflow, see
-[cloud/demo2_vit_tpu_workflow.md](cloud/demo2_vit_tpu_workflow.md). The
+[cloud/demo2_pretrained_vit_tpu_workflow.md](cloud/demo2_pretrained_vit_tpu_workflow.md). The
 Google Cloud / TRC setup record is tracked in
 [report/google_cloud_trc_setup.md](report/google_cloud_trc_setup.md). This is
 documentation-only at the current stage; TRC confirmation is pending and no TPU

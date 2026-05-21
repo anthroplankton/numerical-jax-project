@@ -13,7 +13,7 @@ and Demo 3 remains optional future work.
 
 This demo is inference-only. It does not fine-tune the model, and it does not
 claim TPU execution has been completed. The pre-TRC TPU workflow is documented in
-`cloud/demo2_vit_tpu_workflow.md`; the next step is executing that workflow on a
+`cloud/demo2_pretrained_vit_tpu_workflow.md`; the next step is executing that workflow on a
 TPU VM after TRC confirmation, quota, cost, zone, and cleanup readiness are
 confirmed.
 

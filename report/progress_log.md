@@ -143,7 +143,7 @@
   - `examples/assets/black_cat_staring_closeup.jpg`
   - `examples/assets/manifest.txt`
   - `examples/assets/README.md`
-  - `docs/pretrained_vit_demo.md`
+  - `docs/demo2_pretrained_vit.md`
   - `report/results/README.md`
   - legacy single-image local CPU JSON artifacts under `report/results/`,
     later superseded by the regenerated artifact policy in Phase 5.5
@@ -187,8 +187,8 @@
   - 明確記錄目前沒有建立 Google Cloud resources，沒有執行 TPU VM run，也沒有 CPU-vs-TPU result collection。
 - Files or modules added/updated：
   - `README.md`
-  - `docs/pretrained_vit_demo.md`
-  - `cloud/demo2_vit_tpu_workflow.md`
+  - `docs/demo2_pretrained_vit.md`
+  - `cloud/demo2_pretrained_vit_tpu_workflow.md`
   - `scripts/compare_vit_results.py`
   - `report/current_status.md`
   - `report/presentation_plan.md`
@@ -210,7 +210,7 @@
     (`imagenette2-320`) as the recommended optional local benchmark dataset for
     later Demo 2 work, while keeping it under ignored `data/local/` and out of
     pytest/CI。
-  - Use `cloud/demo2_vit_tpu_workflow.md` to prepare a controlled TPU VM attempt, then record actual commands, metrics, logs, monitoring notes, cleanup evidence, and comparison output only after a real run occurs。
+  - Use `cloud/demo2_pretrained_vit_tpu_workflow.md` to prepare a controlled TPU VM attempt, then record actual commands, metrics, logs, monitoring notes, cleanup evidence, and comparison output only after a real run occurs。
 
 ## Phase 5.1: Demo 2 Benchmark Asset And Result Field Stabilization
 
@@ -237,7 +237,7 @@
   - `tests/test_compare_vit_results.py`
   - `tests/test_build_image_manifest.py`
   - `README.md`
-  - `docs/pretrained_vit_demo.md`
+  - `docs/demo2_pretrained_vit.md`
   - `report/results/README.md`
   - `report/current_status.md`
   - `report/progress_log.md`
@@ -313,7 +313,7 @@
   - `report/current_status.md`
   - `report/progress_log.md`
   - `README.md`
-  - `cloud/demo2_vit_tpu_workflow.md`
+  - `cloud/demo2_pretrained_vit_tpu_workflow.md`
 - Current evidence/results：
   - Google Cloud project setup, billing link, budget alerts, Cloud TPU API
     enablement, and TRC project-number submission are recorded as completed
@@ -326,7 +326,7 @@
     cleanup evidence, or CPU-vs-TPU comparison exists yet。
 - Next planned step：
   - Wait for TRC confirmation / quota / instructions, then use
-    `cloud/demo2_vit_tpu_workflow.md` for a controlled manual TPU VM attempt and
+    `cloud/demo2_pretrained_vit_tpu_workflow.md` for a controlled manual TPU VM attempt and
     record real execution evidence only after it occurs。
 
 ## Phase 5.5: Demo 2 Regenerated CPU Artifact Set

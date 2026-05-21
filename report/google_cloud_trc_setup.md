@@ -107,7 +107,7 @@ fallback funding decision 之後再處理：
 
 1. 根據 TRC confirmation / quota / instructions，確認可用的 `<ZONE>`、
    `<ACCELERATOR_TYPE>` 與 `<RUNTIME_VERSION>`。
-2. Review `cloud/demo2_vit_tpu_workflow.md`，確認 create、verify、run、
+2. Review `cloud/demo2_pretrained_vit_tpu_workflow.md`，確認 create、verify、run、
    retrieve、compare、cleanup commands 都仍符合當時環境。
 3. 在 local machine 先執行 local preflight checks，包括 `git status`、
    Ruff、pytest，以及確認 local CPU Demo 2 artifacts。

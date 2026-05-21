@@ -47,7 +47,7 @@ The current presentation does not attempt to complete all three demos.
 - The benchmark writes JSON metrics.
 - The local comparison helper exists: `scripts/compare_vit_results.py`.
 - The pre-TRC TPU workflow documentation exists:
-  `cloud/demo2_vit_tpu_workflow.md`.
+  `cloud/demo2_pretrained_vit_tpu_workflow.md`.
 - Lightweight pytest tests exist and do not download model weights.
 - Local CPU inference succeeded during manual checking.
 
@@ -76,7 +76,7 @@ used as Demo 2 benchmark evidence.
 ## Planned Google Cloud TPU Work
 
 The planned TPU workflow is documented in
-`cloud/demo2_vit_tpu_workflow.md`. The next step is to run the same Demo 2
+`cloud/demo2_pretrained_vit_tpu_workflow.md`. The next step is to run the same Demo 2
 script on a TPU VM with:
 
 ```bash
