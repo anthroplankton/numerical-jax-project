@@ -492,6 +492,60 @@ Local CPU tables are the primary current-machine evidence. External Ryzen 7735HS
 WSL CPU tables are supplementary and kept separate. The external public examples
 table currently has `b1` and `b4` only; external public `b8` is pending.
 
+## Report Table Generation Patterns
+
+Use two different comparison patterns for Demo 2 result artifacts.
+
+The current curated CPU tables use a vertical, within-group batch-size
+comparison. This compares `b1`, `b4`, and `b8` within the same evidence scope,
+input set, and platform:
+
+```text
+runs/vit-inference/demo2_<scope>_<input_set>_<platform>_b1.json
+runs/vit-inference/demo2_<scope>_<input_set>_<platform>_b4.json
+runs/vit-inference/demo2_<scope>_<input_set>_<platform>_b8.json
+  -> report/results/demo2_<scope>_<input_set>_<platform>.md
+```
+
+For example:
+
+```bash
+uv run python scripts/compare_vit_results.py \
+  runs/vit-inference/demo2_local_public_examples_cpu_b1.json \
+  runs/vit-inference/demo2_local_public_examples_cpu_b4.json \
+  runs/vit-inference/demo2_local_public_examples_cpu_b8.json \
+  --markdown-output report/results/demo2_local_public_examples_cpu.md
+```
+
+If a batch size is intentionally unavailable, omit that JSON and document the
+missing batch as pending. This is the current external public examples case:
+`b1` and `b4` exist, while external public `b8` is pending.
+
+A future horizontal comparison should compare local CPU and cloud TPU for the
+same input set and batch size. Create this only after a real TPU JSON artifact
+exists and has been retrieved:
+
+```bash
+uv run python scripts/compare_vit_results.py \
+  runs/vit-inference/demo2_local_public_examples_cpu_b4.json \
+  runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json \
+  --output runs/vit-inference/demo2_local_cpu_vs_cloud_tpu_public_examples_b4_compare.json \
+  --markdown-output report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md
+```
+
+The JSON comparison output remains an ignored/generated artifact under
+`runs/vit-inference/`. Only the intentionally curated report-ready Markdown table
+belongs under `report/results/`. The local CPU vs cloud TPU table above is a
+future pattern, not current evidence.
+
+Do not mix external Ryzen 7735HS WSL CPU artifacts into the primary local CPU vs
+cloud TPU table. External CPU evidence is supplementary cross-machine CPU
+evidence. If a future three-way view is useful, use a separately named
+supplementary table such as
+`report/results/demo2_cross_machine_public_examples_b4.md`; it should not be
+treated as the primary local-vs-TPU result because it mixes hardware, OS/WSL,
+cache, and thermal variables.
+
 ## Local CUDA Limitation
 
 On the laptop used for this local spike, a simple JAX GPU matrix multiplication
@@ -507,14 +561,15 @@ Use the local comparison helper after a TPU JSON artifact has been retrieved:
 uv run python scripts/compare_vit_results.py \
   runs/vit-inference/demo2_local_public_examples_cpu_b4.json \
   runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json \
-  --output runs/vit-inference/demo2_cpu_vs_tpu_public_examples_b4_compare.json \
-  --markdown-output runs/vit-inference/demo2_cpu_vs_tpu_public_examples_b4_table.md
+  --output runs/vit-inference/demo2_local_cpu_vs_cloud_tpu_public_examples_b4_compare.json \
+  --markdown-output report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md
 ```
 
 The helper only reads existing JSON files. It summarizes command metadata when
 available, input image or manifest, backend, devices, batch size, image count,
 total timed runtime, throughput, derived per-image time, and output path. The
-optional Markdown output is intended for report-ready benchmark tables.
+optional Markdown output is intended for report-ready benchmark tables. This
+CPU-vs-TPU example remains pending until a real TPU JSON artifact exists.
 
 ## Limitations
 

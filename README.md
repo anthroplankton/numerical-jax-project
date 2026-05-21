@@ -171,8 +171,8 @@ without TPU access:
 uv run python scripts/compare_vit_results.py \
   runs/vit-inference/demo2_local_public_examples_cpu_b4.json \
   runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json \
-  --output runs/vit-inference/demo2_cpu_vs_tpu_public_examples_b4_compare.json \
-  --markdown-output runs/vit-inference/demo2_cpu_vs_tpu_public_examples_b4_table.md
+  --output runs/vit-inference/demo2_local_cpu_vs_cloud_tpu_public_examples_b4_compare.json \
+  --markdown-output report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md
 ```
 
 ## Demo 1: Preserved Raw-JAX CNN Foundation
