@@ -6,8 +6,9 @@ commands only. Do not create, modify, or delete cloud resources until project,
 zone, quota, cost, and cleanup plans are confirmed.
 
 Current status: local CPU Demo 2 is completed, the Google Cloud TPU workflow is
-documented, TRC project-number submission is pending outside the repository,
-and TPU execution is not completed.
+documented, Google Cloud / TRC setup is recorded in
+`report/google_cloud_trc_setup.md`, TRC confirmation is pending, and TPU
+execution is not completed.
 
 ## Placeholders
 

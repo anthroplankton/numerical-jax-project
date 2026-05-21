@@ -14,9 +14,11 @@ pretrained ViT inference benchmark with JAX/Flax**。
 - public image set：5 tracked images under `examples/assets/`
 - single-image smoke input：`examples/assets/chihuahua_pet_licorice.jpg`
 - curated local CPU result artifacts：`report/results/`
-- next major Google Cloud step：建立 dedicated Google Cloud project，將
-  project number 提交到 TRC form，等待 TRC confirmation / quota /
+- Google Cloud / TRC setup state：dedicated Google Cloud project 已建立，
+  billing 已 linked，budget alerts 已設定，Cloud TPU API 已啟用，
+  project number 已提交到 TRC form；目前等待 TRC confirmation / quota /
   instructions，之後才建立 TPU resources
+- report-ready setup record：`report/google_cloud_trc_setup.md`
 - next development work while waiting for TRC：繼續整理 Demo 2 documentation
   and evidence；Imagenette 320 (`imagenette2-320`) 是後續 Demo 2 local
   benchmark 的 recommended optional dataset，但 workflow 仍維持 local-only，
@@ -77,10 +79,21 @@ cleanup evidence exist.
   - does not download datasets or inspect image contents
   - requires `data/local/imagenette2-320/val` to exist before Imagenette
     manifests can be generated
-- Pre-TRC Google Cloud status:
+- Google Cloud / TRC setup status:
   - local CPU Demo 2 and JSON comparison helper are prepared
   - Cloud TPU workflow is documented with placeholders only
-  - TRC project-number submission is the next external Google Cloud step
+  - dedicated Google Cloud project was created outside the repository
+  - project ID and project number were verified with `gcloud projects describe`
+    and kept private
+  - billing account was linked outside the repository
+  - budget alerts were configured:
+    `numerical-jax-first-warning` at 10 USD and
+    `numerical-jax-main-limit` at 60 USD
+  - Cloud TPU API was enabled outside the repository
+  - project number was submitted to TRC; confirmation, quota, and instructions
+    are still pending
+  - setup record is documented in `report/google_cloud_trc_setup.md`
+  - no Cloud TPU VM has been created
   - TPU execution and CPU-vs-TPU result collection are not completed yet
 - Lightweight tests that do not download model weights:
   - `tests/test_pretrained_vit_inference.py`
@@ -176,22 +189,19 @@ Hugging Face access, image opening, or model weight download.
 
 ## Next Technical Milestones
 
-1. Create a dedicated Google Cloud project for the course project, record the
-   project ID and project number locally, and submit the project number to the
-   TRC form without committing real identifiers.
-2. Wait for TRC confirmation, quota, and instructions before creating TPU
+1. Wait for TRC confirmation, quota, and instructions before creating TPU
    resources.
-3. Review `cloud/demo2_vit_tpu_workflow.md` and confirm zone, TPU accelerator
+2. Review `cloud/demo2_vit_tpu_workflow.md` and confirm zone, TPU accelerator
    type, runtime version, quota, cost constraints, and cleanup command.
-4. While waiting for TRC, continue Demo 2 documentation/evidence preparation
+3. While waiting for TRC, continue Demo 2 documentation/evidence preparation
    that does not require cloud resources; Imagenette 320 preparation should stay
    local-only under ignored `data/local/imagenette2-320/`, use
    `manifest_val_64.txt` as the primary benchmark manifest, and avoid automatic
    downloads.
-5. Run JAX backend/device verification on a TPU VM only after the cloud
+4. Run JAX backend/device verification on a TPU VM only after the cloud
    experiment is ready.
-6. Run Demo 2 on TPU with `--jax-platform tpu`.
-7. Save TPU JSON metrics, logs, monitoring notes, and cleanup evidence.
-8. Compare Demo 2 local CPU and TPU JSON files with
+5. Run Demo 2 on TPU with `--jax-platform tpu`.
+6. Save TPU JSON metrics, logs, monitoring notes, and cleanup evidence.
+7. Compare Demo 2 local CPU and TPU JSON files with
    `scripts/compare_vit_results.py`.
-9. Keep Demo 1 and Demo 3 preserved as future work unless course scope changes.
+8. Keep Demo 1 and Demo 3 preserved as future work unless course scope changes.

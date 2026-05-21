@@ -198,11 +198,17 @@
   - Local CUDA remains a documented laptop limitation, not a completed benchmark。
 - Limitations：
   - Demo 2 TPU execution, monitoring, artifact retrieval, cleanup, and local-vs-TPU comparison are planned but not completed。
-  - TRC project-number submission is an external next step and is not stored in the repository。
+  - At that phase, TRC project-number submission was still an external next
+    step and was not stored in the repository。
   - The TPU workflow document is documentation-only and uses placeholders such as `<PROJECT_ID>`, `<PROJECT_NUMBER>`, `<ZONE>`, `<TPU_NAME>`, `<ACCELERATOR_TYPE>`, `<RUNTIME_VERSION>`, `<REPO_URL>`, and `<BRANCH>`。
   - Free-trial credits should not be consumed unless TRC is delayed or unavailable and the run plan plus cleanup command are ready。
 - Next planned step：
-  - Submit the Google Cloud project number to TRC outside the repository, wait for confirmation/quota/instructions, and continue Demo 2 documentation/evidence preparation while waiting. Use Imagenette 320 (`imagenette2-320`) as the recommended optional local benchmark dataset for later Demo 2 work, while keeping it under ignored `data/local/` and out of pytest/CI。
+  - At that phase, submit the Google Cloud project number to TRC outside the
+    repository, wait for confirmation/quota/instructions, and continue Demo 2
+    documentation/evidence preparation while waiting. Use Imagenette 320
+    (`imagenette2-320`) as the recommended optional local benchmark dataset for
+    later Demo 2 work, while keeping it under ignored `data/local/` and out of
+    pytest/CI。
   - Use `cloud/demo2_vit_tpu_workflow.md` to prepare a controlled TPU VM attempt, then record actual commands, metrics, logs, monitoring notes, cleanup evidence, and comparison output only after a real run occurs。
 
 ## Phase 5.1: Demo 2 Benchmark Asset And Result Field Stabilization
@@ -286,6 +292,41 @@
 - Current evidence/results：
   - This phase records documentation and setup behavior only。
   - No new benchmark result, GPU/ROCm result, cloud run, or TPU run is claimed。
+
+## Phase 5.4: Google Cloud / TRC Onboarding Setup Record
+
+- Date / phase label：2026-05-21 Google Cloud / TRC onboarding setup record
+- What changed：
+  - Recorded the external Google Cloud / TRC setup state as report-ready
+    material。
+  - Documented that a dedicated Google Cloud project was created outside the
+    repository。
+  - Documented that project ID and project number were verified with:
+    `gcloud projects describe <PROJECT_ID> --format="table(projectId,name,projectNumber)"`。
+  - Documented that billing was linked, budget alerts were configured, Cloud TPU
+    API was enabled, and the project number was submitted to TRC。
+  - Kept all private identifiers out of the repository by using placeholders
+    such as `<PROJECT_ID>` and `<PROJECT_NUMBER>`。
+- Files added/updated：
+  - `report/google_cloud_trc_setup.md`
+  - `report/current_status.md`
+  - `report/progress_log.md`
+  - `README.md`
+  - `cloud/demo2_vit_tpu_workflow.md`
+- Current evidence/results：
+  - Google Cloud project setup, billing link, budget alerts, Cloud TPU API
+    enablement, and TRC project-number submission are recorded as completed
+    external setup steps。
+  - TRC confirmation, quota, and instructions are still pending。
+- Limitations：
+  - This phase records external setup only。
+  - No Cloud TPU VM was created。
+  - No TPU execution, TPU metrics, cloud benchmark result, monitoring screenshot,
+    cleanup evidence, or CPU-vs-TPU comparison exists yet。
+- Next planned step：
+  - Wait for TRC confirmation / quota / instructions, then use
+    `cloud/demo2_vit_tpu_workflow.md` for a controlled manual TPU VM attempt and
+    record real execution evidence only after it occurs。
 
 ## Planned Phases
 

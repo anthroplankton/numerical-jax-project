@@ -148,10 +148,12 @@ report/results/demo2_vit_local_cpu_b8.json
 For full local instructions, expected output, model notes, and limitations, see
 [docs/pretrained_vit_demo.md](docs/pretrained_vit_demo.md).
 
-For the pre-TRC planned TPU workflow, see
-[cloud/demo2_vit_tpu_workflow.md](cloud/demo2_vit_tpu_workflow.md). This is
-documentation-only at the current stage; TRC project-number submission is an
-external next step and no TPU run is claimed.
+For the planned TPU workflow, see
+[cloud/demo2_vit_tpu_workflow.md](cloud/demo2_vit_tpu_workflow.md). The
+Google Cloud / TRC setup record is tracked in
+[report/google_cloud_trc_setup.md](report/google_cloud_trc_setup.md). This is
+documentation-only at the current stage; TRC confirmation is pending and no TPU
+run is claimed.
 
 After TPU JSON artifacts are copied back locally, compare existing result files
 without TPU access:
