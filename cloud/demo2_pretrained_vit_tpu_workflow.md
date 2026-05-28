@@ -8,7 +8,7 @@ confirmed.
 
 Current status: local CPU Demo 2 is completed, the Google Cloud TPU workflow is
 documented, Google Cloud / TRC setup is recorded in
-`report/google_cloud_trc_setup.md`, TRC confirmation is pending, and TPU
+`report/google_cloud_trc_setup.md`, TRC confirmation has been received, and TPU
 execution is not completed. CPU-vs-TPU comparison, TPU monitoring evidence,
 cleanup evidence, and TPU performance evidence remain pending until a real TPU
 run occurs and its JSON artifact is retrieved.
@@ -29,7 +29,7 @@ Use placeholders until safe project-specific values are known:
 - `<BRANCH>`: branch to test.
 - `<COMMIT_SHA>`: exact commit hash to test on the TPU VM.
 
-## Pre-TRC Google Cloud Setup Checklist
+## Google Cloud / TRC Setup Checklist
 
 Complete these steps before attempting TPU execution:
 
@@ -37,7 +37,7 @@ Complete these steps before attempting TPU execution:
 - Record the project ID locally as `<PROJECT_ID>`.
 - Record the project number locally as `<PROJECT_NUMBER>`.
 - Submit the project number to the Google TPU Research Cloud / TRC form.
-- Wait for TRC confirmation before creating TPU resources.
+- Confirm TRC confirmation has been received before creating TPU resources.
 - Avoid committing real project IDs, project numbers, billing details, service
   account keys, `.env` files, credential files, or local cloud config files.
 - Keep repository documentation on placeholders such as `<PROJECT_ID>`,
@@ -106,8 +106,8 @@ weights, image files, or network access.
 ## Cloud Prerequisites
 
 Run from Google Cloud Shell or a local terminal with `gcloud` installed only
-after TRC confirmation or after explicitly deciding to use non-TRC Google Cloud
-credits:
+after TRC confirmation has been received and the cloud experiment is ready to
+start, or after explicitly deciding to use non-TRC Google Cloud credits:
 
 ```bash
 gcloud auth login
@@ -119,7 +119,8 @@ gcloud services enable tpu.googleapis.com
 Before creating resources, verify:
 
 - Billing and TPU quota are available for `<PROJECT_ID>`.
-- TRC confirmation or fallback funding is ready for the experiment.
+- TRC confirmation has been received, or fallback funding is explicitly selected
+  for a non-TRC run.
 - `<ACCELERATOR_TYPE>` is available in `<ZONE>`.
 - `<RUNTIME_VERSION>` is appropriate for the selected TPU VM.
 - `<TPU_NAME>` and optional `<QUEUED_RESOURCE_ID>` are unique and safe to use.
@@ -130,8 +131,9 @@ Before creating resources, verify:
 
 ## First TPU Smoke-Run Sequence
 
-Use this as the first Demo 2 TPU runbook after TRC confirmation, zone,
-accelerator type, runtime version, funding, and cleanup readiness are confirmed.
+Use this as the first Demo 2 TPU runbook after TRC confirmation has been
+received and zone, accelerator type, runtime version, funding, and cleanup
+readiness are confirmed.
 Choose either direct TPU VM creation or queued-resource creation; do not run both
 unless there is a deliberate reason.
 

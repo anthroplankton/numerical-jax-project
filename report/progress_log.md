@@ -183,7 +183,7 @@
   - Demo 3 is preserved as optional future work, but it is not the current presentation focus。
   - Added documentation for a conservative Google Cloud TPU VM workflow for Demo 2。
   - Added a local JSON comparison helper for Demo 2 result files; it compares existing files only and does not require TPU access。
-  - Added pre-TRC Google Cloud guidance：先建立 dedicated Google Cloud project、在本機記錄 project ID / project number、提交 project number 到 TRC form，等待 TRC confirmation 後再建立 TPU resources。
+  - Added pre-TRC Google Cloud guidance：先建立 dedicated Google Cloud project、在本機記錄 project ID / project number、提交 project number 到 TRC form，並在 TRC confirmation received 之前不建立 TPU resources；後續 Phase 5.6 已更新為 TRC confirmation received。
   - 明確記錄目前沒有建立 Google Cloud resources，沒有執行 TPU VM run，也沒有 CPU-vs-TPU result collection。
 - Files or modules added/updated：
   - `README.md`
@@ -318,16 +318,17 @@
   - Google Cloud project setup, billing link, budget alerts, Cloud TPU API
     enablement, and TRC project-number submission are recorded as completed
     external setup steps。
-  - TRC confirmation is still pending。
+  - This phase was later superseded by Phase 5.6, which records TRC
+    confirmation received。
 - Limitations：
   - This phase records external setup only。
   - No Cloud TPU VM was created。
   - No TPU execution, TPU metrics, cloud benchmark result, monitoring screenshot,
     cleanup evidence, or CPU-vs-TPU comparison exists yet。
 - Next planned step：
-  - Wait for TRC confirmation, then use
-    `cloud/demo2_pretrained_vit_tpu_workflow.md` for a controlled manual TPU VM attempt and
-    record real execution evidence only after it occurs。
+  - Phase 5.6 records the updated TRC confirmation status. After that update,
+    use `cloud/demo2_pretrained_vit_tpu_workflow.md` for a controlled manual
+    TPU VM attempt and record real execution evidence only after it occurs。
 
 ## Phase 5.5: Demo 2 Regenerated CPU Artifact Set
 
@@ -363,6 +364,34 @@
     primary local-machine evidence。
   - TPU execution, TPU JSON artifacts, cloud monitoring evidence, cleanup
     evidence, and CPU-vs-TPU comparison remain pending。
+
+## Phase 5.6: TRC Confirmation Received Documentation Update
+
+- Date / phase label：2026-05-28 TRC confirmation received documentation update
+- What changed：
+  - Updated current project documentation to state that TRC confirmation has
+    been received。
+  - Kept real project IDs, project numbers, billing account IDs, TRC email
+    content, screenshots, credentials, and private cloud identifiers out of the
+    repository。
+  - Kept all TPU workflow values as placeholders such as `<PROJECT_ID>`,
+    `<ZONE>`, `<TPU_NAME>`, `<ACCELERATOR_TYPE>`, and `<RUNTIME_VERSION>`。
+- Files updated：
+  - `README.md`
+  - `report/current_status.md`
+  - `report/google_cloud_trc_setup.md`
+  - `report/progress_log.md`
+  - `cloud/demo2_pretrained_vit_tpu_workflow.md`
+- Current evidence/results：
+  - This is a documentation-only status update。
+  - TRC confirmation has been received。
+  - No Cloud TPU VM has been created。
+  - No TPU benchmark has been run。
+  - No TPU JSON, monitoring evidence, cleanup evidence, or CPU-vs-TPU
+    comparison exists yet。
+- Next planned step：
+  - Review the documented TPU workflow, placeholders, quota/cost assumptions,
+    and cleanup plan before any manually confirmed TPU VM attempt。
 
 ## Planned Phases
 

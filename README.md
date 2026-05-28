@@ -164,8 +164,8 @@ For the planned TPU workflow, see
 [cloud/demo2_pretrained_vit_tpu_workflow.md](cloud/demo2_pretrained_vit_tpu_workflow.md). The
 Google Cloud / TRC setup record is tracked in
 [report/google_cloud_trc_setup.md](report/google_cloud_trc_setup.md). This is
-documentation-only at the current stage; TRC confirmation is pending and no TPU
-run is claimed.
+documentation-only at the current stage; TRC confirmation has been received,
+but no TPU VM has been created and no TPU run is claimed.
 
 After TPU JSON artifacts are copied back locally, compare existing result files
 without TPU access:

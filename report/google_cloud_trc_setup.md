@@ -52,12 +52,16 @@ private cloud screenshots。
    | `numerical-jax-main-limit` | 60 USD |
 
 5. 啟用 Cloud TPU API。
-6. 將 `<PROJECT_NUMBER>` 提交到 TRC short form，等待 TRC confirmation。
+6. 將 `<PROJECT_NUMBER>` 提交到 TRC short form。
+7. TRC confirmation 已收到；TRC email content、project-specific identifiers
+   與 private cloud details 不記錄於 repository。
 
-## Current Pending State
+## Current Setup State
 
-- TRC confirmation 仍在等待中。
-- repository 尚未記錄可建立 TPU resources 的核准狀態。
+- TRC confirmation 已收到。
+- repository 只記錄 confirmation status，不記錄 TRC email content、real
+  project ID、real project number、billing account ID、credentials 或 private
+  cloud identifiers。
 - 尚未建立 Cloud TPU VM。
 - 尚未執行 `examples/pretrained_vit_inference.py --jax-platform tpu`。
 - 尚未產生 cloud TPU benchmark JSON、logs、monitoring notes 或 screenshots。
@@ -68,8 +72,8 @@ private cloud screenshots。
 
 ## Not Done Yet
 
-以下工作尚未進行，需等 TRC confirmation 或明確的 fallback funding decision
-之後再處理：
+以下工作尚未進行，需在建立 TPU VM 前再次確認 placeholders、quota、cost
+風險與 cleanup plan：
 
 - 選定 `<ZONE>`、`<TPU_NAME>`、`<ACCELERATOR_TYPE>` 與 `<RUNTIME_VERSION>`。
 - 建立或啟動 TPU VM。
@@ -84,8 +88,9 @@ private cloud screenshots。
 
 ## Cost-Control Principles
 
-- 在 TRC confirmation、zone、accelerator type、run command、artifact retrieval
-  command 與 cleanup command 都明確之前，不建立 TPU resources。
+- 雖然 TRC confirmation 已收到，在 zone、accelerator type、run command、
+  artifact retrieval command 與 cleanup command 都明確之前，不建立 TPU
+  resources。
 - 任何 TPU VM 建立前，都先確認 cleanup command：
 
   ```bash
@@ -101,10 +106,10 @@ private cloud screenshots。
 - Cloud resources 建立、啟動、停止或刪除都應由使用者手動確認，不由 repo
   automation 自動執行。
 
-## Next Planned Steps After TRC Confirmation
+## Next Planned Steps Before TPU VM Creation
 
-1. 根據 TRC confirmation，確認可用的 `<ZONE>`、`<ACCELERATOR_TYPE>` 與
-   `<RUNTIME_VERSION>`。
+1. 根據 TRC confirmation 與 Google Cloud Console 狀態，確認可用的
+   `<ZONE>`、`<ACCELERATOR_TYPE>` 與 `<RUNTIME_VERSION>`。
 2. Review `cloud/demo2_pretrained_vit_tpu_workflow.md`，確認 create、verify、run、
    retrieve、compare、cleanup commands 都仍符合當時環境。
 3. 在 local machine 先執行 local preflight checks，包括 `git status`、
