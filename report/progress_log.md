@@ -393,6 +393,79 @@
   - Review the documented TPU workflow, placeholders, quota/cost assumptions,
     and cleanup plan before any manually confirmed TPU VM attempt。
 
+## Phase 5.7: First Demo 2 TPU Smoke Run Evidence
+
+- Date / phase label：2026-06-02 first Demo 2 TPU public-example smoke run
+- What changed：
+  - TRC confirmation 後，完成第一個 real Demo 2 Cloud TPU smoke run。
+  - Successful run 使用 `examples/pretrained_vit_inference.py` with
+    `--jax-platform tpu`、`--image-manifest examples/assets/manifest.txt`、
+    `--batch-size 4`、`--warmup-steps 1`、`--benchmark-steps 5`。
+  - TPU JSON artifact 已產生並取回到 ignored/generated path：
+    `runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json`。
+  - 使用 local CPU baseline：
+    `runs/vit-inference/demo2_local_public_examples_cpu_b4.json`。
+  - 使用 `scripts/compare_vit_results.py` 產生 curated Markdown comparison：
+    `report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md`。
+  - Cleanup completed after artifact retrieval；queued resource deletion
+    succeeded，`gcloud compute tpus queued-resources list` 與
+    `gcloud compute tpus tpu-vm list` 在 selected zone 都回傳 0 items。
+- Resource / environment notes：
+  - Successful resource 使用 TRC spot quota。
+  - Zone：`us-east1-d`。
+  - Google Cloud accelerator type：`v6e-1`。
+  - Runtime version：`v2-alpha-tpuv6e`。
+  - JSON-visible device kind：`TPU v6 lite`。
+  - Branch：`feat/demo2-tpu-evidence`。
+  - Exact TPU checkout commit 沒有保存在目前可用的 report notes 中；不可用
+    post-edit local commit SHA 代替，這是 reproducibility limitation。
+- Operational note：
+  - Initial v4 queued resource in `us-central2-b` remained in
+    `WAITING_FOR_RESOURCES` for several days and was abandoned。
+  - Successful smoke run used the smaller v6e TRC spot queued resource in
+    `us-east1-d`。
+  - This is an availability / queue behavior note, not a performance claim。
+- Current evidence/results：
+  - TPU JSON reported backend `tpu`、device kind `TPU v6 lite`、mode
+    `image_manifest`、manifest kind `public_example`、num_images 5、batch_size
+    4、num_batches 2、num_padded_images 3、timed_batch_runs 10。
+  - TPU JSON reported total timed inference around 0.01098252 sec and
+    throughput around 2276.3446 images/sec。
+  - Generated comparison table reports about 1931.76x throughput speedup versus
+    this local CPU `b4` public-example artifact for this specific smoke run。
+- Limitations：
+  - This is a small public smoke run only。
+  - It uses five public example images, batch size 4, final-batch padding
+    (`num_padded_images = 3`), and a short benchmark loop。
+  - It is not dataset-level accuracy evaluation。
+  - It is not a full controlled hardware benchmark。
+  - It should not be described as TPU generally being 1931x faster。
+  - Raw JSON under `runs/vit-inference/` remains ignored/generated and should not
+    be committed in this edit；only the curated Markdown table belongs under
+    `report/results/`。
+- Next planned step：
+  - If time and quota allow, plan a broader Imagenette TPU run or controlled
+    local-vs-TPU comparison with exact commit SHA, environment metadata,
+    monitoring notes, longer timing loops, and the same cleanup verification。
+
+## Phase 5.8: Demo 2 TPU Documentation Architecture Split
+
+- Date / phase label：2026-06-03 Demo 2 TPU documentation architecture split
+- What changed：
+  - Created `cloud/demo2_tpu_quickstart.md` as the reusable user-facing TPU
+    execution quickstart。
+  - Refactored `cloud/demo2_pretrained_vit_tpu_workflow.md` into a reference
+    document for resource variants, monitoring/evidence guidance, cleanup
+    discipline, troubleshooting, and the course smoke-run appendix。
+  - Clarified that TRC spot quota was the course project's funding/quota path,
+    not a requirement of the Demo 2 code。
+  - Kept `report/google_cloud_trc_setup.md` as the course-specific Google
+    Cloud / TRC setup and evidence record。
+- Claim boundary：
+  - The completed TPU result remains a five-image public smoke-run comparison,
+    not a full benchmark study, not dataset-level accuracy evaluation, and not a
+    controlled hardware comparison。
+
 ## Planned Phases
 
 ### Phase 6: Real MNIST/Fashion-MNIST and Curated Local Result
@@ -424,19 +497,27 @@
   - Cleanup notes。
   - Comparison artifact grounded in saved metrics。
 
-### Phase 8: Demo 2 Pretrained ViT TPU Evidence
+### Phase 8: Broader Demo 2 TPU Benchmark Evidence
 
-- Status：planned, not completed。
-- Goal：extend the Demo 2 local CPU baseline to Google Cloud TPU, then compare local CPU and TPU inference evidence。
+- Status：partially completed by Phase 5.7 smoke-run evidence；broader benchmark
+  work remains planned。
+- Goal：extend the first Demo 2 public-example TPU smoke evidence into a broader
+  Google Cloud TPU comparison only if time, quota, and evidence quality are
+  sufficient。
 - Planned work：
-  - Review and execute the TPU workflow manually when cloud project, quota, and cost constraints are acceptable。
-  - Run `examples/pretrained_vit_inference.py` with `--jax-platform tpu` on a TPU VM。
-  - Capture backend/device output, JSON metrics, terminal logs, monitoring notes, and cleanup evidence。
-  - Compare TPU metrics against the existing local CPU baseline artifacts with `scripts/compare_vit_results.py` after TPU artifacts are retrieved locally。
+  - Preserve the first public-example TPU smoke evidence without overstating it。
+  - If another TPU run is justified, record exact commit SHA, backend/device
+    output, JSON metrics, terminal logs, monitoring notes, cleanup evidence,
+    and deletion verification。
+  - Prefer a broader Imagenette TPU run or controlled CPU-vs-TPU comparison
+    with longer timing loops over repeating another tiny smoke run。
+  - Compare TPU metrics against matching local CPU artifacts with
+    `scripts/compare_vit_results.py` after TPU artifacts are retrieved locally。
 - Evidence needed before marking complete：
-  - TPU metrics if TPU execution is attempted。
-  - Cloud logs or screenshots if TPU execution is attempted。
-  - Monitoring notes and cleanup evidence if TPU resources are created。
+  - Broader TPU metrics beyond the first five-image smoke run。
+  - Exact commit / environment metadata。
+  - Monitoring notes or privacy-safe screenshots if available。
+  - Cleanup evidence for any additional resources。
   - Local-vs-TPU comparison artifact grounded in saved metrics。
 
 ### Phase 9: Optional Demo 3 Pretrained/Gemma Cloud Demo

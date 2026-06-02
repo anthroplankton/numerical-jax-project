@@ -4,10 +4,23 @@ Course project repository for Numerical Computation with JAX.
 
 The current course presentation focus is **Demo 2: pretrained ViT inference
 with JAX/Flax** using `google/vit-base-patch16-224`. Local CPU inference has
-been run successfully. Raw JSON benchmark outputs live under ignored
+been run successfully, and the first Google Cloud TPU public-example smoke run
+has also completed. Raw JSON benchmark outputs live under ignored
 `runs/vit-inference/`, and curated report-ready Markdown tables live under
-`report/results/`. Google Cloud TPU execution is the next planned workflow and
-has not been completed yet.
+`report/results/`.
+
+The completed TPU evidence is a small smoke run, not a full controlled
+benchmark study: it used five public example images, batch size 4, one warmup
+step, five benchmark steps, and final-batch padding with `num_padded_images =
+3`. The generated local CPU `b4` versus cloud TPU `b4` table reports about
+1931.76x throughput speedup for this specific smoke-run comparison only. Broader
+Imagenette TPU benchmarking, dataset-level accuracy evaluation, and controlled
+hardware comparison remain future work.
+
+Local CPU remains the stable default path. TPU execution is optional and
+requires suitable Google Cloud TPU quota/funding, Cloud TPU API access, and
+cleanup discipline. The course project used TRC spot quota for the completed
+smoke run, but TRC is not mandatory for the code.
 
 Demo 1 remains in the repository as preserved background work: a raw-JAX
 hand-written CNN benchmark foundation. Demo 3 remains optional future work for a
@@ -149,23 +162,35 @@ report/results/demo2_external_ryzen7735hs_wsl_imagenette320_val64_cpu.md
 report/results/demo2_local_imagenette320_val256_cpu.md
 report/results/demo2_external_ryzen7735hs_wsl_imagenette320_val256_cpu.md
 report/results/demo2_local_private_examples_cpu.md
+report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md
 ```
 
 Local CPU tables are the primary current-machine evidence. External Ryzen
-7735HS WSL CPU tables are supplementary and are kept separate.
-For the current pre-TPU progress report, the `val256` curated tables are the
-main CPU benchmark evidence because b1/b4/b8 all use 256 real images with 0
+7735HS WSL CPU tables are supplementary and are kept separate. The
+`demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md` table is the first TPU
+smoke-run comparison table and should be interpreted with its small-run
+limitations.
+For the historical pre-TPU progress report, the `val256` curated tables were the
+main CPU benchmark evidence because b1/b4/b8 all used 256 real images with 0
 padded images.
 
 For full local instructions, expected output, model notes, and limitations, see
 [docs/demo2_pretrained_vit.md](docs/demo2_pretrained_vit.md).
 
-For the planned TPU workflow, see
-[cloud/demo2_pretrained_vit_tpu_workflow.md](cloud/demo2_pretrained_vit_tpu_workflow.md). The
-Google Cloud / TRC setup record is tracked in
-[report/google_cloud_trc_setup.md](report/google_cloud_trc_setup.md). This is
-documentation-only at the current stage; TRC confirmation has been received,
-but no TPU VM has been created and no TPU run is claimed.
+For TPU execution, use these documents by role:
+
+- [cloud/demo2_tpu_quickstart.md](cloud/demo2_tpu_quickstart.md): reusable
+  user-facing TPU quickstart from local baseline through cleanup.
+- [cloud/demo2_pretrained_vit_tpu_workflow.md](cloud/demo2_pretrained_vit_tpu_workflow.md):
+  reference workflow with resource variants, evidence checklist, cleanup
+  guidance, troubleshooting, and the course smoke-run appendix.
+- [report/google_cloud_trc_setup.md](report/google_cloud_trc_setup.md):
+  course-specific Google Cloud / TRC setup and evidence record.
+
+TRC confirmation has been received. A first Demo 2 TPU smoke run used a TRC
+spot queued resource in `us-east1-d` with Google Cloud accelerator type `v6e-1`,
+runtime `v2-alpha-tpuv6e`, and JSON-visible device kind `TPU v6 lite`; cleanup
+was verified after artifact retrieval.
 
 After TPU JSON artifacts are copied back locally, compare existing result files
 without TPU access:

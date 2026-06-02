@@ -17,18 +17,21 @@ pretrained ViT inference benchmark with JAX/Flax**。
 - curated report-ready Markdown tables：`report/results/`
 - Google Cloud / TRC setup state：dedicated Google Cloud project 已建立，
   billing 已 linked，budget alerts 已設定，Cloud TPU API 已啟用，
-  project number 已提交到 TRC form；TRC confirmation 已收到；尚未建立 TPU
-  resources
+  project number 已提交到 TRC form；TRC confirmation 已收到；第一個 Demo 2
+  TPU public-example smoke run 已完成，artifact 已取回，CPU-vs-TPU comparison
+  table 已產生，cleanup 已完成並確認 selected zone 沒有剩餘 queued resource
+  或 TPU VM
 - report-ready setup record：`report/google_cloud_trc_setup.md`
-- next development work before TPU VM creation：review the documented TPU
-  workflow, placeholders, and cleanup plan；Imagenette 320
+- next benchmark work after first TPU smoke evidence：若時間與 quota 允許，
+  再規劃較完整的 Imagenette TPU run 或 controlled hardware comparison；
+  Imagenette 320
   (`imagenette2-320`) 已有 local/external CPU curated Markdown tables，但
   dataset workflow 仍維持 local-only，不自動下載、不進 pytest/CI，也不提交
   `data/local/` 內容
 
-TPU execution has not been attempted or completed yet. No TPU performance claim
-should be made until a real TPU VM run, metrics, logs, monitoring notes, and
-cleanup evidence exist.
+First TPU execution evidence now exists, but it is limited to a small
+public-example smoke run. It should not be described as a full benchmark study,
+dataset-level accuracy evaluation, or controlled hardware comparison.
 
 ## What The Repository Currently Does
 
@@ -69,7 +72,8 @@ cleanup evidence exist.
   - qualitative live predictions only; not a public dataset or accuracy benchmark
 - Demo 2 documentation:
   - `docs/demo2_pretrained_vit.md`
-- Planned TPU workflow documentation:
+- TPU documentation:
+  - `cloud/demo2_tpu_quickstart.md`
   - `cloud/demo2_pretrained_vit_tpu_workflow.md`
 - Local result comparison helper:
   - `scripts/compare_vit_results.py`
@@ -90,7 +94,10 @@ cleanup evidence exist.
     public `b8` remains pending
 - Google Cloud / TRC setup status:
   - local CPU Demo 2 and JSON comparison helper are prepared
-  - Cloud TPU workflow is documented with placeholders only
+  - reusable Cloud TPU quickstart is documented separately from course-specific
+    TRC setup/evidence records
+  - Cloud TPU workflow reference is documented with placeholders, resource
+    variants, cleanup guidance, and first smoke-run evidence appendix
   - dedicated Google Cloud project was created outside the repository
   - project ID and project number were verified with `gcloud projects describe`
     and kept private
@@ -101,8 +108,20 @@ cleanup evidence exist.
   - Cloud TPU API was enabled outside the repository
   - project number was submitted to TRC and TRC confirmation has been received
   - setup record is documented in `report/google_cloud_trc_setup.md`
-  - no Cloud TPU VM has been created
-  - TPU execution and CPU-vs-TPU result collection are not completed yet
+  - initial v4 queued resource in `us-central2-b` remained in
+    `WAITING_FOR_RESOURCES` for several days and was abandoned
+  - successful smoke run used a TRC spot queued resource in `us-east1-d` with
+    Google Cloud accelerator type `v6e-1`, runtime `v2-alpha-tpuv6e`, and
+    JSON-visible device kind `TPU v6 lite`
+  - successful TPU run used branch `feat/demo2-tpu-evidence`; the exact TPU
+    checkout commit was not preserved in the available report notes
+  - Demo 2 TPU JSON artifact was generated and retrieved:
+    `runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json`
+  - CPU-vs-TPU comparison table was generated:
+    `report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md`
+  - cleanup completed after artifact retrieval; queued-resource deletion
+    succeeded, and both queued-resource list and TPU-VM list returned zero items
+    in `us-east1-d`
 - Lightweight tests that do not download model weights:
   - `tests/test_pretrained_vit_inference.py`
 
@@ -135,8 +154,8 @@ Supplementary external Ryzen 7735HS WSL CPU tables:
 These are CPU inference timing/throughput summaries. They are not dataset-level
 accuracy evaluations, not GPU results, and not TPU results. External CPU
 evidence is supplementary and should stay separate from local-machine evidence.
-For the current pre-TPU progress report, Imagenette `val256` is the main CPU
-benchmark evidence because b1/b4/b8 all use 256 real images with 0 padded
+For the historical pre-TPU progress report, Imagenette `val256` was the main
+CPU benchmark evidence because b1/b4/b8 all used 256 real images with 0 padded
 images. Imagenette `val64` remains a lightweight documented benchmark path and
 supporting CPU result.
 The private local table is live-demo evidence, not a public reproducible
@@ -144,6 +163,41 @@ benchmark dataset.
 Private manifest runs follow the same qualitative-inference framing unless
 explicit labels and top-k evaluation are added later, but they now measure true
 batched manifest inference over the listed images.
+
+## Demo 2 TPU Smoke Evidence
+
+The first successful TPU artifact is:
+
+- `runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json`
+
+The report-ready comparison table is:
+
+- `report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md`
+
+This run used `examples/pretrained_vit_inference.py --jax-platform tpu` with
+`examples/assets/manifest.txt`, batch size 4, one warmup step, five benchmark
+steps, and output path
+`runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json`.
+
+Key recorded fields:
+
+- backend：`tpu`
+- JSON-visible device kind：`TPU v6 lite`
+- mode：`image_manifest`
+- manifest kind：`public_example`
+- num_images：5
+- batch_size：4
+- num_batches：2
+- num_padded_images：3
+- timed_batch_runs：10
+- total timed inference：約 0.01098252 秒
+- throughput：約 2276.3446 images/sec
+
+The generated comparison table reports about 1931.76x throughput speedup versus
+the local CPU `b4` artifact for this specific smoke run. This statement is
+limited to the five-image public smoke run. It is not a general TPU speed claim,
+not an Imagenette result, not dataset-level accuracy evaluation, and not a full
+controlled hardware benchmark.
 
 New Demo 2 JSON outputs include stable result fields for mode, processing mode,
 batch size, image count, batch count, padding count, timed batch runs, timing,
@@ -199,20 +253,13 @@ Hugging Face access, image opening, or model weight download.
 
 ## Next Technical Milestones
 
-1. With TRC confirmation received, review the TPU workflow, placeholders,
-   quota/cost assumptions, and cleanup command before creating TPU resources.
-2. Review `cloud/demo2_pretrained_vit_tpu_workflow.md` and confirm zone, TPU accelerator
-   type, runtime version, quota, cost constraints, and cleanup command.
-3. Before creating TPU resources, keep Demo 2 documentation/evidence
-   preparation local-only; Imagenette 320 preparation should stay under ignored
-   `data/local/imagenette2-320/`, keep `manifest_val_64.txt` as the
-   lightweight documented benchmark path, use `val256` curated tables as the
-   current progress report's main CPU benchmark evidence, and avoid automatic
-   downloads.
-4. Run JAX backend/device verification on a TPU VM only after the cloud
-   experiment is ready.
-5. Run Demo 2 on TPU with `--jax-platform tpu`.
-6. Save TPU JSON metrics, logs, monitoring notes, and cleanup evidence.
-7. Compare Demo 2 local CPU and TPU JSON files with
-   `scripts/compare_vit_results.py`.
-8. Keep Demo 1 and Demo 3 preserved as future work unless course scope changes.
+1. Preserve the first TPU smoke-run evidence without committing raw JSON under
+   `runs/vit-inference/`.
+2. Keep `report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md` as
+   the curated table for this first CPU-vs-TPU smoke comparison.
+3. If time and quota allow, plan a broader Imagenette TPU run or controlled
+   hardware comparison with longer benchmark loops, recorded commit SHA,
+   environment metadata, monitoring notes, and the same cleanup verification.
+4. Keep Imagenette 320 preparation under ignored `data/local/imagenette2-320/`;
+   do not add automatic downloads or pytest/CI dependencies.
+5. Keep Demo 1 and Demo 3 preserved as future work unless course scope changes.

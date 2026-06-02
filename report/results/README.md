@@ -5,9 +5,15 @@ from the course report.
 
 ## Demo 2: Current Curated Result Artifacts
 
-This directory contains report-ready Markdown summaries for Demo 2 CPU evidence.
-The raw JSON benchmark outputs live under ignored `runs/vit-inference/` and are
-treated as generated local artifacts. Do not normally commit raw JSON outputs.
+This directory contains report-ready Markdown summaries for Demo 2 CPU evidence
+and the first local CPU versus cloud TPU smoke-run comparison. The raw JSON
+benchmark outputs live under ignored `runs/vit-inference/` and are treated as
+generated local artifacts. Do not normally commit raw JSON outputs.
+
+This file is a result artifact index, not a TPU execution runbook. For the
+reusable TPU execution path, see `../../cloud/demo2_tpu_quickstart.md`; for
+workflow variants and evidence guidance, see
+`../../cloud/demo2_pretrained_vit_tpu_workflow.md`.
 
 Each Markdown table in this directory should correspond to real JSON artifacts
 and should be generated with `scripts/compare_vit_results.py --markdown-output`.
@@ -22,7 +28,8 @@ uv run python scripts/compare_vit_results.py \
 ```
 
 These tables summarize inference timing and throughput. They are not
-classification accuracy evaluations, GPU results, or TPU results.
+classification accuracy evaluations or GPU results. The TPU comparison table is
+smoke-run evidence only, not a full controlled benchmark.
 
 ### Primary Local CPU Tables
 
@@ -37,8 +44,8 @@ The local-machine CPU tables are the primary current-machine evidence:
 - `demo2_local_private_examples_cpu.md`: private local live-demo image set,
   `b1`, `b4`, and `b8`.
 
-For the current pre-TPU progress report, the Imagenette `val256` tables are the
-main CPU benchmark evidence because b1/b4/b8 all use 256 real images with 0
+For the historical pre-TPU progress report, the Imagenette `val256` tables were
+the main CPU benchmark evidence because b1/b4/b8 all used 256 real images with 0
 padded images. Imagenette `val64` remains a lighter documented benchmark path
 and supporting CPU result.
 
@@ -64,8 +71,19 @@ External-machine labels should stay neutral and environment-based, such as
 `rx7600s`. Reserve `rx7600s` and `rocm` labels for explicit ROCm/GPU
 sanity-check artifacts, and only when actual ROCm/GPU evidence exists.
 
-### Pending TPU Evidence
+### TPU Smoke-Run Comparison
 
-TPU execution, TPU JSON artifacts, cloud monitoring evidence, cleanup evidence,
-and CPU-vs-TPU comparison tables remain pending. Do not claim CPU-vs-TPU
-comparison results until a real TPU JSON artifact exists.
+- `demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md`: local CPU `b4` versus
+  cloud TPU `b4` comparison for the five public example images.
+
+This table was generated after the TPU artifact
+`runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json` was retrieved. The
+successful TPU run used TRC spot quota in `us-east1-d`, Google Cloud
+accelerator type `v6e-1`, runtime `v2-alpha-tpuv6e`, and JSON-visible device
+kind `TPU v6 lite`.
+
+Interpret the table narrowly. It is a first public-example smoke run with five
+images, batch size 4, three padded final-batch entries, and a short benchmark
+loop. It is not a dataset-level accuracy evaluation and not a controlled
+hardware benchmark. Do not describe the reported speedup as general TPU
+performance.
