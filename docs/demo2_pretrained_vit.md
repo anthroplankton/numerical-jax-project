@@ -162,9 +162,10 @@ already exist:
 data/local/imagenette2-320/val
 ```
 
-If that path is missing, manually download and extract Imagenette 320 first.
-`scripts/build_image_manifest.py` only scans existing local images; it does not
-download datasets or create the Imagenette directory tree.
+If that path is missing, manually download Imagenette 320 from its official
+source and extract it first. `scripts/build_image_manifest.py` only scans
+existing local images; it does not download datasets or create the Imagenette
+directory tree.
 
 Build manifests before running benchmarks. Use these names for the validation
 split:
@@ -215,6 +216,19 @@ images, require labels, or add files to Git. Do not commit Imagenette images or
 the generated manifests under `data/local/`. The generated manifest includes
 one header line, so `wc -l` reports one more line than the `--limit` image
 count.
+
+For future cloud TPU Imagenette runs, preserve the same repository-relative
+paths on the TPU VM. Either download and extract Imagenette 320 on the TPU VM,
+or copy a prepared local `data/local/imagenette2-320/` directory to the TPU VM.
+The benchmark commands below expect:
+
+```text
+data/local/imagenette2-320/val
+data/local/imagenette2-320/val/manifest_val_64.txt
+```
+
+Keep `data/local/`, generated manifests, dataset files, and raw JSON benchmark
+outputs uncommitted.
 
 ## Imagenette 320 Local CPU Benchmark Commands
 

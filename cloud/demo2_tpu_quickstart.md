@@ -64,6 +64,8 @@ export TPU_NAME="<TPU_NAME>"
 export QUEUED_RESOURCE_ID="<QUEUED_RESOURCE_ID>"
 export ACCELERATOR_TYPE="<ACCELERATOR_TYPE>"
 export RUNTIME_VERSION="<RUNTIME_VERSION>"
+export NETWORK_NAME="<NETWORK_NAME>"
+export SUBNET_NAME="<SUBNET_NAME>"
 ```
 
 Optional concrete cloud-resource block for reproducing the successful course
@@ -77,11 +79,19 @@ export TPU_NAME="demo2-vit-v6e1-use1-spot"
 export QUEUED_RESOURCE_ID="demo2-vit-v6e1-use1-spot-qr"
 export ACCELERATOR_TYPE="v6e-1"
 export RUNTIME_VERSION="v2-alpha-tpuv6e"
+export NETWORK_NAME="default"
+export SUBNET_NAME="default"
 ```
 
 The second block reproduces the successful course smoke-run resource shape, but
 it requires matching quota and funding availability. `<PROJECT_ID>` remains a
 placeholder.
+
+The successful course smoke run used the default VPC network and default subnet
+in the selected region. Other users may use another valid VPC/subnet. The subnet
+must exist in the region corresponding to the selected TPU zone. Network and
+subnet names are not secrets, but project-specific network topology details
+should still be documented conservatively.
 
 Repository checkout variables such as `REPO_URL`, `BRANCH`, and optional
 `COMMIT_SHA` are used later inside the **TPU VM shell**. Shell variables exported
@@ -92,11 +102,31 @@ before SSH do not automatically exist inside the TPU VM shell.
 Run from **Google Cloud Shell or a local terminal with `gcloud`** after setting
 the environment variables above.
 
+Discover or confirm the active Google Cloud project without committing real
+project IDs or project numbers:
+
+```bash
+gcloud projects list --format="table(projectId,name,projectNumber)"
+gcloud config get-value project
+gcloud projects describe <PROJECT_ID> --format="table(projectId,name,projectNumber)"
+```
+
 ```bash
 gcloud auth login
 gcloud config set project "$PROJECT_ID"
 gcloud config set compute/zone "$ZONE"
 gcloud services enable tpu.googleapis.com
+
+gcloud compute networks list \
+  --project "$PROJECT_ID"
+
+gcloud compute networks subnets list \
+  --project "$PROJECT_ID" \
+  --regions "$REGION"
+
+gcloud compute networks subnets describe "$SUBNET_NAME" \
+  --project "$PROJECT_ID" \
+  --region "$REGION"
 
 gcloud compute tpus accelerator-types list \
   --project "$PROJECT_ID" \
@@ -140,7 +170,9 @@ gcloud compute tpus queued-resources create "$QUEUED_RESOURCE_ID" \
   --project "$PROJECT_ID" \
   --zone "$ZONE" \
   --accelerator-type "$ACCELERATOR_TYPE" \
-  --runtime-version "$RUNTIME_VERSION"
+  --runtime-version "$RUNTIME_VERSION" \
+  --network "$NETWORK_NAME" \
+  --subnetwork "$SUBNET_NAME"
 ```
 
 Add `--spot` when using spot or TRC spot quota. The course project's successful
@@ -153,8 +185,38 @@ gcloud compute tpus queued-resources create "$QUEUED_RESOURCE_ID" \
   --zone "$ZONE" \
   --accelerator-type "$ACCELERATOR_TYPE" \
   --runtime-version "$RUNTIME_VERSION" \
+  --network "$NETWORK_NAME" \
+  --subnetwork "$SUBNET_NAME" \
   --spot
 ```
+
+Optional queue expiration guard:
+
+If your installed `gcloud` version and selected queued-resource API support it,
+you can add `--valid-until-duration` to limit how long the queued resource
+should remain valid. Check support first:
+
+```bash
+gcloud compute tpus queued-resources create --help
+```
+
+Example:
+
+```bash
+gcloud compute tpus queued-resources create "$QUEUED_RESOURCE_ID" \
+  --node-id "$TPU_NAME" \
+  --project "$PROJECT_ID" \
+  --zone "$ZONE" \
+  --accelerator-type "$ACCELERATOR_TYPE" \
+  --runtime-version "$RUNTIME_VERSION" \
+  --network "$NETWORK_NAME" \
+  --subnetwork "$SUBNET_NAME" \
+  --spot \
+  --valid-until-duration=45m
+```
+
+This is a queue-expiration guard, not a substitute for cleanup. If a wait is
+abandoned, still verify and delete queued resources explicitly.
 
 ## Wait For Resource
 
@@ -302,6 +364,83 @@ uv run python scripts/compare_vit_results.py \
 
 Keep raw JSON and comparison JSON under ignored `runs/vit-inference/`. Curated
 Markdown comparison tables belong under `report/results/`.
+
+## Planned Imagenette 320 Val64 TPU Benchmark
+
+This is a planned next benchmark path, not completed evidence. The repository
+does not download Imagenette automatically.
+
+Prepare Imagenette 320 before running the TPU commands. Use the official
+Imagenette source, then extract files so this path exists:
+
+```text
+data/local/imagenette2-320/val
+```
+
+Build the lightweight validation manifest:
+
+```bash
+uv run python scripts/build_image_manifest.py \
+  data/local/imagenette2-320/val \
+  --output data/local/imagenette2-320/val/manifest_val_64.txt \
+  --limit 64
+```
+
+Do not commit `data/local/`, generated manifests, dataset files, or raw JSON
+benchmark outputs.
+
+On the **TPU VM shell**, either download and extract Imagenette 320 on the TPU
+VM or copy a prepared local `data/local/imagenette2-320/` directory to the TPU
+VM. Preserve the same manifest path expected by the benchmark commands:
+
+```text
+data/local/imagenette2-320/val/manifest_val_64.txt
+```
+
+Planned cloud TPU Imagenette val64 commands:
+
+```bash
+uv run --group pretrained python examples/pretrained_vit_inference.py \
+  --jax-platform tpu \
+  --image-manifest data/local/imagenette2-320/val/manifest_val_64.txt \
+  --batch-size 1 \
+  --warmup-steps 1 \
+  --benchmark-steps 5 \
+  --output runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b1.json
+
+uv run --group pretrained python examples/pretrained_vit_inference.py \
+  --jax-platform tpu \
+  --image-manifest data/local/imagenette2-320/val/manifest_val_64.txt \
+  --batch-size 4 \
+  --warmup-steps 1 \
+  --benchmark-steps 5 \
+  --output runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b4.json
+
+uv run --group pretrained python examples/pretrained_vit_inference.py \
+  --jax-platform tpu \
+  --image-manifest data/local/imagenette2-320/val/manifest_val_64.txt \
+  --batch-size 8 \
+  --warmup-steps 1 \
+  --benchmark-steps 5 \
+  --output runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b8.json
+```
+
+After retrieving the cloud TPU JSON files to the local repository, generate a
+planned local CPU-vs-cloud TPU Imagenette val64 table:
+
+```bash
+uv run python scripts/compare_vit_results.py \
+  runs/vit-inference/demo2_local_imagenette320_val64_cpu_b1.json \
+  runs/vit-inference/demo2_local_imagenette320_val64_cpu_b4.json \
+  runs/vit-inference/demo2_local_imagenette320_val64_cpu_b8.json \
+  runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b1.json \
+  runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b4.json \
+  runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b8.json \
+  --markdown-output report/results/demo2_local_cpu_vs_cloud_tpu_imagenette320_val64.md
+```
+
+Do not create the curated Markdown table until the real cloud TPU JSON artifacts
+exist.
 
 ## Limitations
 

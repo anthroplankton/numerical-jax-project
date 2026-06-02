@@ -261,5 +261,8 @@ Hugging Face access, image opening, or model weight download.
    hardware comparison with longer benchmark loops, recorded commit SHA,
    environment metadata, monitoring notes, and the same cleanup verification.
 4. Keep Imagenette 320 preparation under ignored `data/local/imagenette2-320/`;
-   do not add automatic downloads or pytest/CI dependencies.
+   do not add automatic downloads or pytest/CI dependencies. The planned
+   Imagenette val64 cloud TPU preparation and command templates are documented
+   in `cloud/demo2_tpu_quickstart.md` and remain future work until real TPU JSON
+   artifacts exist.
 5. Keep Demo 1 and Demo 3 preserved as future work unless course scope changes.

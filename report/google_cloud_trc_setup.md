@@ -100,6 +100,11 @@ generally 1931x faster。
   note，不是 performance claim。
 - Successful attempt：改用較小的 v6e TRC spot queued resource，在
   `us-east1-d` 完成 public-example smoke run。
+- Network / subnet note：成功的 first smoke run 使用 selected region 的
+  default VPC network 與 default subnet。Earlier resource attempts showed that
+  subnet availability can matter; missing regional default subnet can block TPU
+  resource creation。除非有明確且安全的需求，不在 repository 記錄 private IPs、
+  subnet CIDR ranges、hostnames 或 detailed network topology。
 
 ## Remaining Work
 

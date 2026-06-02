@@ -46,6 +46,8 @@ Cloud resource placeholders are used from Google Cloud Shell or a local
 - `<ACCELERATOR_TYPE>`: TPU accelerator type.
 - `<RUNTIME_VERSION>`: TPU VM runtime version.
 - `<QUEUED_RESOURCE_ID>`: queued-resource identifier.
+- `<NETWORK_NAME>`: VPC network name.
+- `<SUBNET_NAME>`: regional subnet name.
 
 Repository checkout placeholders are used inside the TPU VM shell:
 
@@ -58,7 +60,8 @@ Repository checkout placeholders are used inside the TPU VM shell:
 Do not document or commit project numbers, billing account IDs, private
 hostnames, private IP addresses, credential paths, SSH key fingerprints, raw
 terminal logs, private screenshots, service account keys, or cloud credential
-files.
+files, subnet CIDR ranges, or detailed network topology unless intentionally
+needed and safe.
 
 ## Resource And Funding Paths
 
@@ -83,7 +86,9 @@ gcloud compute tpus tpu-vm create <TPU_NAME> \
   --project=<PROJECT_ID> \
   --zone=<ZONE> \
   --accelerator-type=<ACCELERATOR_TYPE> \
-  --version=<RUNTIME_VERSION>
+  --version=<RUNTIME_VERSION> \
+  --network=<NETWORK_NAME> \
+  --subnetwork=<SUBNET_NAME>
 
 gcloud compute tpus tpu-vm describe <TPU_NAME> \
   --project=<PROJECT_ID> \
@@ -111,7 +116,9 @@ gcloud compute tpus queued-resources create <QUEUED_RESOURCE_ID> \
   --project=<PROJECT_ID> \
   --zone=<ZONE> \
   --accelerator-type=<ACCELERATOR_TYPE> \
-  --runtime-version=<RUNTIME_VERSION>
+  --runtime-version=<RUNTIME_VERSION> \
+  --network=<NETWORK_NAME> \
+  --subnetwork=<SUBNET_NAME>
 ```
 
 Spot or TRC spot queued resource:
@@ -123,8 +130,21 @@ gcloud compute tpus queued-resources create <QUEUED_RESOURCE_ID> \
   --zone=<ZONE> \
   --accelerator-type=<ACCELERATOR_TYPE> \
   --runtime-version=<RUNTIME_VERSION> \
+  --network=<NETWORK_NAME> \
+  --subnetwork=<SUBNET_NAME> \
   --spot
 ```
+
+The subnet must exist in the region corresponding to the selected TPU zone. The
+course smoke run used the default VPC network and default subnet in the selected
+region, but other valid VPC/subnet setups may be used.
+
+Optional queue expiration guard: if the installed `gcloud` version and selected
+queued-resource API support it, `--valid-until-duration` can limit how long a
+queued resource should remain valid. Check support with
+`gcloud compute tpus queued-resources create --help` before using it. This was
+not recorded as used in the completed course smoke run, and it does not replace
+manual cleanup.
 
 Delete a queued resource after artifact retrieval, failed provisioning, or an
 abandoned wait:
@@ -164,6 +184,8 @@ resource before trying another zone or accelerator type.
 Use [demo2_tpu_quickstart.md](demo2_tpu_quickstart.md) for the complete
 repository checkout, `uv` setup, TPU-compatible JAX install, backend/device
 verification, Demo 2 command, artifact retrieval, and local comparison sequence.
+That quickstart also contains the planned Imagenette 320 val64 TPU preparation
+and command templates.
 
 Reference command for the public `b4` TPU smoke run:
 
@@ -179,6 +201,38 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
 
 Do not claim TPU execution succeeded unless backend/device verification reports
 TPU and the Demo 2 command completes on the TPU VM.
+
+## Planned Imagenette 320 Cloud Benchmark Reference
+
+Imagenette 320 cloud TPU runs remain planned work until real cloud TPU JSON
+artifacts exist. The repository does not download Imagenette automatically.
+Download Imagenette 320 from its official source and preserve the same path on
+the local machine and TPU VM:
+
+```text
+data/local/imagenette2-320/val/manifest_val_64.txt
+```
+
+Use `scripts/build_image_manifest.py` to generate `manifest_val_64.txt` from an
+existing extracted validation directory. Do not commit `data/local/`, generated
+manifests, dataset files, raw JSON artifacts, or raw cloud logs.
+
+The planned cloud TPU output names are:
+
+```text
+runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b1.json
+runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b4.json
+runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b8.json
+```
+
+The planned curated comparison table path is:
+
+```text
+report/results/demo2_local_cpu_vs_cloud_tpu_imagenette320_val64.md
+```
+
+Do not create this curated Markdown table until the real cloud TPU JSON
+artifacts have been retrieved.
 
 ## Artifact Policy
 
@@ -254,6 +308,10 @@ Record cleanup evidence in report materials only after cleanup actually occurs.
 
 - If `WAITING_FOR_RESOURCES` lasts longer than the run window, delete the queued
   resource and consider another zone, accelerator type, or quota path.
+- If resource creation fails before provisioning, verify the selected network
+  and regional subnet. A missing default subnet in the selected region can block
+  TPU resource creation; either create/select a valid regional subnet or use a
+  different zone/network/subnet combination.
 - If backend/device verification does not show TPU devices, do not run or claim
   TPU benchmark evidence. Re-check runtime version, JAX TPU install, and the VM
   environment.
