@@ -34,7 +34,10 @@ appropriate.
 
 ## Placeholders And Privacy
 
-Use placeholders until values are safe and intentional:
+Use placeholders until values are safe and intentional.
+
+Cloud resource placeholders are used from Google Cloud Shell or a local
+`gcloud` terminal:
 
 - `<PROJECT_ID>`: Google Cloud project ID.
 - `<PROJECT_NUMBER>`: Google Cloud project number for TRC submission.
@@ -43,9 +46,14 @@ Use placeholders until values are safe and intentional:
 - `<ACCELERATOR_TYPE>`: TPU accelerator type.
 - `<RUNTIME_VERSION>`: TPU VM runtime version.
 - `<QUEUED_RESOURCE_ID>`: queued-resource identifier.
-- `<REPO_URL>`: Git URL for this repository.
+
+Repository checkout placeholders are used inside the TPU VM shell:
+
+- `<REPO_URL>`: Git URL for the repository checkout.
 - `<BRANCH>`: branch to test.
-- `<COMMIT_SHA>`: exact commit hash to test on the TPU VM.
+- `<COMMIT_SHA>`: optional exact commit hash for reproducible benchmark mode.
+  Latest-branch smoke-test mode may omit checkout and record `git rev-parse
+  HEAD` instead.
 
 Do not document or commit project numbers, billing account IDs, private
 hostnames, private IP addresses, credential paths, SSH key fingerprints, raw

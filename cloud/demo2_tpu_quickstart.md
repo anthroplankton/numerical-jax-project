@@ -52,8 +52,9 @@ JSON unless a later artifact policy explicitly changes.
 
 ## Environment Variables
 
-Use this generic block first, replacing placeholders with values available to
-your project and quota path:
+These cloud resource variables are used from **Google Cloud Shell or a local
+terminal with `gcloud`**. Use this generic block first, replacing placeholders
+with values available to your project and quota path:
 
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
@@ -63,12 +64,10 @@ export TPU_NAME="<TPU_NAME>"
 export QUEUED_RESOURCE_ID="<QUEUED_RESOURCE_ID>"
 export ACCELERATOR_TYPE="<ACCELERATOR_TYPE>"
 export RUNTIME_VERSION="<RUNTIME_VERSION>"
-export REPO_URL="https://github.com/anthroplankton/numerical-jax-project.git"
-export BRANCH="feat/demo2-tpu-evidence"
-export COMMIT_SHA="<COMMIT_SHA>"
 ```
 
-Optional concrete block for reproducing the successful course smoke-run shape:
+Optional concrete cloud-resource block for reproducing the successful course
+smoke-run shape:
 
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
@@ -78,15 +77,15 @@ export TPU_NAME="demo2-vit-v6e1-use1-spot"
 export QUEUED_RESOURCE_ID="demo2-vit-v6e1-use1-spot-qr"
 export ACCELERATOR_TYPE="v6e-1"
 export RUNTIME_VERSION="v2-alpha-tpuv6e"
-export REPO_URL="https://github.com/anthroplankton/numerical-jax-project.git"
-export BRANCH="feat/demo2-tpu-evidence"
-export COMMIT_SHA="<COMMIT_SHA>"
 ```
 
 The second block reproduces the successful course smoke-run resource shape, but
-it requires matching quota and funding availability. `<PROJECT_ID>` and
-`<COMMIT_SHA>` remain placeholders; do not use a later local commit SHA as a
-substitute for the TPU-run commit.
+it requires matching quota and funding availability. `<PROJECT_ID>` remains a
+placeholder.
+
+Repository checkout variables such as `REPO_URL`, `BRANCH`, and optional
+`COMMIT_SHA` are used later inside the **TPU VM shell**. Shell variables exported
+before SSH do not automatically exist inside the TPU VM shell.
 
 ## Cloud Preflight
 
@@ -195,12 +194,24 @@ gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
 
 Run inside the **TPU VM shell**.
 
-Choose one checkout mode:
+Set repository checkout variables inside the TPU VM shell:
 
-- Reproducible mode: set `COMMIT_SHA` to a real commit SHA, then run
-  `git checkout "$COMMIT_SHA"`.
-- Latest-branch smoke-test mode: leave `COMMIT_SHA` as a placeholder, omit the
-  checkout command, and record `git rev-parse HEAD`.
+```bash
+export REPO_URL="<REPO_URL>"
+export BRANCH="<BRANCH>"
+# export COMMIT_SHA="<real commit SHA>"
+
+# Example for this repository and current evidence branch:
+# export REPO_URL="https://github.com/anthroplankton/numerical-jax-project.git"
+# export BRANCH="feat/demo2-tpu-evidence"
+```
+
+`COMMIT_SHA` is optional. Choose one checkout mode:
+
+- Latest-branch smoke-test mode: leave `COMMIT_SHA` unset or as a placeholder,
+  do not run `git checkout "$COMMIT_SHA"`, and record `git rev-parse HEAD`.
+- Reproducible benchmark mode: replace `COMMIT_SHA` with a real commit SHA and
+  run `git checkout "$COMMIT_SHA"`.
 
 ```bash
 git clone "$REPO_URL" numerical-jax-project
