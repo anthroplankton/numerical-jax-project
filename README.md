@@ -84,6 +84,9 @@ local ignored path exists:
 data/local/imagenette2-320/val
 ```
 
+Concrete `curl` and `tar` commands using the official fastai Imagenette 320
+archive are in [docs/demo2_pretrained_vit.md](docs/demo2_pretrained_vit.md).
+
 ## Demo 2: Pretrained ViT Inference
 
 Demo 2 benchmarks inference for `google/vit-base-patch16-224` with
@@ -139,8 +142,10 @@ local-only dataset. Current curated tables exist for local and supplementary
 external CPU Imagenette runs, but the extracted dataset and generated manifests
 remain under ignored `data/local/imagenette2-320/`. Build a manifest before
 running a benchmark. `scripts/build_image_manifest.py` scans existing local
-images only; it does not download Imagenette. The lightweight documented path is
-the 64-image validation manifest:
+images only; it does not download Imagenette. If the dataset path is missing,
+follow the download and extraction steps in
+[docs/demo2_pretrained_vit.md](docs/demo2_pretrained_vit.md). The lightweight
+documented path is the 64-image validation manifest:
 
 ```bash
 uv run python scripts/build_image_manifest.py \

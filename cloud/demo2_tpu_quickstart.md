@@ -377,6 +377,12 @@ Imagenette source, then extract files so this path exists:
 data/local/imagenette2-320/val
 ```
 
+Concrete local download and extraction commands using the official fastai
+Imagenette 320 archive are documented in
+[../docs/demo2_pretrained_vit.md](../docs/demo2_pretrained_vit.md). For cloud
+Imagenette benchmark runs, the TPU VM must have the same
+`data/local/imagenette2-320/val` path before benchmark commands run.
+
 Build the lightweight validation manifest:
 
 ```bash
@@ -386,8 +392,8 @@ uv run python scripts/build_image_manifest.py \
   --limit 64
 ```
 
-Do not commit `data/local/`, generated manifests, dataset files, or raw JSON
-benchmark outputs.
+Do not commit `data/local/`, generated manifests, dataset files, model caches,
+or raw JSON benchmark outputs.
 
 On the **TPU VM shell**, either download and extract Imagenette 320 on the TPU
 VM or copy a prepared local `data/local/imagenette2-320/` directory to the TPU

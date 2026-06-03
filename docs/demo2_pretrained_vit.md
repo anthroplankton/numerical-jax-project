@@ -162,10 +162,25 @@ already exist:
 data/local/imagenette2-320/val
 ```
 
-If that path is missing, manually download Imagenette 320 from its official
-source and extract it first. `scripts/build_image_manifest.py` only scans
-existing local images; it does not download datasets or create the Imagenette
-directory tree.
+### Download and extract
+
+Run from the repository root. This downloads the official fastai Imagenette 320
+archive into ignored local storage and extracts it under `data/local/`:
+
+```bash
+mkdir -p data/local
+curl -L --fail --show-error -o data/local/imagenette2-320.tgz https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz
+tar -xzf data/local/imagenette2-320.tgz -C data/local
+test -d data/local/imagenette2-320/val
+find data/local/imagenette2-320/val -type f | wc -l
+```
+
+Imagenette files remain under ignored `data/local/`, and generated manifests
+remain under ignored `data/local/imagenette2-320/`. Raw JSON benchmark outputs
+remain under ignored `runs/vit-inference/`. Tests and CI must not require
+Imagenette, and project scripts still do not automatically download it:
+`scripts/build_image_manifest.py` only scans existing local images and does not
+create the Imagenette directory tree.
 
 Build manifests before running benchmarks. Use these names for the validation
 split:
@@ -227,8 +242,8 @@ data/local/imagenette2-320/val
 data/local/imagenette2-320/val/manifest_val_64.txt
 ```
 
-Keep `data/local/`, generated manifests, dataset files, and raw JSON benchmark
-outputs uncommitted.
+Keep `data/local/`, generated manifests, dataset files, model caches, and raw
+JSON benchmark outputs uncommitted.
 
 ## Imagenette 320 Local CPU Benchmark Commands
 

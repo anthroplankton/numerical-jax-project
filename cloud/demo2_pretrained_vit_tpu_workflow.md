@@ -207,7 +207,9 @@ TPU and the Demo 2 command completes on the TPU VM.
 Imagenette 320 cloud TPU runs remain planned work until real cloud TPU JSON
 artifacts exist. The repository does not download Imagenette automatically.
 Download Imagenette 320 from its official source and preserve the same path on
-the local machine and TPU VM:
+the local machine and TPU VM. Concrete `curl` and `tar` commands using the
+official fastai Imagenette 320 archive are documented in
+[../docs/demo2_pretrained_vit.md](../docs/demo2_pretrained_vit.md).
 
 ```text
 data/local/imagenette2-320/val/manifest_val_64.txt
@@ -215,7 +217,7 @@ data/local/imagenette2-320/val/manifest_val_64.txt
 
 Use `scripts/build_image_manifest.py` to generate `manifest_val_64.txt` from an
 existing extracted validation directory. Do not commit `data/local/`, generated
-manifests, dataset files, raw JSON artifacts, or raw cloud logs.
+manifests, dataset files, model caches, raw JSON artifacts, or raw cloud logs.
 
 The planned cloud TPU output names are:
 
