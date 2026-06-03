@@ -275,6 +275,10 @@ export BRANCH="<BRANCH>"
 - Reproducible benchmark mode: replace `COMMIT_SHA` with a real commit SHA and
   run `git checkout "$COMMIT_SHA"`.
 
+New Demo 2 JSON records `git_commit` from the observed checkout when Git
+metadata is available. `COMMIT_SHA` remains an optional checkout pin; it is not
+used as the source of truth for result provenance.
+
 ```bash
 git clone "$REPO_URL" numerical-jax-project
 cd numerical-jax-project

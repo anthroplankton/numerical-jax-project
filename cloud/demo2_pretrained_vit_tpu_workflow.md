@@ -57,6 +57,12 @@ Repository checkout placeholders are used inside the TPU VM shell:
   Latest-branch smoke-test mode may omit checkout and record `git rev-parse
   HEAD` instead.
 
+`<COMMIT_SHA>` is the run-input pin used before execution. New Demo 2 raw JSON
+results also record observed code provenance as `git_commit`, `git_branch`, and
+`git_dirty` when Git metadata is available inside the TPU VM shell. Use the JSON
+`git_commit` field to audit the code version that actually produced a new
+artifact; do not invent these fields for legacy artifacts.
+
 Do not document or commit project numbers, billing account IDs, private
 hostnames, private IP addresses, credential paths, SSH key fingerprints, raw
 terminal logs, private screenshots, service account keys, or cloud credential

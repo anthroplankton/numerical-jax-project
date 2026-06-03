@@ -360,6 +360,9 @@ that count.
   "processing_mode": "repeated_single_image",
   "command_used": "python examples/pretrained_vit_inference.py --jax-platform cpu ...",
   "output_path": "runs/vit-inference/metrics.json",
+  "git_commit": "0123456789abcdef0123456789abcdef01234567",
+  "git_branch": "feat/demo2-tpu-evidence",
+  "git_dirty": false,
   "model_name": "google/vit-base-patch16-224",
   "selected_jax_platform": "cpu",
   "backend": "cpu",
@@ -408,6 +411,9 @@ mistaken for whole-run predictions:
   "mode": "image_manifest",
   "command_used": "python examples/pretrained_vit_inference.py --jax-platform cpu ...",
   "output_path": "runs/vit-inference/demo2_local_private_examples_cpu_b4.json",
+  "git_commit": "0123456789abcdef0123456789abcdef01234567",
+  "git_branch": "feat/demo2-tpu-evidence",
+  "git_dirty": false,
   "manifest_path": "data/local/demo2_vit_images/manifest.txt",
   "manifest_kind": "local_private",
   "input_shape": [4, 3, 224, 224],
@@ -444,8 +450,13 @@ mistaken for whole-run predictions:
 Each `image_results` entry includes that image's input shape, batch index,
 position inside its batch, and qualitative top-k predictions. Manifest timing is
 reported at the batch/run level rather than as separate per-image timing.
-New CLI-generated JSON outputs also include `command_used` and `output_path` so
-local CPU and TPU artifacts can be compared with clearer provenance.
+New CLI-generated JSON outputs also include `command_used`, `output_path`, and
+privacy-safe Git provenance fields (`git_commit`, `git_branch`, and
+`git_dirty`) so local CPU and TPU artifacts can be compared with clearer
+provenance. `git_commit` is the observed checkout from `git rev-parse HEAD`, and
+`git_dirty` is derived from `git status --short` without storing the full status
+output. The Git fields are nullable: legacy artifacts, runs outside a Git
+checkout, or environments without Git may report `null` values.
 Curated Markdown tables under `report/results/` summarize selected fields from
 the raw JSON files.
 
@@ -456,6 +467,7 @@ present:
 
 - `mode` and `processing_mode`
 - `model_name`, `selected_jax_platform`, actual `backend`, and `devices`
+- `git_commit`, `git_branch`, and `git_dirty`
 - `batch_size`, `warmup_steps`, `benchmark_steps`, `timed_batch_runs`
 - `num_images`, `num_batches`, `num_padded_images`, and `last_batch_policy`
 - `mean_step_time_sec`, `total_timed_inference_sec`,
@@ -608,10 +620,13 @@ uv run python scripts/compare_vit_results.py \
   --markdown-output report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md
 ```
 
-The helper only reads existing JSON files. It summarizes command metadata when
-available, input image or manifest, backend, devices, batch size, image count,
-total timed runtime, throughput, derived per-image time, and output path. The
-optional Markdown output is intended for report-ready benchmark tables.
+The helper only reads existing JSON files. It summarizes command metadata and
+Git provenance when available, input image or manifest, backend, devices, batch
+size, image count, total timed runtime, throughput, derived per-image time, and
+output path. The optional Markdown output is intended for report-ready benchmark
+tables and keeps the main performance table focused on timing, throughput, and
+speedup. Use the comparison JSON output when detailed provenance fields are
+needed.
 
 ## Limitations
 

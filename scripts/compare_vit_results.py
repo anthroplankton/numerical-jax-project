@@ -11,6 +11,12 @@ import json
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+GIT_METADATA_FIELDS = (
+    "git_commit",
+    "git_branch",
+    "git_dirty",
+)
+
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     """Parse command-line arguments for result comparison."""
@@ -63,6 +69,7 @@ def summarize_result(path: Path, metrics: Mapping[str, Any]) -> dict[str, Any]:
         "source_path": str(path),
         "command_used": metrics.get("command_used"),
         "output_path": metrics.get("output_path", str(path)),
+        **{field: metrics.get(field) for field in GIT_METADATA_FIELDS},
         "mode": mode,
         "processing_mode": metrics.get("processing_mode"),
         "model_name": metrics.get("model_name"),
