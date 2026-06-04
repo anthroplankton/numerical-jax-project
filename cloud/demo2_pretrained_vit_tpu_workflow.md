@@ -7,7 +7,8 @@ recommended executable path from local baseline to TPU cleanup, start with
 This document keeps details that are useful after the quickstart: resource
 creation variants, queued-resource state interpretation, spot and TRC spot
 notes, monitoring and evidence guidance, cleanup discipline, troubleshooting
-notes, and the course-specific TRC spot TPU evidence appendices.
+notes, optional classifier-head fine-tuning smoke evidence, and the
+course-specific TRC spot TPU evidence appendices.
 
 TRC was the funding/quota path used for the course project. TRC is not required
 by the code itself. Any valid Google Cloud TPU quota and funding path may be
@@ -30,7 +31,8 @@ appropriate.
 - **Google Cloud Shell or local terminal with `gcloud`**: cloud auth, resource
   creation, SSH, artifact retrieval, and cleanup.
 - **TPU VM shell**: repository checkout, dependency setup, JAX TPU verification,
-  and Demo 2 execution.
+  and Demo 2 execution, including the optional classifier-head fine-tuning
+  smoke workflow.
 
 ## Placeholders And Privacy
 
@@ -208,6 +210,13 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
 Do not claim TPU execution succeeded unless backend/device verification reports
 TPU and the Demo 2 command completes on the TPU VM.
 
+Optional classifier-head fine-tuning is also part of Demo 2. The script
+`examples/demo2_pretrained_vit_finetune.py` freezes the ViT backbone, updates
+only the classifier head, and writes generated artifacts under
+`runs/vit-finetune/`. Use the quickstart for the executable TPU command and
+resume sequence. Do not claim TPU fine-tuning evidence until the command has
+actually completed on a TPU VM and artifacts have been retrieved.
+
 ## Imagenette 320 Cloud TPU Inference Evidence
 
 The repository now has retrieved TPU JSON artifacts for Imagenette 320
@@ -277,6 +286,8 @@ universal TPU speedup claim.
 
 - Raw TPU JSON belongs under ignored `runs/vit-inference/`.
 - Generated comparison JSON also belongs under ignored `runs/vit-inference/`.
+- Raw fine-tuning summaries, metrics, logs, predictions, checkpoints, and
+  resume artifacts belong under ignored `runs/vit-finetune/`.
 - Curated Markdown tables may be committed under `report/results/` when they are
   intentionally report-ready.
 - Do not commit model caches, Hugging Face cache files, private images, raw cloud
@@ -286,6 +297,10 @@ universal TPU speedup claim.
 
 Useful monitoring and observability evidence can include:
 
+- Application metrics: loss, step time, examples per second, runtime,
+  checkpoint step, resume start step, and final step.
+- Checkpoint evidence: checkpoint directory, latest checkpoint step, restored
+  start step, final step, and whether the run resumed.
 - Google Cloud Console resource lifecycle notes.
 - Cloud Monitoring charts for TPU utilization, host CPU, memory, or idle time,
   if available.
@@ -311,10 +326,19 @@ Capture these items for each real TPU attempt:
   local device count, and devices.
 - Demo command and output artifact path.
 - TPU JSON artifact path.
+- For fine-tuning attempts: `summary.json`, `metrics.csv`, checkpoint directory,
+  latest checkpoint step, resume command, resume start step, final step, and
+  whether controlled SIGTERM or real spot interruption was used.
 - Artifact retrieval command.
 - Cleanup command and deletion verification output.
 - Comparison command and curated Markdown table path.
 - Limitations and failed attempts, if any.
+
+For spot or preemptible TPU risk, controlled SIGTERM plus resume is the primary
+checkpoint evidence path. Real interruption is non-deterministic and may not
+send graceful SIGTERM. Durable resume after TPU VM deletion requires copying
+checkpoints to Google Cloud Storage or another durable location before deleting
+the VM.
 
 ## Cleanup Discipline
 

@@ -1,24 +1,28 @@
-# Demo 2: Pretrained ViT Inference Benchmark
+# Demo 2: Pretrained ViT Inference And Head Fine-Tuning
 
-Demo 2 is now a Vision Transformer inference benchmark workflow with JAX/Flax.
+Demo 2 is now a Vision Transformer workflow with JAX/Flax. Its completed
+evidence is an inference benchmark workflow.
 It uses raw JSON outputs under ignored `runs/vit-inference/`, curated
 report-ready Markdown tables under `report/results/`, manifest batching, public
 example assets, supplementary external CPU evidence, a completed Google Cloud
 TPU public-example smoke run, and retrieved Imagenette 320 TPU inference
-artifacts. The default model is `google/vit-base-patch16-224` from Hugging
-Face.
+artifacts. The default model is `google/vit-base-patch16-224` from Hugging Face.
+The optional head fine-tuning extension writes generated smoke-run artifacts
+under ignored `runs/vit-finetune/`.
 
 Because of current course presentation constraints, this is the primary demo
 path for the project. Demo 1 remains preserved as background raw-JAX CNN work,
 and Demo 3 remains optional future work.
 
-This demo is inference-only. It does not fine-tune the model, and it does not
-perform dataset-level accuracy evaluation. TPU evidence now includes a small
-public-example smoke run plus Imagenette 320 `val64`, `val256`, and `val_full`
-inference timing tables, but it is still not a full controlled benchmark. For
-actual TPU execution, use `cloud/demo2_tpu_quickstart.md`. For resource
-variants, monitoring/evidence guidance, cleanup discipline, and course evidence
-appendices, see `cloud/demo2_pretrained_vit_tpu_workflow.md`.
+The completed evidence is inference-only. The optional fine-tuning extension is
+part of Demo 2, not Demo 3, and should be described as planned or newly
+implemented workflow support until a real run produces artifacts. TPU evidence
+now includes a small public-example smoke run plus Imagenette 320 `val64`,
+`val256`, and `val_full` inference timing tables, but it is still not a full
+controlled benchmark. For actual TPU execution, use
+`cloud/demo2_tpu_quickstart.md`. For resource variants, monitoring/evidence
+guidance, cleanup discipline, and course evidence appendices, see
+`cloud/demo2_pretrained_vit_tpu_workflow.md`.
 
 ## Setup
 
@@ -27,6 +31,12 @@ group:
 
 ```bash
 uv sync --frozen --group pretrained
+```
+
+The optional fine-tuning extension also uses the `training` dependency group:
+
+```bash
+uv sync --frozen --group pretrained --group training
 ```
 
 The first run downloads the image processor and model weights from Hugging Face
@@ -252,6 +262,76 @@ data/local/imagenette2-320/val/manifest_val_full.txt
 
 Keep `data/local/`, generated manifests, dataset files, model caches, and raw
 JSON benchmark outputs uncommitted.
+
+## Optional Classifier-Head Fine-Tuning Extension
+
+`examples/demo2_pretrained_vit_finetune.py` is a small Demo 2 training smoke
+extension. It keeps the pretrained ViT backbone frozen and updates only the
+classifier head. Orbax manages checkpoint/resume, and the checkpoint payload is
+limited to classifier-head parameters, optimizer state, current step, and small
+metadata. It does not save the frozen ViT backbone or Hugging Face model cache.
+
+This extension is not a new Demo 3, not full ViT fine-tuning, not a model
+quality study, and not an Imagenette accuracy benchmark. Any accuracy-like
+numbers written during the smoke run are helper metrics for the listed manifest
+only.
+
+Prepare small path-only Imagenette manifests from existing local data. The
+script derives labels from Imagenette class directory names such as
+`n01440764/` and maps them to the corresponding ImageNet class indices used by
+`google/vit-base-patch16-224`.
+
+```bash
+uv run python scripts/build_image_manifest.py \
+  data/local/imagenette2-320/train \
+  --output data/local/imagenette2-320/train/manifest_train_64.txt \
+  --limit 64
+
+uv run python scripts/build_image_manifest.py \
+  data/local/imagenette2-320/val \
+  --output data/local/imagenette2-320/val/manifest_val_64.txt \
+  --limit 64
+```
+
+These generated manifests are small smoke inputs. They are not automatically
+balanced across classes and should not be treated as dataset-level evaluation.
+
+Run a local CPU smoke test:
+
+```bash
+uv run --group pretrained --group training python examples/demo2_pretrained_vit_finetune.py \
+  --jax-platform cpu \
+  --train-manifest data/local/imagenette2-320/train/manifest_train_64.txt \
+  --eval-manifest data/local/imagenette2-320/val/manifest_val_64.txt \
+  --batch-size 8 \
+  --learning-rate 0.001 \
+  --max-steps 20 \
+  --checkpoint-every-steps 10 \
+  --checkpoint-every-seconds 30 \
+  --checkpoint-dir runs/vit-finetune/demo2_local_train64_cpu/checkpoints \
+  --output-dir runs/vit-finetune/demo2_local_train64_cpu \
+  --save-predictions
+```
+
+Expected generated artifacts:
+
+```text
+runs/vit-finetune/demo2_local_train64_cpu/summary.json
+runs/vit-finetune/demo2_local_train64_cpu/metrics.csv
+runs/vit-finetune/demo2_local_train64_cpu/predictions_before.json
+runs/vit-finetune/demo2_local_train64_cpu/predictions_after.json
+runs/vit-finetune/demo2_local_train64_cpu/train.log
+runs/vit-finetune/demo2_local_train64_cpu/checkpoints/
+```
+
+`summary.json` records the mode, model name, trainable scope
+`classifier_head_only`, frozen scope `vit_backbone`, backend/devices, manifests,
+batch size, learning rate, start/final step, resume status, checkpoint path,
+initial/final loss, step timing, throughput, total runtime, and privacy-safe Git
+metadata when available. In that summary, `mean_step_time_sec` and
+`examples_per_second` measure training-step execution time and exclude
+checkpoint write time, while `total_runtime_sec` includes setup, evaluation,
+checkpointing, prediction writing, and summary writing overhead.
 
 ## Imagenette 320 Local CPU Benchmark Commands
 
@@ -505,6 +585,9 @@ Expected manifest metadata for the current image sets:
 - `google/vit-base-patch16-224` is a pretrained ViT image-classification model.
 - The script uses `AutoImageProcessor` for preprocessing and
   `FlaxViTForImageClassification` for JAX/Flax inference.
+- The optional fine-tuning script uses the same model family and updates only
+  the classifier head. The ViT backbone stays frozen during the training smoke
+  loop.
 - In single-image mode, the input image is converted to RGB, preprocessed to
   model tensor format, then repeated along the batch dimension according to
   `--batch-size`.
@@ -657,6 +740,9 @@ needed.
 - The Imagenette TPU tables are ViT inference timing evidence for retrieved
   JSON artifacts. They do not train or fine-tune the model, compute Imagenette
   accuracy, or establish a universal TPU speedup claim.
+- The optional fine-tuning extension is a classifier-head-only workflow smoke
+  run. It should not be described as full ViT fine-tuning, a large benchmark, or
+  model-quality evaluation.
 - Private manifest runs are qualitative local demonstrations, not public
   benchmark datasets or classification-accuracy measurements.
 - Dataset-level accuracy evaluation, longer benchmark loops, monitoring

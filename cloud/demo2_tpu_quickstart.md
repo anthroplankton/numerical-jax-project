@@ -2,12 +2,14 @@
 
 ## Purpose
 
-This is the reusable Cloud TPU quickstart for Demo 2 pretrained ViT inference.
+This is the reusable Cloud TPU quickstart for Demo 2 pretrained ViT inference
+and the optional classifier-head fine-tuning smoke extension.
 It runs the same small public-example TPU smoke test documented in the course
 project, retrieves the JSON artifact, runs local comparison commands, and keeps
 cleanup visible. It also documents how to retrieve the full
 `runs/vit-inference/` folder and regenerate curated Imagenette 320 TPU Markdown
-tables after those JSON artifacts exist.
+tables after those JSON artifacts exist. Fine-tuning outputs use
+`runs/vit-finetune/` and are not part of the existing inference result tables.
 
 Local CPU remains the stable default path for this repository. TPU execution is
 optional and requires a Google Cloud project, billing or another funding path,
@@ -346,6 +348,23 @@ This copies the remote folder to local `runs/vit-inference/`, which is ignored
 by Git. Keep raw TPU JSON and generated comparison JSON there; commit only
 intentionally curated Markdown tables under `report/results/`.
 
+To retrieve the full optional fine-tuning output directory, use the same
+recursive pattern:
+
+```bash
+mkdir -p runs
+
+gcloud compute tpus tpu-vm scp --recurse \
+  "$TPU_NAME":~/numerical-jax-project/runs/vit-finetune \
+  runs/ \
+  --project "$PROJECT_ID" \
+  --zone "$ZONE"
+```
+
+This copies raw fine-tuning summaries, metrics, logs, predictions, and
+checkpoints under ignored `runs/vit-finetune/`. Commit only intentionally
+curated, small report summaries after a real run.
+
 To retrieve only the public-example smoke-run JSON, use the single-file form:
 
 ```bash
@@ -555,9 +574,88 @@ The existing generated summary file for this cross-device view is
 universal speedup claim; it is still inference-only timing evidence from
 specific artifacts.
 
+## Optional Demo 2 ViT Head Fine-Tuning TPU Smoke Run
+
+This optional path is still Demo 2. It freezes the pretrained ViT backbone,
+trains only the classifier head, and uses Orbax checkpoints to demonstrate
+checkpoint/resume behavior under spot or preemptible TPU risk. It is not full
+ViT fine-tuning and not an accuracy benchmark.
+
+Run inside the **TPU VM shell** after repository checkout, Imagenette
+preparation, and TPU JAX installation. Prefer a frozen dependency sync for this
+extension:
+
+```bash
+uv sync --frozen --group pretrained --group training
+```
+
+Build small train/eval manifests from existing Imagenette 320 files:
+
+```bash
+uv run python scripts/build_image_manifest.py \
+  data/local/imagenette2-320/train \
+  --output data/local/imagenette2-320/train/manifest_train_64.txt \
+  --limit 64
+
+uv run python scripts/build_image_manifest.py \
+  data/local/imagenette2-320/val \
+  --output data/local/imagenette2-320/val/manifest_val_64.txt \
+  --limit 64
+```
+
+Run the time-controlled TPU smoke command:
+
+```bash
+uv run --group pretrained --group training python examples/demo2_pretrained_vit_finetune.py \
+  --jax-platform tpu \
+  --train-manifest data/local/imagenette2-320/train/manifest_train_64.txt \
+  --eval-manifest data/local/imagenette2-320/val/manifest_val_64.txt \
+  --batch-size 8 \
+  --learning-rate 0.001 \
+  --max-steps 100000 \
+  --min-train-seconds 120 \
+  --checkpoint-every-steps 20 \
+  --checkpoint-every-seconds 30 \
+  --checkpoint-dir runs/vit-finetune/demo2_cloud_imagenette320_train64_tpu/checkpoints \
+  --output-dir runs/vit-finetune/demo2_cloud_imagenette320_train64_tpu \
+  --save-predictions
+```
+
+`--max-steps 100000` is only an upper bound so the run can be controlled by
+`--min-train-seconds`; it is not a large benchmark target.
+
+For primary interruption evidence, use a controlled SIGTERM from another TPU VM
+shell and then resume from the latest checkpoint:
+
+```bash
+pkill -TERM -f "examples/demo2_pretrained_vit_finetune.py"
+
+uv run --group pretrained --group training python examples/demo2_pretrained_vit_finetune.py \
+  --jax-platform tpu \
+  --train-manifest data/local/imagenette2-320/train/manifest_train_64.txt \
+  --eval-manifest data/local/imagenette2-320/val/manifest_val_64.txt \
+  --batch-size 8 \
+  --learning-rate 0.001 \
+  --max-steps 100000 \
+  --min-train-seconds 120 \
+  --checkpoint-every-steps 20 \
+  --checkpoint-every-seconds 30 \
+  --checkpoint-dir runs/vit-finetune/demo2_cloud_imagenette320_train64_tpu/checkpoints \
+  --output-dir runs/vit-finetune/demo2_cloud_imagenette320_train64_tpu_resume \
+  --resume \
+  --save-predictions
+```
+
+Real spot or preemptible interruption is non-deterministic and is not guaranteed
+to deliver graceful SIGTERM. Treat it as optional evidence, separate from the
+controlled SIGTERM smoke test. Durable resume after TPU VM deletion requires
+copying checkpoints to Google Cloud Storage or another durable location before
+the VM is deleted.
+
 ## Limitations
 
-- Demo 2 is ViT inference only; it does not train or fine-tune the model.
+- Completed Demo 2 TPU evidence is ViT inference only. The optional fine-tuning
+  extension should be reported only after a real run produces artifacts.
 - The public TPU smoke run uses five public images, batch size 4, final-batch
   padding with `num_padded_images = 3`, and a short benchmark loop.
 - The Imagenette 320 TPU tables use validation manifests for inference timing

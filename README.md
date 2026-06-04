@@ -2,22 +2,24 @@
 
 Course project repository for Numerical Computation with JAX.
 
-The current course presentation focus is **Demo 2: pretrained ViT inference
+The current course presentation focus is **Demo 2: pretrained ViT workflows
 with JAX/Flax** using `google/vit-base-patch16-224`. Local CPU inference has
 been run successfully. Google Cloud TPU evidence now includes the first
 public-example smoke run and Imagenette 320 validation-manifest inference runs
 for `val64`, `val256`, and `val_full`. Raw JSON benchmark outputs live under
 ignored `runs/vit-inference/`, and curated report-ready Markdown tables live
-under `report/results/`.
+under `report/results/`. Demo 2 also has a small optional classifier-head
+fine-tuning extension under `runs/vit-finetune/`.
 
-The TPU evidence remains inference-only. The public smoke comparison used five
-public example images, batch size 4, one warmup step, five benchmark steps, and
-final-batch padding with `num_padded_images = 3`. The Imagenette 320 TPU tables
-cover `b1`, `b4`, and `b8` for 64-image, 256-image, and full validation
-manifests. These results are not training evidence, not dataset-level accuracy
-evaluation, not a full controlled benchmark study, and not a universal TPU
-speedup claim. A controlled local-versus-TPU hardware comparison remains future
-work.
+The completed TPU evidence remains inference-only. The public smoke comparison
+used five public example images, batch size 4, one warmup step, five benchmark
+steps, and final-batch padding with `num_padded_images = 3`. The Imagenette 320
+TPU tables cover `b1`, `b4`, and `b8` for 64-image, 256-image, and full
+validation manifests. These results are not training evidence, not
+dataset-level accuracy evaluation, not a full controlled benchmark study, and
+not a universal TPU speedup claim. The optional fine-tuning extension is
+implemented for later smoke runs, but no TPU fine-tuning result should be
+claimed until a real run is completed and artifacts are retrieved.
 
 Local CPU remains the stable default path. TPU execution is optional and
 requires suitable Google Cloud TPU quota/funding, Cloud TPU API access, and
@@ -95,8 +97,8 @@ archive are in [docs/demo2_pretrained_vit.md](docs/demo2_pretrained_vit.md).
 
 ## Demo 2: Pretrained ViT Inference
 
-Demo 2 benchmarks inference for `google/vit-base-patch16-224` with
-Hugging Face Transformers, Flax, and JAX. Pretrained dependencies are optional:
+Demo 2 benchmarks inference for `google/vit-base-patch16-224` with Hugging Face
+Transformers, Flax, and JAX. Pretrained dependencies are optional:
 
 ```bash
 uv sync --frozen --group pretrained
@@ -181,6 +183,34 @@ padded images.
 
 For full local instructions, expected output, model notes, and limitations, see
 [docs/demo2_pretrained_vit.md](docs/demo2_pretrained_vit.md).
+
+Optional Demo 2 classifier-head fine-tuning uses the same pretrained ViT model,
+freezes the ViT backbone, trains only the classifier head, and checkpoints only
+the head parameters, optimizer state, current step, and minimal metadata with
+Orbax. It is a checkpoint/resume and TPU-training smoke workflow, not an
+accuracy benchmark. Install both optional groups before running it:
+
+```bash
+uv sync --frozen --group pretrained --group training
+```
+
+Example local smoke command after preparing small Imagenette train/eval
+manifests:
+
+```bash
+uv run --group pretrained --group training python examples/demo2_pretrained_vit_finetune.py \
+  --jax-platform cpu \
+  --train-manifest data/local/imagenette2-320/train/manifest_train_64.txt \
+  --eval-manifest data/local/imagenette2-320/val/manifest_val_64.txt \
+  --batch-size 8 \
+  --max-steps 20 \
+  --checkpoint-dir runs/vit-finetune/demo2_local_train64_cpu/checkpoints \
+  --output-dir runs/vit-finetune/demo2_local_train64_cpu
+```
+
+Fine-tuning outputs stay under ignored `runs/vit-finetune/`. Do not commit
+checkpoints, model caches, dataset files, raw cloud logs, or large generated
+artifacts.
 
 For TPU execution, use these documents by role:
 

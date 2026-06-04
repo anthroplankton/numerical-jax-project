@@ -542,6 +542,31 @@
     create/delete cloud resources, rerun TPU benchmarks, or add new TPU
     evidence。
 
+## Phase 5.12: Demo 2 Optional ViT Classifier-Head Fine-Tuning Extension
+
+- Date / phase label：2026-06-05 Demo 2 classifier-head fine-tuning workflow
+  support
+- What changed：
+  - Added `examples/demo2_pretrained_vit_finetune.py` as an optional Demo 2
+    extension, not a new Demo 3。
+  - The script uses the existing pretrained ViT model path, freezes the ViT
+    backbone, trains only the classifier head, and writes generated artifacts
+    under ignored `runs/vit-finetune/`。
+  - Added Orbax checkpoint/resume support for classifier-head parameters,
+    optimizer state, current step, and minimal metadata only。
+  - Added lightweight helper tests that avoid TPU, Google Cloud credentials,
+    model downloads, Imagenette data, and Orbax-heavy runtime。
+  - Added the `training` dependency group for `optax` and `orbax-checkpoint`。
+  - Updated README, Demo 2 docs, TPU quickstart/reference docs, current status,
+    and result-artifact guidance。
+- Claim boundary：
+  - This phase did not run model downloads, TPU jobs, `gcloud` commands, cloud
+    resource creation/deletion, commits, or pushes。
+  - No TPU fine-tuning evidence exists yet from this phase。
+  - The extension is a checkpoint/resume and TPU training smoke workflow, not
+    full ViT fine-tuning, not a large benchmark, and not dataset-level accuracy
+    evaluation。
+
 ## Planned Phases
 
 ### Phase 6: Real MNIST/Fashion-MNIST and Curated Local Result

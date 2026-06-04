@@ -461,6 +461,10 @@ pretrained = [
     { name = "pillow" },
     { name = "transformers" },
 ]
+training = [
+    { name = "optax" },
+    { name = "orbax-checkpoint" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -482,6 +486,10 @@ pretrained = [
     { name = "huggingface-hub" },
     { name = "pillow" },
     { name = "transformers", specifier = "<5" },
+]
+training = [
+    { name = "optax" },
+    { name = "orbax-checkpoint" },
 ]
 
 [[package]]

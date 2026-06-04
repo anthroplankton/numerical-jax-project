@@ -37,6 +37,10 @@ pretrained = [
     "pillow",
     "transformers<5",
 ]
+training = [
+    "optax",
+    "orbax-checkpoint",
+]
 
 [tool.ruff]
 line-length = 88
