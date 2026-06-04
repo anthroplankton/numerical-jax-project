@@ -4,10 +4,10 @@
 
 This is the reusable Cloud TPU quickstart for Demo 2 pretrained ViT inference.
 It runs the same small public-example TPU smoke test documented in the course
-project, then retrieves the JSON artifact, deletes the TPU resource, and
-generates a local CPU-vs-TPU comparison table. It also documents how to retrieve
-the full `runs/vit-inference/` folder and regenerate curated Imagenette 320 TPU
-Markdown tables after those JSON artifacts exist.
+project, retrieves the JSON artifact, runs local comparison commands, and keeps
+cleanup visible. It also documents how to retrieve the full
+`runs/vit-inference/` folder and regenerate curated Imagenette 320 TPU Markdown
+tables after those JSON artifacts exist.
 
 Local CPU remains the stable default path for this repository. TPU execution is
 optional and requires a Google Cloud project, billing or another funding path,
@@ -400,6 +400,9 @@ resource to become `ACTIVE`, runs the same public-example TPU `b4` smoke command
 on the TPU VM, retrieves the JSON artifact, runs the existing local comparison
 command, and prints cleanup instructions:
 
+This helper only runs and retrieves the public-example `b4` smoke artifact. It
+does not run, retrieve, or compare Imagenette 320 TPU artifacts.
+
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
 export ZONE="<ZONE>"
@@ -420,6 +423,25 @@ after artifact retrieval and comparison, opt in:
 ```bash
 bash scripts/demo2_tpu_run_when_active.sh --delete-after
 ```
+
+## Imagenette 320 TPU Inference Benchmark
+
+The repository now has retrieved TPU JSON artifacts for Imagenette 320
+inference runs on `val64`, `val256`, and the full validation manifest, each with
+batch sizes `b1`, `b4`, and `b8`. The raw JSON artifacts stay under ignored
+`runs/vit-inference/`; the curated Markdown tables are:
+
+```text
+report/results/demo2_cloud_imagenette320_val64_tpu.md
+report/results/demo2_cloud_imagenette320_val256_tpu.md
+report/results/demo2_cloud_imagenette320_valfull_tpu.md
+```
+
+These tables are TPU inference timing evidence. They are not training evidence,
+not dataset-level accuracy evaluation, not a full controlled benchmark study,
+and not a universal TPU speedup claim.
+
+### Regenerate Curated Markdown Tables
 
 After retrieving Imagenette 320 TPU JSON artifacts, generate the curated TPU
 Markdown tables from the **local Ubuntu/WSL repo root**:
@@ -443,23 +465,6 @@ uv run python scripts/compare_vit_results.py \
   runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_b8.json \
   --markdown-output report/results/demo2_cloud_imagenette320_valfull_tpu.md
 ```
-
-## Imagenette 320 TPU Inference Benchmark
-
-The repository now has retrieved TPU JSON artifacts for Imagenette 320
-inference runs on `val64`, `val256`, and the full validation manifest, each with
-batch sizes `b1`, `b4`, and `b8`. The raw JSON artifacts stay under ignored
-`runs/vit-inference/`; the curated Markdown tables are:
-
-```text
-report/results/demo2_cloud_imagenette320_val64_tpu.md
-report/results/demo2_cloud_imagenette320_val256_tpu.md
-report/results/demo2_cloud_imagenette320_valfull_tpu.md
-```
-
-These tables are TPU inference timing evidence. They are not training evidence,
-not dataset-level accuracy evaluation, not a full controlled benchmark study,
-and not a universal TPU speedup claim.
 
 Prepare Imagenette 320 before running the TPU commands. Use the official
 Imagenette source, then extract files so this path exists:

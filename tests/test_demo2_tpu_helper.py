@@ -34,6 +34,9 @@ def test_demo2_tpu_helper_documents_safe_cloud_lifecycle() -> None:
     assert "values are intentionally not logged" in text
     assert "trap on_exit EXIT" in text
     assert "cleanup_printed" in text
+    assert "normalize_queued_resource_state" in text
+    assert 'normalized="${normalized#state=}"' in text
+    assert 'state="$(normalize_queued_resource_state "${raw_state:-UNKNOWN}")"' in text
     assert "require_non_negative_integer" in text
     assert "require_positive_integer" not in text
     assert "REPO_URL must not contain embedded credentials" in text

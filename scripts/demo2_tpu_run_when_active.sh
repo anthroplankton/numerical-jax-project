@@ -122,6 +122,20 @@ log_command() {
   log "COMMAND: $*"
 }
 
+normalize_queued_resource_state() {
+  local normalized="$1"
+  normalized="${normalized//$'\r'/}"
+  normalized="${normalized//$'\n'/}"
+  while [[ "$normalized" == [[:space:]]* ]]; do
+    normalized="${normalized#?}"
+  done
+  while [[ "$normalized" == *[[:space:]] ]]; do
+    normalized="${normalized%?}"
+  done
+  normalized="${normalized#state=}"
+  printf '%s\n' "$normalized"
+}
+
 print_cleanup_instructions() {
   cleanup_printed=true
   cat <<'CLEANUP'
@@ -194,12 +208,13 @@ fi
 start_epoch="$(date +%s)"
 while true; do
   log_command 'gcloud compute tpus queued-resources describe "$QUEUED_RESOURCE_ID" --project "$PROJECT_ID" --zone "$ZONE" --format="value(state)"'
-  state="$(
+  raw_state="$(
     gcloud compute tpus queued-resources describe "$QUEUED_RESOURCE_ID" \
       --project "$PROJECT_ID" \
       --zone "$ZONE" \
       --format="value(state)"
   )"
+  state="$(normalize_queued_resource_state "${raw_state:-UNKNOWN}")"
   state="${state:-UNKNOWN}"
   log "Queued resource state: $state"
 
