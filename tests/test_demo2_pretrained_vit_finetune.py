@@ -97,6 +97,35 @@ def test_parse_args_accepts_tpu_resume_and_time_controlled_settings() -> None:
     assert args.save_predictions is True
 
 
+def test_resolve_run_paths_makes_output_and_checkpoint_dirs_absolute(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = load_finetune_module()
+    monkeypatch.chdir(PROJECT_ROOT)
+    args = module.parse_args(
+        [
+            "--train-manifest",
+            str(TRAIN_MANIFEST),
+            "--eval-manifest",
+            str(EVAL_MANIFEST),
+            "--checkpoint-dir",
+            "runs/vit-finetune/cloud/checkpoints",
+            "--output-dir",
+            "runs/vit-finetune/cloud",
+        ]
+    )
+
+    resolved = module.resolve_run_paths(args)
+
+    assert resolved.checkpoint_dir.is_absolute()
+    assert resolved.output_dir.is_absolute()
+    assert (
+        resolved.checkpoint_dir
+        == (PROJECT_ROOT / "runs/vit-finetune/cloud/checkpoints").resolve()
+    )
+    assert resolved.output_dir == (PROJECT_ROOT / "runs/vit-finetune/cloud").resolve()
+
+
 def test_read_labeled_manifest_derives_imagenette_labels(tmp_path) -> None:
     module = load_finetune_module()
     manifest = tmp_path / "manifest.txt"

@@ -430,6 +430,13 @@ def reset_signal_state() -> None:
     STOP_SIGNAL_NAME = None
 
 
+def resolve_run_paths(args: argparse.Namespace) -> argparse.Namespace:
+    """Resolve run artifact directories before Orbax checkpoint creation."""
+    args.output_dir = args.output_dir.expanduser().resolve()
+    args.checkpoint_dir = args.checkpoint_dir.expanduser().resolve()
+    return args
+
+
 def create_checkpoint_manager(checkpoint_dir: Path) -> Any:
     """Create an Orbax CheckpointManager for the head-only state."""
     from orbax import checkpoint as ocp
@@ -689,6 +696,7 @@ def _nonnegative_float(raw_value: str) -> float:
 def run_finetune(args: argparse.Namespace) -> dict[str, Any]:
     """Run the fine-tuning smoke workflow and return the summary payload."""
     reset_signal_state()
+    args = resolve_run_paths(args)
     apply_jax_platform(args.jax_platform)
     install_signal_handlers()
     args.output_dir.mkdir(parents=True, exist_ok=True)
