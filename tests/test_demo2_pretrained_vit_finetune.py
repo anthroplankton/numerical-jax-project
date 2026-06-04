@@ -49,11 +49,14 @@ def test_parse_args_uses_small_cpu_safe_defaults() -> None:
     assert args.min_train_seconds == 0.0
     assert args.checkpoint_every_steps == 10
     assert args.checkpoint_every_seconds == 30.0
+    assert args.eval_every_steps == 0
     assert args.checkpoint_dir == Path(
         "runs/vit-finetune/demo2_vit_head_finetune/checkpoints"
     )
     assert args.output_dir == Path("runs/vit-finetune/demo2_vit_head_finetune")
     assert args.jax_platform == "cpu"
+    assert args.reinit_head is False
+    assert args.seed == 0
     assert args.resume is False
     assert args.save_predictions is False
 
@@ -77,10 +80,15 @@ def test_parse_args_accepts_tpu_resume_and_time_controlled_settings() -> None:
             "20",
             "--checkpoint-every-seconds",
             "30",
+            "--eval-every-steps",
+            "25",
             "--checkpoint-dir",
             "runs/vit-finetune/cloud/checkpoints",
             "--output-dir",
             "runs/vit-finetune/cloud",
+            "--reinit-head",
+            "--seed",
+            "123",
             "--resume",
             "--save-predictions",
         ]
@@ -91,8 +99,11 @@ def test_parse_args_accepts_tpu_resume_and_time_controlled_settings() -> None:
     assert args.min_train_seconds == pytest.approx(120.0)
     assert args.checkpoint_every_steps == 20
     assert args.checkpoint_every_seconds == pytest.approx(30.0)
+    assert args.eval_every_steps == 25
     assert args.checkpoint_dir == Path("runs/vit-finetune/cloud/checkpoints")
     assert args.output_dir == Path("runs/vit-finetune/cloud")
+    assert args.reinit_head is True
+    assert args.seed == 123
     assert args.resume is True
     assert args.save_predictions is True
 
@@ -163,6 +174,20 @@ def test_read_labeled_manifest_rejects_unknown_parent_label(tmp_path) -> None:
 
     with pytest.raises(ValueError, match="unsupported Imagenette label directory"):
         module.read_labeled_manifest(manifest)
+
+
+def test_count_labels_returns_sorted_label_counts(tmp_path) -> None:
+    module = load_finetune_module()
+    entries = [
+        module.LabeledImage(tmp_path / "n03445777" / "a.JPEG", "n03445777", 574),
+        module.LabeledImage(tmp_path / "n01440764" / "b.JPEG", "n01440764", 0),
+        module.LabeledImage(tmp_path / "n03445777" / "c.JPEG", "n03445777", 574),
+    ]
+
+    assert module.count_labels(entries) == {
+        "n01440764": 1,
+        "n03445777": 2,
+    }
 
 
 def test_pad_label_batch_repeats_last_real_label() -> None:
@@ -247,6 +272,81 @@ def test_checkpoint_schedule_supports_step_time_and_sigterm() -> None:
     )
 
 
+def test_periodic_eval_schedule_is_step_based() -> None:
+    module = load_finetune_module()
+
+    assert module.should_run_periodic_eval(
+        step=25,
+        start_step=0,
+        eval_every_steps=25,
+    )
+    assert not module.should_run_periodic_eval(
+        step=0,
+        start_step=0,
+        eval_every_steps=25,
+    )
+    assert not module.should_run_periodic_eval(
+        step=30,
+        start_step=0,
+        eval_every_steps=25,
+    )
+    assert not module.should_run_periodic_eval(
+        step=25,
+        start_step=0,
+        eval_every_steps=0,
+    )
+
+
+def test_eval_metrics_csv_writes_pandas_friendly_columns(tmp_path) -> None:
+    module = load_finetune_module()
+    metrics_path = tmp_path / "eval_metrics.csv"
+
+    module.write_eval_metrics_header(metrics_path)
+    module.append_eval_metrics_row(
+        metrics_path,
+        step=5,
+        metrics={"loss": 1.25, "accuracy": 0.5},
+    )
+
+    assert metrics_path.read_text().splitlines() == [
+        "step,eval_loss,eval_accuracy",
+        "5,1.25,0.5",
+    ]
+
+
+def test_reinitialize_classifier_head_preserves_shape_and_zeroes_bias() -> None:
+    import jax
+    import jax.numpy as jnp
+
+    module = load_finetune_module()
+    head_params = {
+        "kernel": jnp.ones((2, 3)),
+        "bias": jnp.ones((3,)),
+    }
+
+    reinitialized = module.reinitialize_classifier_head(
+        head_params,
+        seed=0,
+        jax_module=jax,
+        jnp_module=jnp,
+    )
+    reinitialized_again = module.reinitialize_classifier_head(
+        head_params,
+        seed=0,
+        jax_module=jax,
+        jnp_module=jnp,
+    )
+
+    assert reinitialized["kernel"].shape == head_params["kernel"].shape
+    assert reinitialized["bias"].shape == head_params["bias"].shape
+    assert not np.allclose(np.asarray(reinitialized["kernel"]), np.ones((2, 3)))
+    np.testing.assert_allclose(np.asarray(reinitialized["bias"]), np.zeros((3,)))
+    np.testing.assert_allclose(
+        np.asarray(reinitialized["kernel"]),
+        np.asarray(reinitialized_again["kernel"]),
+    )
+
+
 def test_reset_signal_state_clears_stale_in_process_stop_request() -> None:
     module = load_finetune_module()
     module.STOP_REQUESTED = True
@@ -306,8 +406,13 @@ def test_build_summary_has_expected_schema() -> None:
         eval_manifest=EVAL_MANIFEST,
         train_examples=64,
         eval_examples=64,
+        train_label_counts={"n01440764": 32, "n03445777": 32},
+        eval_label_counts={"n01440764": 16, "n03445777": 48},
         batch_size=8,
         learning_rate=1e-3,
+        eval_every_steps=25,
+        reinit_head=True,
+        seed=123,
         start_step=10,
         final_step=20,
         resumed_from_checkpoint=True,
@@ -330,6 +435,13 @@ def test_build_summary_has_expected_schema() -> None:
     assert summary["mode"] == "demo2_vit_head_finetune"
     assert summary["trainable_scope"] == "classifier_head_only"
     assert summary["frozen_scope"] == "vit_backbone"
+    assert summary["train_label_counts"] == {"n01440764": 32, "n03445777": 32}
+    assert summary["eval_label_counts"] == {"n01440764": 16, "n03445777": 48}
+    assert summary["num_train_classes"] == 2
+    assert summary["num_eval_classes"] == 2
+    assert summary["eval_every_steps"] == 25
+    assert summary["reinit_head"] is True
+    assert summary["seed"] == 123
     assert summary["resumed_from_checkpoint"] is True
     assert summary["initial_loss"] == pytest.approx(2.0)
     assert summary["final_loss"] == pytest.approx(1.5)

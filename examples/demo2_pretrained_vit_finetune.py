@@ -52,6 +52,8 @@ DEFAULT_MAX_STEPS = 20
 DEFAULT_MIN_TRAIN_SECONDS = 0.0
 DEFAULT_CHECKPOINT_EVERY_STEPS = 10
 DEFAULT_CHECKPOINT_EVERY_SECONDS = 30.0
+DEFAULT_EVAL_EVERY_STEPS = 0
+DEFAULT_SEED = 0
 CHECKPOINT_METADATA_BYTES = 8192
 
 IMAGENETTE_LABEL_TO_IMAGENET_INDEX = {
@@ -171,6 +173,16 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--eval-every-steps",
+        type=_nonnegative_int,
+        default=DEFAULT_EVAL_EVERY_STEPS,
+        help=(
+            "Write eval_metrics.csv every N completed steps; 0 disables "
+            "extra periodic evals. Initial and final eval rows are still "
+            f"written. Default: {DEFAULT_EVAL_EVERY_STEPS}."
+        ),
+    )
+    parser.add_argument(
         "--checkpoint-dir",
         type=Path,
         default=DEFAULT_CHECKPOINT_DIR,
@@ -200,6 +212,20 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
             "JAX platform request. Use 'default' to leave JAX_PLATFORMS unset. "
             f"Default: {DEFAULT_JAX_PLATFORM}."
         ),
+    )
+    parser.add_argument(
+        "--reinit-head",
+        action="store_true",
+        help=(
+            "Randomly reinitialize only the classifier head before training. "
+            "The frozen ViT backbone and pretrained default path are unchanged."
+        ),
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=DEFAULT_SEED,
+        help=f"Random seed for --reinit-head. Default: {DEFAULT_SEED}.",
     )
     parser.add_argument(
         "--top-k",
@@ -258,6 +284,14 @@ def validate_manifest_paths(entries: Sequence[LabeledImage]) -> None:
         missing = ", ".join(str(path) for path in missing_paths)
         msg = f"image path does not exist: {missing}"
         raise FileNotFoundError(msg)
+
+
+def count_labels(entries: Sequence[LabeledImage]) -> dict[str, int]:
+    """Return deterministic label-id counts for manifest-skew analysis."""
+    counts: dict[str, int] = {}
+    for entry in entries:
+        counts[entry.label_id] = counts.get(entry.label_id, 0) + 1
+    return dict(sorted(counts.items()))
 
 
 def pad_label_batch(labels: Any, *, padding_count: int, jnp_module: Any) -> Any:
@@ -319,6 +353,40 @@ def should_save_checkpoint(
     )
 
 
+def should_run_periodic_eval(
+    *, step: int, start_step: int, eval_every_steps: int
+) -> bool:
+    """Return whether an extra eval row should be written for this step."""
+    return eval_every_steps > 0 and step > start_step and step % eval_every_steps == 0
+
+
+def reinitialize_classifier_head(
+    head_params: Any,
+    *,
+    seed: int,
+    jax_module: Any,
+    jnp_module: Any,
+) -> Any:
+    """Reinitialize only classifier-head leaves for learning-curve smoke plots."""
+    leaves, treedef = jax_module.tree_util.tree_flatten(head_params)
+    key = jax_module.random.PRNGKey(seed)
+    new_leaves = []
+    for leaf in leaves:
+        key, subkey = jax_module.random.split(key)
+        if getattr(leaf, "ndim", 0) >= 2:
+            values = 0.02 * jax_module.random.truncated_normal(
+                subkey,
+                lower=-2.0,
+                upper=2.0,
+                shape=leaf.shape,
+                dtype=leaf.dtype,
+            )
+            new_leaves.append(values)
+        else:
+            new_leaves.append(jnp_module.zeros_like(leaf))
+    return jax_module.tree_util.tree_unflatten(treedef, new_leaves)
+
+
 def encode_checkpoint_metadata(metadata: Mapping[str, Any]) -> np.ndarray:
     """Encode metadata into a fixed-size uint8 array for Orbax PyTree storage."""
     payload = json.dumps(dict(metadata), sort_keys=True).encode("utf-8")
@@ -373,6 +441,9 @@ def build_checkpoint_metadata(
     eval_manifest: Path,
     batch_size: int,
     learning_rate: float,
+    eval_every_steps: int,
+    reinit_head: bool,
+    seed: int,
     label_ids: Sequence[str],
     git_metadata: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -386,6 +457,9 @@ def build_checkpoint_metadata(
         "eval_manifest": str(eval_manifest),
         "batch_size": batch_size,
         "learning_rate": learning_rate,
+        "eval_every_steps": eval_every_steps,
+        "reinit_head": reinit_head,
+        "seed": seed,
         "label_ids": list(label_ids),
         **dict(git_metadata),
     }
@@ -579,6 +653,26 @@ def append_metrics_row(metrics_path: Path, row: Mapping[str, Any]) -> None:
         )
 
 
+def write_eval_metrics_header(metrics_path: Path) -> None:
+    """Create the periodic eval CSV metric artifact."""
+    metrics_path.parent.mkdir(parents=True, exist_ok=True)
+    with metrics_path.open("w", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(["step", "eval_loss", "eval_accuracy"])
+
+
+def append_eval_metrics_row(
+    metrics_path: Path,
+    *,
+    step: int,
+    metrics: Mapping[str, float],
+) -> None:
+    """Append one eval metric row."""
+    with metrics_path.open("a", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow([step, metrics["loss"], metrics["accuracy"]])
+
+
 def append_log(output_dir: Path, message: str) -> None:
     """Append one line to train.log."""
     log_path = output_dir / "train.log"
@@ -597,8 +691,13 @@ def build_summary(
     eval_manifest: Path,
     train_examples: int,
     eval_examples: int,
+    train_label_counts: Mapping[str, int],
+    eval_label_counts: Mapping[str, int],
     batch_size: int,
     learning_rate: float,
+    eval_every_steps: int,
+    reinit_head: bool,
+    seed: int,
     start_step: int,
     final_step: int,
     resumed_from_checkpoint: bool,
@@ -630,8 +729,15 @@ def build_summary(
         "eval_manifest": str(eval_manifest),
         "train_examples": train_examples,
         "eval_examples": eval_examples,
+        "train_label_counts": dict(train_label_counts),
+        "eval_label_counts": dict(eval_label_counts),
+        "num_train_classes": len(train_label_counts),
+        "num_eval_classes": len(eval_label_counts),
         "batch_size": batch_size,
         "learning_rate": learning_rate,
+        "eval_every_steps": eval_every_steps,
+        "reinit_head": reinit_head,
+        "seed": seed,
         "start_step": start_step,
         "final_step": final_step,
         "resumed_from_checkpoint": resumed_from_checkpoint,
@@ -706,6 +812,8 @@ def run_finetune(args: argparse.Namespace) -> dict[str, Any]:
     validate_manifest_paths(train_entries)
     validate_manifest_paths(eval_entries)
     label_ids = sorted({entry.label_id for entry in [*train_entries, *eval_entries]})
+    train_label_counts = count_labels(train_entries)
+    eval_label_counts = count_labels(eval_entries)
     git_metadata = collect_git_metadata()
 
     try:
@@ -730,6 +838,13 @@ def run_finetune(args: argparse.Namespace) -> dict[str, Any]:
         raise ValueError(msg)
     backbone_params = params["vit"]
     initial_head_params = params["classifier"]
+    if args.reinit_head:
+        initial_head_params = reinitialize_classifier_head(
+            initial_head_params,
+            seed=args.seed,
+            jax_module=jax,
+            jnp_module=jnp,
+        )
 
     train_pixel_values = jnp.asarray(load_pixel_values(train_entries, image_processor))
     eval_pixel_values = jnp.asarray(load_pixel_values(eval_entries, image_processor))
@@ -764,6 +879,9 @@ def run_finetune(args: argparse.Namespace) -> dict[str, Any]:
         eval_manifest=args.eval_manifest,
         batch_size=args.batch_size,
         learning_rate=args.learning_rate,
+        eval_every_steps=args.eval_every_steps,
+        reinit_head=args.reinit_head,
+        seed=args.seed,
         label_ids=label_ids,
         git_metadata=git_metadata,
     )
@@ -901,7 +1019,15 @@ def run_finetune(args: argparse.Namespace) -> dict[str, Any]:
         )
 
     metrics_path = args.output_dir / "metrics.csv"
+    eval_metrics_path = args.output_dir / "eval_metrics.csv"
     write_metrics_header(metrics_path)
+    write_eval_metrics_header(eval_metrics_path)
+    append_eval_metrics_row(
+        eval_metrics_path,
+        step=state.step,
+        metrics=initial_eval,
+    )
+    last_eval_metrics_step = state.step
     step_times: list[float] = []
     total_train_examples = 0
     latest_checkpoint_step = restored_checkpoint_step
@@ -971,6 +1097,18 @@ def run_finetune(args: argparse.Namespace) -> dict[str, Any]:
                 f"checkpoint_saved={checkpoint_saved}"
             ),
         )
+        if not STOP_REQUESTED and should_run_periodic_eval(
+            step=state.step,
+            start_step=start_step,
+            eval_every_steps=args.eval_every_steps,
+        ):
+            eval_metrics = evaluate(state.head_params)
+            append_eval_metrics_row(
+                eval_metrics_path,
+                step=state.step,
+                metrics=eval_metrics,
+            )
+            last_eval_metrics_step = state.step
         if STOP_REQUESTED:
             break
 
@@ -984,6 +1122,12 @@ def run_finetune(args: argparse.Namespace) -> dict[str, Any]:
         )
 
     final_eval = evaluate(state.head_params)
+    if last_eval_metrics_step != state.step:
+        append_eval_metrics_row(
+            eval_metrics_path,
+            step=state.step,
+            metrics=final_eval,
+        )
     if args.save_predictions:
         write_metrics(
             {"mode": MODE, "predictions": collect_predictions(state.head_params)},
@@ -1000,8 +1144,13 @@ def run_finetune(args: argparse.Namespace) -> dict[str, Any]:
         eval_manifest=args.eval_manifest,
         train_examples=len(train_entries),
         eval_examples=len(eval_entries),
+        train_label_counts=train_label_counts,
+        eval_label_counts=eval_label_counts,
         batch_size=args.batch_size,
         learning_rate=args.learning_rate,
+        eval_every_steps=args.eval_every_steps,
+        reinit_head=args.reinit_head,
+        seed=args.seed,
         start_step=start_step,
         final_step=state.step,
         resumed_from_checkpoint=resumed_from_checkpoint,

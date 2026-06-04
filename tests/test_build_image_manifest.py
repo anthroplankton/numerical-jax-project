@@ -42,6 +42,41 @@ def test_find_image_paths_is_sorted_limited_and_extension_filtered(tmp_path) -> 
     ]
 
 
+def test_find_image_paths_selects_per_parent_class_limit(tmp_path) -> None:
+    module = load_manifest_module()
+    touch(tmp_path / "n002" / "b.jpg")
+    touch(tmp_path / "n001" / "c.jpg")
+    touch(tmp_path / "n001" / "a.jpg")
+    touch(tmp_path / "n002" / "a.jpg")
+    touch(tmp_path / "n002" / "c.jpg")
+
+    image_paths = module.find_image_paths(
+        tmp_path,
+        extensions=(".jpg",),
+        per_class_limit=2,
+    )
+
+    assert image_paths == [
+        tmp_path / "n001" / "a.jpg",
+        tmp_path / "n001" / "c.jpg",
+        tmp_path / "n002" / "a.jpg",
+        tmp_path / "n002" / "b.jpg",
+    ]
+
+
+def test_find_image_paths_rejects_limit_with_per_class_limit(tmp_path) -> None:
+    module = load_manifest_module()
+    touch(tmp_path / "n001" / "a.jpg")
+
+    with pytest.raises(ValueError, match="use either limit or per_class_limit"):
+        module.find_image_paths(
+            tmp_path,
+            extensions=(".jpg",),
+            limit=1,
+            per_class_limit=1,
+        )
+
+
 def test_build_manifest_text_uses_paths_relative_to_manifest_dir(tmp_path) -> None:
     module = load_manifest_module()
     image_paths = [
