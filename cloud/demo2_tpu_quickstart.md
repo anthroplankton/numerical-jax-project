@@ -391,6 +391,36 @@ uv run python scripts/compare_vit_results.py \
 Keep raw JSON and comparison JSON under ignored `runs/vit-inference/`. Curated
 Markdown comparison tables belong under `report/results/`.
 
+## Optional Run-When-Active Helper
+
+The manual quickstart above remains the primary workflow because it keeps cloud
+resource creation, artifact retrieval, comparison, and cleanup visible. For an
+existing queued resource, this optional run-when-active helper waits for the
+resource to become `ACTIVE`, runs the same public-example TPU `b4` smoke command
+on the TPU VM, retrieves the JSON artifact, runs the existing local comparison
+command, and prints cleanup instructions:
+
+```bash
+export PROJECT_ID="<PROJECT_ID>"
+export ZONE="<ZONE>"
+export TPU_NAME="<TPU_NAME>"
+export QUEUED_RESOURCE_ID="<QUEUED_RESOURCE_ID>"
+export REPO_URL="<REPO_URL>"
+export BRANCH="<BRANCH>"
+
+bash scripts/demo2_tpu_run_when_active.sh
+```
+
+The helper does not create queued resources. It writes a small sanitized command
+log under `runs/vit-inference/` and does not record expanded project IDs, repo
+URLs, IPs, or private local paths. By default it does not delete resources; it
+prints cleanup commands for review. To explicitly delete the queued resource
+after artifact retrieval and comparison, opt in:
+
+```bash
+bash scripts/demo2_tpu_run_when_active.sh --delete-after
+```
+
 After retrieving Imagenette 320 TPU JSON artifacts, generate the curated TPU
 Markdown tables from the **local Ubuntu/WSL repo root**:
 

@@ -526,6 +526,22 @@
     dataset-level accuracy evaluation, a full benchmark study, or a universal
     TPU speedup claim。
 
+## Phase 5.11: Demo 2 Optional TPU Run-When-Active Helper
+
+- Date / phase label：2026-06-04 Demo 2 optional TPU run-when-active helper
+- What changed：
+  - Added `scripts/demo2_tpu_run_when_active.sh` as an optional
+    run-when-active helper for an existing queued resource。
+  - The helper waits for `ACTIVE`, runs the existing public-example TPU `b4`
+    smoke command, retrieves the JSON artifact, runs the existing local
+    comparison command, and prints cleanup instructions。
+  - Updated `cloud/demo2_tpu_quickstart.md` with a short optional-helper
+    section while keeping the manual quickstart as the primary workflow。
+- Claim boundary：
+  - This was a documentation/script addition only；it did not run `gcloud`,
+    create/delete cloud resources, rerun TPU benchmarks, or add new TPU
+    evidence。
+
 ## Planned Phases
 
 ### Phase 6: Real MNIST/Fashion-MNIST and Curated Local Result
