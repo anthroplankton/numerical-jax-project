@@ -567,6 +567,36 @@
     full ViT fine-tuning, not a large benchmark, and not dataset-level accuracy
     evaluation。
 
+## Phase 5.13: Demo 2 TPU Fine-Tuning GCS Resume Evidence Documentation
+
+- Date / phase label：2026-06-05 Demo 2 TPU fine-tuning GCS checkpoint/resume
+  documentation
+- What changed：
+  - Updated Demo 2 documentation for the optional classifier-head-only
+    fine-tuning TPU smoke workflow。
+  - Documented GCS durable checkpoint setup, local and TPU VM GCS preflight,
+    first-run command, GCS restore/resume command, monitoring checks, artifact
+    retrieval, metrics review, and cleanup。
+  - Added the successful observed workflow facts：first `v6e-1` spot run in
+    `us-east1-d`，real spot/maintenance interruption after the first run，GCS
+    checkpoint copies at steps `15100`, `15120`, and `15140`，and successful
+    resume on `v6e-1` spot in `europe-west4-a`。
+  - Added a curated result note:
+    `report/results/demo2_cloud_vit_head_finetune_tpu_resume_gcs.md`。
+- Evidence boundary：
+  - The resume summary fields recorded in the documentation are
+    `backend=tpu`, `resumed_from_checkpoint=true`, `start_step=15140`,
+    `final_step=51538`, `trainable_scope=classifier_head_only`, and
+    `frozen_scope=vit_backbone`。
+  - Raw artifacts remain ignored under `runs/vit-finetune/` and/or temporary
+    GCS storage；checkpoints, logs, model caches, and datasets are not committed。
+  - This remains smoke workflow evidence, checkpoint/resume evidence, and TPU
+    execution evidence, not full ViT fine-tuning, not a large benchmark, and
+    not dataset-level accuracy evaluation。
+- Claim boundary for this patch：
+  - This documentation update did not run cloud commands, TPU jobs, model
+    downloads, `gcloud` resource creation/deletion, commits, or pushes。
+
 ## Planned Phases
 
 ### Phase 6: Real MNIST/Fashion-MNIST and Curated Local Result

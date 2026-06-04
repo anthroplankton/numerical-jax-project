@@ -20,6 +20,10 @@ pretrained ViT workflow with JAX/Flax**。
   public-example smoke run、artifact retrieval、comparison table、cleanup
   verification，以及 Imagenette 320 TPU inference tables 都已有 privacy-safe
   report record
+- optional Demo 2 fine-tuning TPU state：classifier-head-only workflow 已在 TPU
+  上觀察到 first run、spot/maintenance interruption、GCS checkpoint copies，
+  以及 replacement TPU VM restore/resume；raw artifacts 仍維持在 ignored
+  `runs/vit-finetune/` 或暫存 GCS，不進 Git
 - report-ready setup/evidence record：`report/google_cloud_trc_setup.md`
 - remaining benchmark work after TPU inference evidence：若時間與 quota 允許，
   可再規劃 controlled hardware comparison、較完整 monitoring evidence，或明確
@@ -31,9 +35,14 @@ TPU execution evidence now exists for both a small public-example smoke run and
 Imagenette 320 validation-manifest inference timing. It should not be described
 as training, a full benchmark study, dataset-level accuracy evaluation,
 controlled hardware comparison, or a universal TPU speedup claim. The optional
-classifier-head fine-tuning extension is implemented as Demo 2 workflow support,
-but no TPU fine-tuning evidence should be claimed until an actual TPU run is
-completed and artifacts are retrieved.
+classifier-head fine-tuning extension has also produced TPU smoke workflow
+evidence: first run on `v6e-1` spot in `us-east1-d`, real spot or maintenance
+interruption after that run, GCS checkpoint copies at steps `15100`, `15120`,
+and `15140`, and successful resume on `v6e-1` spot in `europe-west4-a` with
+`backend=tpu`, `resumed_from_checkpoint=true`, `start_step=15140`,
+`final_step=51538`, `trainable_scope=classifier_head_only`, and
+`frozen_scope=vit_backbone`. This is checkpoint/resume and TPU execution
+workflow evidence, not full ViT fine-tuning or accuracy benchmark evidence.
 
 ## What The Repository Currently Does
 
@@ -292,9 +301,9 @@ access, Hugging Face access, image opening, or model weight download.
    the curated table for the first CPU-vs-TPU public-example smoke comparison.
 3. Keep the three cloud TPU Imagenette tables as inference timing evidence, not
    accuracy evaluation or training evidence.
-4. If time and quota allow, run the optional Demo 2 classifier-head fine-tuning
-   smoke workflow on TPU with controlled SIGTERM/resume evidence, retrieved
-   `runs/vit-finetune/` artifacts, monitoring notes, and cleanup verification.
+4. Preserve the optional Demo 2 classifier-head fine-tuning TPU smoke evidence
+   without committing raw `runs/vit-finetune/` artifacts, checkpoints, logs,
+   datasets, model caches, or GCS objects.
 5. If time and quota allow, plan a controlled local-vs-TPU comparison with
    longer benchmark loops, recorded commit SHA, environment metadata,
    monitoring notes, and cleanup verification.

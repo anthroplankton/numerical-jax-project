@@ -14,12 +14,14 @@ Because of current course presentation constraints, this is the primary demo
 path for the project. Demo 1 remains preserved as background raw-JAX CNN work,
 and Demo 3 remains optional future work.
 
-The completed evidence is inference-only. The optional fine-tuning extension is
-part of Demo 2, not Demo 3, and should be described as planned or newly
-implemented workflow support until a real run produces artifacts. TPU evidence
-now includes a small public-example smoke run plus Imagenette 320 `val64`,
-`val256`, and `val_full` inference timing tables, but it is still not a full
-controlled benchmark. For actual TPU execution, use
+TPU inference evidence now includes a small public-example smoke run plus
+Imagenette 320 `val64`, `val256`, and `val_full` inference timing tables. The
+optional fine-tuning extension is part of Demo 2, not Demo 3, and has produced
+classifier-head-only TPU smoke workflow evidence with GCS checkpoint
+restore/resume. It should still be described narrowly: workflow,
+checkpoint/resume, and TPU execution evidence, not full ViT fine-tuning, not a
+dataset-level accuracy evaluation, and not a full controlled benchmark. For
+actual TPU execution, use
 `cloud/demo2_tpu_quickstart.md`. For resource variants, monitoring/evidence
 guidance, cleanup discipline, and course evidence appendices, see
 `cloud/demo2_pretrained_vit_tpu_workflow.md`.
@@ -332,6 +334,13 @@ metadata when available. In that summary, `mean_step_time_sec` and
 `examples_per_second` measure training-step execution time and exclude
 checkpoint write time, while `total_runtime_sec` includes setup, evaluation,
 checkpointing, prediction writing, and summary writing overhead.
+
+For TPU runs, use absolute `RUN_DIR` and `CKPT_DIR` values before passing
+`--output-dir` and `--checkpoint-dir`. Orbax writes local checkpoint files
+first; the GCS workflow in `cloud/demo2_tpu_quickstart.md` copies those
+checkpoint directories to durable storage for resume after spot interruption,
+maintenance, or TPU VM deletion risk. Durable GCS copies should remain outside
+Git along with raw logs, predictions, datasets, and model caches.
 
 ## Imagenette 320 Local CPU Benchmark Commands
 
