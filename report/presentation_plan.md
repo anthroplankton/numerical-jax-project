@@ -1,5 +1,10 @@
 # Demo 2 Pretrained ViT Inference: Presentation Scope and TPU Plan
 
+> Historical note: this was a pre-TPU presentation plan. It is superseded by
+> the current Demo 2 TPU evidence, Imagenette 320 inference artifacts, and
+> generated summaries under `report/results/`. Keep this file as planning
+> history, not as the current project status.
+
 ## Purpose
 
 This repository is a course project for Numerical Computation with JAX. The

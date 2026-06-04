@@ -444,9 +444,10 @@
     be committed in this edit；only the curated Markdown table belongs under
     `report/results/`。
 - Next planned step：
-  - If time and quota allow, plan a broader Imagenette TPU run or controlled
-    local-vs-TPU comparison with exact commit SHA, environment metadata,
-    monitoring notes, longer timing loops, and the same cleanup verification。
+  - At that phase, the next planned step was broader TPU evidence or a
+    controlled local-vs-TPU comparison. Phase 5.9 later added Imagenette TPU
+    inference tables; controlled comparison and monitoring evidence remain
+    future work。
 
 ## Phase 5.8: Demo 2 TPU Documentation Architecture Split
 
@@ -465,6 +466,65 @@
   - The completed TPU result remains a five-image public smoke-run comparison,
     not a full benchmark study, not dataset-level accuracy evaluation, and not a
     controlled hardware comparison。
+
+## Phase 5.9: Demo 2 Imagenette TPU Inference Tables
+
+- Date / phase label：2026-06-04 Demo 2 Imagenette 320 TPU inference evidence
+- What changed：
+  - Retrieved TPU JSON artifacts for Imagenette 320 inference are now reflected
+    in the report surface。
+  - Artifact families covered：
+    - `val64`: `b1`, `b4`, `b8`
+    - `val256`: `b1`, `b4`, `b8`
+    - `val_full`: `b1`, `b4`, `b8`
+  - Raw JSON artifacts remain under ignored/generated
+    `runs/vit-inference/` and are not committed。
+  - Generated curated Markdown TPU tables under `report/results/` with
+    `scripts/compare_vit_results.py --markdown-output`。
+  - Added documented recursive retrieval command using
+    `gcloud compute tpus tpu-vm scp --recurse` for copying the whole
+    `runs/vit-inference/` folder from a TPU VM。
+- Files added：
+  - `report/results/demo2_cloud_imagenette320_val64_tpu.md`
+  - `report/results/demo2_cloud_imagenette320_val256_tpu.md`
+  - `report/results/demo2_cloud_imagenette320_valfull_tpu.md`
+- Files updated：
+  - `README.md`
+  - `cloud/demo2_tpu_quickstart.md`
+  - `cloud/demo2_pretrained_vit_tpu_workflow.md`
+  - `docs/demo2_pretrained_vit.md`
+  - `report/current_status.md`
+  - `report/google_cloud_trc_setup.md`
+  - `report/results/README.md`
+  - `report/progress_log.md`
+- Current evidence/results：
+  - TPU Imagenette tables report backend `tpu` and JSON-visible device kind
+    `TPU v6 lite`。
+  - `val64` table covers 64 images with no padding for `b1`, `b4`, and `b8`。
+  - `val256` table covers 256 images with no padding for `b1`, `b4`, and `b8`。
+  - `val_full` table covers 3925 images; `b4` and `b8` include 3 padded
+    final-batch entries。
+- Limitations：
+  - This phase did not run `gcloud`, create/delete cloud resources, rerun TPU
+    benchmarks, commit, or push。
+  - The tables are ViT inference timing evidence only。
+  - They are not training results, not fine-tuning, not dataset-level accuracy
+    evaluation, not a full controlled benchmark study, and not a universal TPU
+    speedup claim。
+
+## Phase 5.10: Demo 2 Grouped Result Summaries
+
+- Date / phase label：2026-06-04 Demo 2 generated grouped summary tables
+- What changed：
+  - Added generated report summaries with
+    `scripts/generate_vit_summary_tables.py`。
+  - Imagenette 320 summary files now stay focused on Imagenette evidence, while
+    `report/results/demo2_public_examples_summary.md` records public-example
+    smoke/demo evidence separately。
+- Claim boundary：
+  - These summaries are ViT inference evidence only；they are not training,
+    dataset-level accuracy evaluation, a full benchmark study, or a universal
+    TPU speedup claim。
 
 ## Planned Phases
 
@@ -499,22 +559,26 @@
 
 ### Phase 8: Broader Demo 2 TPU Benchmark Evidence
 
-- Status：partially completed by Phase 5.7 smoke-run evidence；broader benchmark
-  work remains planned。
+- Status：partially completed by Phase 5.7 public smoke-run evidence and Phase
+  5.9 Imagenette TPU inference tables；controlled comparison work remains
+  planned。
 - Goal：extend the first Demo 2 public-example TPU smoke evidence into a broader
-  Google Cloud TPU comparison only if time, quota, and evidence quality are
+  Google Cloud TPU evidence set only if time, quota, and evidence quality are
   sufficient。
 - Planned work：
   - Preserve the first public-example TPU smoke evidence without overstating it。
+  - Preserve the Imagenette TPU inference tables without describing them as
+    training, accuracy evaluation, or universal speedup evidence。
   - If another TPU run is justified, record exact commit SHA, backend/device
     output, JSON metrics, terminal logs, monitoring notes, cleanup evidence,
     and deletion verification。
-  - Prefer a broader Imagenette TPU run or controlled CPU-vs-TPU comparison
-    with longer timing loops over repeating another tiny smoke run。
+  - Prefer a controlled CPU-vs-TPU comparison with longer timing loops over
+    repeating another tiny smoke run。
   - Compare TPU metrics against matching local CPU artifacts with
     `scripts/compare_vit_results.py` after TPU artifacts are retrieved locally。
 - Evidence needed before marking complete：
-  - Broader TPU metrics beyond the first five-image smoke run。
+  - Controlled comparison metrics beyond the first five-image smoke run and
+    basic Imagenette TPU inference tables。
   - Exact commit / environment metadata。
   - Monitoring notes or privacy-safe screenshots if available。
   - Cleanup evidence for any additional resources。

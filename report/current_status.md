@@ -19,19 +19,20 @@ pretrained ViT inference benchmark with JAX/Flax**。
   billing 已 linked，budget alerts 已設定，Cloud TPU API 已啟用，
   project number 已提交到 TRC form；TRC confirmation 已收到；第一個 Demo 2
   TPU public-example smoke run 已完成，artifact 已取回，CPU-vs-TPU comparison
-  table 已產生，cleanup 已完成並確認 selected zone 沒有剩餘 queued resource
-  或 TPU VM
+  table 已產生；Imagenette 320 `val64`、`val256`、`val_full` TPU inference
+  JSON artifacts 已取回並整理成 curated Markdown tables；已記錄的 TPU resource
+  cleanup 完成並確認 selected zone 沒有剩餘 queued resource 或 TPU VM
 - report-ready setup record：`report/google_cloud_trc_setup.md`
-- next benchmark work after first TPU smoke evidence：若時間與 quota 允許，
-  再規劃較完整的 Imagenette TPU run 或 controlled hardware comparison；
-  Imagenette 320
-  (`imagenette2-320`) 已有 local/external CPU curated Markdown tables，但
-  dataset workflow 仍維持 local-only，不自動下載、不進 pytest/CI，也不提交
+- remaining benchmark work after TPU inference evidence：若時間與 quota 允許，
+  可再規劃 controlled hardware comparison、較完整 monitoring evidence，或
+  dataset-level accuracy evaluation；目前 Imagenette workflow 仍維持
+  local-only data preparation，不自動下載、不進 pytest/CI，也不提交
   `data/local/` 內容
 
-First TPU execution evidence now exists, but it is limited to a small
-public-example smoke run. It should not be described as a full benchmark study,
-dataset-level accuracy evaluation, or controlled hardware comparison.
+TPU execution evidence now exists for both a small public-example smoke run and
+Imagenette 320 validation-manifest inference timing. It should not be described
+as training, a full benchmark study, dataset-level accuracy evaluation,
+controlled hardware comparison, or a universal TPU speedup claim.
 
 ## What The Repository Currently Does
 
@@ -85,11 +86,14 @@ dataset-level accuracy evaluation, or controlled hardware comparison.
   - does not download datasets or inspect image contents
   - requires `data/local/imagenette2-320/val` to exist before Imagenette
     manifests can be generated
-- Curated Demo 2 CPU tables:
+- Curated Demo 2 result tables:
   - local public examples, Imagenette val64, Imagenette val256, and private
     local examples
   - supplementary external Ryzen 7735HS WSL public examples, Imagenette val64,
     and Imagenette val256
+  - cloud TPU Imagenette val64, val256, and full validation-manifest inference
+    tables
+  - local CPU versus cloud TPU public-example smoke comparison table
   - external public examples currently include `b1` and `b4` only; external
     public `b8` remains pending
 - Google Cloud / TRC setup status:
@@ -135,7 +139,9 @@ Manual local checks completed:
 - Raw JSON benchmark outputs are generated under ignored `runs/vit-inference/`
   and are not committed by default。
 - Curated Markdown tables under `report/results/` are generated from real JSON
-  artifacts with `scripts/compare_vit_results.py --markdown-output`。
+  artifacts. Flat comparison tables use
+  `scripts/compare_vit_results.py --markdown-output`; grouped summary tables
+  use `scripts/generate_vit_summary_tables.py`。
 
 Primary local-machine CPU tables:
 
@@ -164,13 +170,13 @@ Private manifest runs follow the same qualitative-inference framing unless
 explicit labels and top-k evaluation are added later, but they now measure true
 batched manifest inference over the listed images.
 
-## Demo 2 TPU Smoke Evidence
+## Demo 2 TPU Inference Evidence
 
 The first successful TPU artifact is:
 
 - `runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json`
 
-The report-ready comparison table is:
+The report-ready public-example comparison table is:
 
 - `report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md`
 
@@ -196,8 +202,44 @@ Key recorded fields:
 The generated comparison table reports about 1931.76x throughput speedup versus
 the local CPU `b4` artifact for this specific smoke run. This statement is
 limited to the five-image public smoke run. It is not a general TPU speed claim,
-not an Imagenette result, not dataset-level accuracy evaluation, and not a full
-controlled hardware benchmark.
+not dataset-level accuracy evaluation, and not a full controlled hardware
+benchmark.
+
+Imagenette 320 TPU inference JSON artifacts have also been retrieved under
+ignored `runs/vit-inference/` for:
+
+- `val64`: `demo2_cloud_imagenette320_val64_tpu_b1.json`,
+  `demo2_cloud_imagenette320_val64_tpu_b4.json`, and
+  `demo2_cloud_imagenette320_val64_tpu_b8.json`
+- `val256`: `demo2_cloud_imagenette320_val256_tpu_b1.json`,
+  `demo2_cloud_imagenette320_val256_tpu_b4.json`, and
+  `demo2_cloud_imagenette320_val256_tpu_b8.json`
+- `val_full`: `demo2_cloud_imagenette320_valfull_tpu_b1.json`,
+  `demo2_cloud_imagenette320_valfull_tpu_b4.json`, and
+  `demo2_cloud_imagenette320_valfull_tpu_b8.json`
+
+The curated TPU Imagenette tables are:
+
+- `report/results/demo2_cloud_imagenette320_val64_tpu.md`
+- `report/results/demo2_cloud_imagenette320_val256_tpu.md`
+- `report/results/demo2_cloud_imagenette320_valfull_tpu.md`
+
+For grouped report-ready summaries, start with
+`report/results/README.md`. The generated summary set includes
+`demo2_imagenette320_overview.md`, `demo2_imagenette320_batch_scaling.md`,
+`demo2_imagenette320_cpu_vs_tpu.md`, `demo2_cpu_machine_comparison.md`, and
+`demo2_public_examples_summary.md`.
+
+These tables report backend `tpu`, JSON-visible device kind `TPU v6 lite`,
+batch sizes `b1` / `b4` / `b8`, one warmup step, five benchmark steps, and
+Imagenette validation-manifest inference timing. The full validation manifest
+contains 3925 images; `b4` and `b8` have 3 padded final-batch entries. The
+curated TPU tables report throughput in the approximate range of 1812 to 4370
+images/sec for the retrieved artifacts.
+
+The Imagenette TPU evidence is still ViT inference only. It is not model
+training, not fine-tuning, not dataset-level accuracy evaluation, not a full
+controlled benchmark study, and not a universal TPU speedup claim.
 
 New Demo 2 JSON outputs include stable result fields for mode, processing mode,
 batch size, image count, batch count, padding count, timed batch runs, timing,
@@ -253,16 +295,15 @@ Hugging Face access, image opening, or model weight download.
 
 ## Next Technical Milestones
 
-1. Preserve the first TPU smoke-run evidence without committing raw JSON under
-   `runs/vit-inference/`.
+1. Preserve TPU evidence without committing raw JSON under
+   `runs/vit-inference/`; commit only curated Markdown result tables.
 2. Keep `report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md` as
-   the curated table for this first CPU-vs-TPU smoke comparison.
-3. If time and quota allow, plan a broader Imagenette TPU run or controlled
-   hardware comparison with longer benchmark loops, recorded commit SHA,
-   environment metadata, monitoring notes, and the same cleanup verification.
-4. Keep Imagenette 320 preparation under ignored `data/local/imagenette2-320/`;
-   do not add automatic downloads or pytest/CI dependencies. The planned
-   Imagenette val64 cloud TPU preparation and command templates are documented
-   in `cloud/demo2_tpu_quickstart.md` and remain future work until real TPU JSON
-   artifacts exist.
-5. Keep Demo 1 and Demo 3 preserved as future work unless course scope changes.
+   the curated table for the first CPU-vs-TPU public-example smoke comparison.
+3. Keep the three cloud TPU Imagenette tables as inference timing evidence, not
+   accuracy evaluation or training evidence.
+4. If time and quota allow, plan a controlled local-vs-TPU comparison with
+   longer benchmark loops, recorded commit SHA, environment metadata,
+   monitoring notes, and cleanup verification.
+5. Keep Imagenette 320 preparation under ignored `data/local/imagenette2-320/`;
+   do not add automatic downloads or pytest/CI dependencies.
+6. Keep Demo 1 and Demo 3 preserved as future work unless course scope changes.

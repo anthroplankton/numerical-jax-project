@@ -3,20 +3,22 @@
 Demo 2 is now a Vision Transformer inference benchmark workflow with JAX/Flax.
 It uses raw JSON outputs under ignored `runs/vit-inference/`, curated
 report-ready Markdown tables under `report/results/`, manifest batching, public
-example assets, supplementary external CPU evidence, and a completed first
-Google Cloud TPU public-example smoke run. The default model is
-`google/vit-base-patch16-224` from Hugging Face.
+example assets, supplementary external CPU evidence, a completed Google Cloud
+TPU public-example smoke run, and retrieved Imagenette 320 TPU inference
+artifacts. The default model is `google/vit-base-patch16-224` from Hugging
+Face.
 
 Because of current course presentation constraints, this is the primary demo
 path for the project. Demo 1 remains preserved as background raw-JAX CNN work,
 and Demo 3 remains optional future work.
 
 This demo is inference-only. It does not fine-tune the model, and it does not
-perform dataset-level accuracy evaluation. The first TPU evidence is a small
-public-example smoke run, not a full controlled benchmark. For actual TPU
-execution, use `cloud/demo2_tpu_quickstart.md`. For resource variants,
-monitoring/evidence guidance, cleanup discipline, and the course smoke-run
-appendix, see `cloud/demo2_pretrained_vit_tpu_workflow.md`.
+perform dataset-level accuracy evaluation. TPU evidence now includes a small
+public-example smoke run plus Imagenette 320 `val64`, `val256`, and `val_full`
+inference timing tables, but it is still not a full controlled benchmark. For
+actual TPU execution, use `cloud/demo2_tpu_quickstart.md`. For resource
+variants, monitoring/evidence guidance, cleanup discipline, and course evidence
+appendices, see `cloud/demo2_pretrained_vit_tpu_workflow.md`.
 
 ## Setup
 
@@ -60,6 +62,10 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --benchmark-steps 1 \
   --output runs/vit-inference/demo2_public_examples_smoke_cpu_b4.json
 ```
+
+This smoke filename is temporary local output. It is not automatically included
+in the generated report summaries, which use the curated
+`demo2_local_public_examples_cpu_b*.json` artifact naming scheme.
 
 Optional Imagenette benchmarks require separately prepared local data. Current
 curated local and supplementary external CPU tables exist, but project scripts
@@ -232,14 +238,16 @@ the generated manifests under `data/local/`. The generated manifest includes
 one header line, so `wc -l` reports one more line than the `--limit` image
 count.
 
-For future cloud TPU Imagenette runs, preserve the same repository-relative
-paths on the TPU VM. Either download and extract Imagenette 320 on the TPU VM,
-or copy a prepared local `data/local/imagenette2-320/` directory to the TPU VM.
-The benchmark commands below expect:
+For cloud TPU Imagenette runs, preserve the same repository-relative paths on
+the TPU VM. Either download and extract Imagenette 320 on the TPU VM, or copy a
+prepared local `data/local/imagenette2-320/` directory to the TPU VM. The
+benchmark commands expect:
 
 ```text
 data/local/imagenette2-320/val
 data/local/imagenette2-320/val/manifest_val_64.txt
+data/local/imagenette2-320/val/manifest_val_256.txt
+data/local/imagenette2-320/val/manifest_val_full.txt
 ```
 
 Keep `data/local/`, generated manifests, dataset files, model caches, and raw
@@ -533,6 +541,12 @@ The following report-ready Markdown tables summarize real JSON artifacts from
 - `report/results/demo2_local_private_examples_cpu.md`
 - `report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md`
 
+For grouped report-ready summaries, start with
+`report/results/README.md`. The generated summary set includes
+`demo2_imagenette320_overview.md`, `demo2_imagenette320_batch_scaling.md`,
+`demo2_imagenette320_cpu_vs_tpu.md`, `demo2_cpu_machine_comparison.md`, and
+`demo2_public_examples_summary.md`.
+
 Local CPU tables are the primary current-machine evidence. External Ryzen 7735HS
 WSL CPU tables are supplementary and kept separate. The
 `demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md` table is the first local
@@ -595,9 +609,8 @@ should not be generalized to TPU performance overall.
 
 Do not mix external Ryzen 7735HS WSL CPU artifacts into the primary local CPU vs
 cloud TPU table. External CPU evidence is supplementary cross-machine CPU
-evidence. If a future three-way view is useful, use a separately named
-supplementary table such as
-`report/results/demo2_cross_machine_public_examples_b4.md`; it should not be
+evidence. The current three-way public-example smoke/demo view belongs in the
+separate `report/results/demo2_public_examples_summary.md`; it should not be
 treated as the primary local-vs-TPU result because it mixes hardware, OS/WSL,
 cache, and thermal variables.
 
@@ -630,8 +643,8 @@ needed.
 
 ## Limitations
 
-- The completed TPU run is a first public-example smoke run, not a final
-  local-vs-TPU benchmark study.
+- The completed TPU evidence includes a public-example smoke run and Imagenette
+  320 inference timing tables, not a final local-vs-TPU benchmark study.
 - The default pytest suite does not download the model or require Hugging Face
   network access.
 - First-run download time is not part of the timed inference loop.
@@ -641,15 +654,17 @@ needed.
   evaluations.
 - The TPU smoke run used five public example images, batch size 4, one warmup
   step, five benchmark steps, and `num_padded_images = 3`.
+- The Imagenette TPU tables are ViT inference timing evidence for retrieved
+  JSON artifacts. They do not train or fine-tune the model, compute Imagenette
+  accuracy, or establish a universal TPU speedup claim.
 - Private manifest runs are qualitative local demonstrations, not public
   benchmark datasets or classification-accuracy measurements.
-- Broader Imagenette TPU benchmarking, dataset-level accuracy evaluation,
-  longer benchmark loops, monitoring analysis, and controlled hardware
-  comparison remain future work.
+- Dataset-level accuracy evaluation, longer benchmark loops, monitoring
+  analysis, and controlled hardware comparison remain future work.
 
 ## Next Planned Step
 
-Extend the first TPU smoke-run evidence only when a larger controlled run is
-actually executed. The likely next benchmark step is an Imagenette TPU run or a
-more controlled CPU-vs-TPU comparison with longer timing loops, recorded
-environment metadata, monitoring notes, and the same cleanup discipline.
+Extend the TPU evidence only when a larger controlled comparison is actually
+executed. The likely next benchmark step is a more controlled CPU-vs-TPU
+comparison with longer timing loops, recorded environment metadata, monitoring
+notes, and the same cleanup discipline.

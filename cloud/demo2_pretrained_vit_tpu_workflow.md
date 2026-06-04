@@ -7,7 +7,7 @@ recommended executable path from local baseline to TPU cleanup, start with
 This document keeps details that are useful after the quickstart: resource
 creation variants, queued-resource state interpretation, spot and TRC spot
 notes, monitoring and evidence guidance, cleanup discipline, troubleshooting
-notes, and the course-specific TRC spot smoke-run evidence appendix.
+notes, and the course-specific TRC spot TPU evidence appendices.
 
 TRC was the funding/quota path used for the course project. TRC is not required
 by the code itself. Any valid Google Cloud TPU quota and funding path may be
@@ -190,8 +190,8 @@ resource before trying another zone or accelerator type.
 Use [demo2_tpu_quickstart.md](demo2_tpu_quickstart.md) for the complete
 repository checkout, `uv` setup, TPU-compatible JAX install, backend/device
 verification, Demo 2 command, artifact retrieval, and local comparison sequence.
-That quickstart also contains the planned Imagenette 320 val64 TPU preparation
-and command templates.
+That quickstart also contains Imagenette 320 TPU preparation, retrieval, and
+curated table generation commands.
 
 Reference command for the public `b4` TPU smoke run:
 
@@ -208,39 +208,70 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
 Do not claim TPU execution succeeded unless backend/device verification reports
 TPU and the Demo 2 command completes on the TPU VM.
 
-## Planned Imagenette 320 Cloud Benchmark Reference
+## Imagenette 320 Cloud TPU Inference Evidence
 
-Imagenette 320 cloud TPU runs remain planned work until real cloud TPU JSON
-artifacts exist. The repository does not download Imagenette automatically.
-Download Imagenette 320 from its official source and preserve the same path on
-the local machine and TPU VM. Concrete `curl` and `tar` commands using the
-official fastai Imagenette 320 archive are documented in
+The repository now has retrieved TPU JSON artifacts for Imagenette 320
+validation-manifest inference runs:
+
+- `val64`: batch sizes `b1`, `b4`, and `b8`.
+- `val256`: batch sizes `b1`, `b4`, and `b8`.
+- `val_full`: batch sizes `b1`, `b4`, and `b8`.
+
+The repository does not download Imagenette automatically. Download Imagenette
+320 from its official source and preserve the same path on the local machine and
+TPU VM. Concrete `curl` and `tar` commands using the official fastai Imagenette
+320 archive are documented in
 [../docs/demo2_pretrained_vit.md](../docs/demo2_pretrained_vit.md).
 
 ```text
 data/local/imagenette2-320/val/manifest_val_64.txt
+data/local/imagenette2-320/val/manifest_val_256.txt
+data/local/imagenette2-320/val/manifest_val_full.txt
 ```
 
-Use `scripts/build_image_manifest.py` to generate `manifest_val_64.txt` from an
-existing extracted validation directory. Do not commit `data/local/`, generated
+Use `scripts/build_image_manifest.py` to generate the `manifest_val_64.txt`,
+`manifest_val_256.txt`, and `manifest_val_full.txt` files from an existing
+extracted validation directory. Do not commit `data/local/`, generated
 manifests, dataset files, model caches, raw JSON artifacts, or raw cloud logs.
 
-The planned cloud TPU output names are:
+The retrieved cloud TPU output names are:
 
 ```text
 runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b1.json
 runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b4.json
 runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b8.json
+runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_b1.json
+runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_b4.json
+runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_b8.json
+runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_b1.json
+runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_b4.json
+runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_b8.json
 ```
 
-The planned curated comparison table path is:
+Retrieve a complete TPU VM result folder from **Google Cloud Shell or a local
+terminal with `gcloud`**, preferably at the local repository root:
+
+```bash
+mkdir -p runs
+
+gcloud compute tpus tpu-vm scp --recurse \
+  "$TPU_NAME":~/numerical-jax-project/runs/vit-inference \
+  runs/ \
+  --project "$PROJECT_ID" \
+  --zone "$ZONE"
+```
+
+The curated TPU Markdown table paths are:
 
 ```text
-report/results/demo2_local_cpu_vs_cloud_tpu_imagenette320_val64.md
+report/results/demo2_cloud_imagenette320_val64_tpu.md
+report/results/demo2_cloud_imagenette320_val256_tpu.md
+report/results/demo2_cloud_imagenette320_valfull_tpu.md
 ```
 
-Do not create this curated Markdown table until the real cloud TPU JSON
-artifacts have been retrieved.
+These are ViT inference timing tables only. They are not training results, not
+Imagenette accuracy evaluation, not a full controlled benchmark study, and not a
+universal TPU speedup claim.
 
 ## Artifact Policy
 
@@ -393,6 +424,39 @@ Smoke-run limitations:
 - Short benchmark loop.
 - No dataset-level accuracy evaluation.
 - Not a full controlled hardware benchmark.
+
+## Appendix: Course Imagenette 320 TPU Inference Evidence
+
+After the public-example smoke run, Demo 2 TPU JSON artifacts were retrieved for
+Imagenette 320 validation-manifest inference:
+
+- `val64`: `b1`, `b4`, and `b8`.
+- `val256`: `b1`, `b4`, and `b8`.
+- `val_full`: `b1`, `b4`, and `b8`.
+
+The curated Markdown tables are:
+
+```text
+report/results/demo2_cloud_imagenette320_val64_tpu.md
+report/results/demo2_cloud_imagenette320_val256_tpu.md
+report/results/demo2_cloud_imagenette320_valfull_tpu.md
+```
+
+Recorded table scope:
+
+- Backend: `tpu`.
+- JSON-visible device kind: `TPU v6 lite`.
+- Benchmark shape: one warmup step and five benchmark steps.
+- Full validation manifest size: 3925 images.
+- Full validation `b4` and `b8` runs include 3 padded final-batch entries.
+
+Interpretation limits:
+
+- ViT inference timing only.
+- No model training or fine-tuning.
+- No Imagenette dataset-level accuracy evaluation.
+- No full controlled hardware benchmark.
+- No universal TPU speedup claim.
 
 ## References
 

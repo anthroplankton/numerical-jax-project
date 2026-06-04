@@ -4,18 +4,20 @@ Course project repository for Numerical Computation with JAX.
 
 The current course presentation focus is **Demo 2: pretrained ViT inference
 with JAX/Flax** using `google/vit-base-patch16-224`. Local CPU inference has
-been run successfully, and the first Google Cloud TPU public-example smoke run
-has also completed. Raw JSON benchmark outputs live under ignored
-`runs/vit-inference/`, and curated report-ready Markdown tables live under
-`report/results/`.
+been run successfully. Google Cloud TPU evidence now includes the first
+public-example smoke run and Imagenette 320 validation-manifest inference runs
+for `val64`, `val256`, and `val_full`. Raw JSON benchmark outputs live under
+ignored `runs/vit-inference/`, and curated report-ready Markdown tables live
+under `report/results/`.
 
-The completed TPU evidence is a small smoke run, not a full controlled
-benchmark study: it used five public example images, batch size 4, one warmup
-step, five benchmark steps, and final-batch padding with `num_padded_images =
-3`. The generated local CPU `b4` versus cloud TPU `b4` table reports about
-1931.76x throughput speedup for this specific smoke-run comparison only. Broader
-Imagenette TPU benchmarking, dataset-level accuracy evaluation, and controlled
-hardware comparison remain future work.
+The TPU evidence remains inference-only. The public smoke comparison used five
+public example images, batch size 4, one warmup step, five benchmark steps, and
+final-batch padding with `num_padded_images = 3`. The Imagenette 320 TPU tables
+cover `b1`, `b4`, and `b8` for 64-image, 256-image, and full validation
+manifests. These results are not training evidence, not dataset-level accuracy
+evaluation, not a full controlled benchmark study, and not a universal TPU
+speedup claim. A controlled local-versus-TPU hardware comparison remains future
+work.
 
 Local CPU remains the stable default path. TPU execution is optional and
 requires suitable Google Cloud TPU quota/funding, Cloud TPU API access, and
@@ -75,6 +77,10 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --benchmark-steps 1 \
   --output runs/vit-inference/demo2_public_examples_smoke_cpu_b4.json
 ```
+
+This smoke filename is temporary local output. It is not automatically included
+in the generated report summaries, which use the curated
+`demo2_local_public_examples_cpu_b*.json` artifact naming scheme.
 
 Imagenette 320 is not downloaded by tests or project scripts. Before running
 Imagenette benchmarks, manually download and extract `imagenette2-320` so this
@@ -137,15 +143,15 @@ padding. The current local live-demo manifest is expected to contain 15 images.
 The private manifest workflow is for qualitative live predictions only; it is
 not a public benchmark dataset or an accuracy benchmark.
 
-For optional local benchmark work, use Imagenette 320 (`imagenette2-320`) as a
-local-only dataset. Current curated tables exist for local and supplementary
-external CPU Imagenette runs, but the extracted dataset and generated manifests
-remain under ignored `data/local/imagenette2-320/`. Build a manifest before
-running a benchmark. `scripts/build_image_manifest.py` scans existing local
-images only; it does not download Imagenette. If the dataset path is missing,
-follow the download and extraction steps in
-[docs/demo2_pretrained_vit.md](docs/demo2_pretrained_vit.md). The lightweight
-documented path is the 64-image validation manifest:
+For optional benchmark work, use Imagenette 320 (`imagenette2-320`) as a
+local-only dataset input. Current curated tables exist for local CPU,
+supplementary external CPU, and cloud TPU Imagenette inference runs, but the
+extracted dataset and generated manifests remain under ignored
+`data/local/imagenette2-320/`. Build a manifest before running a benchmark.
+`scripts/build_image_manifest.py` scans existing local images only; it does not
+download Imagenette. If the dataset path is missing, follow the download and
+extraction steps in [docs/demo2_pretrained_vit.md](docs/demo2_pretrained_vit.md).
+The lightweight documented path is the 64-image validation manifest:
 
 ```bash
 uv run python scripts/build_image_manifest.py \
@@ -166,15 +172,26 @@ report/results/demo2_local_imagenette320_val64_cpu.md
 report/results/demo2_external_ryzen7735hs_wsl_imagenette320_val64_cpu.md
 report/results/demo2_local_imagenette320_val256_cpu.md
 report/results/demo2_external_ryzen7735hs_wsl_imagenette320_val256_cpu.md
+report/results/demo2_cloud_imagenette320_val64_tpu.md
+report/results/demo2_cloud_imagenette320_val256_tpu.md
+report/results/demo2_cloud_imagenette320_valfull_tpu.md
 report/results/demo2_local_private_examples_cpu.md
 report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md
 ```
 
+For grouped report-ready summaries, start with
+[report/results/README.md](report/results/README.md). It documents the generated
+`demo2_imagenette320_overview.md`, `demo2_imagenette320_batch_scaling.md`,
+`demo2_imagenette320_cpu_vs_tpu.md`, `demo2_cpu_machine_comparison.md`, and
+`demo2_public_examples_summary.md` files.
+
 Local CPU tables are the primary current-machine evidence. External Ryzen
-7735HS WSL CPU tables are supplementary and are kept separate. The
-`demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md` table is the first TPU
-smoke-run comparison table and should be interpreted with its small-run
-limitations.
+7735HS WSL CPU tables are supplementary and are kept separate. The cloud TPU
+Imagenette tables are direct TPU inference timing tables generated from
+retrieved TPU JSON artifacts. The
+`demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md` table is the first
+CPU-vs-TPU smoke-run comparison table and should be interpreted with its
+small-run limitations.
 For the historical pre-TPU progress report, the `val256` curated tables were the
 main CPU benchmark evidence because b1/b4/b8 all used 256 real images with 0
 padded images.
@@ -195,7 +212,10 @@ For TPU execution, use these documents by role:
 TRC confirmation has been received. A first Demo 2 TPU smoke run used a TRC
 spot queued resource in `us-east1-d` with Google Cloud accelerator type `v6e-1`,
 runtime `v2-alpha-tpuv6e`, and JSON-visible device kind `TPU v6 lite`; cleanup
-was verified after artifact retrieval.
+was verified after artifact retrieval. Later retrieved Imagenette 320 TPU JSON
+artifacts for `val64`, `val256`, and `val_full` are kept under ignored
+`runs/vit-inference/`; their curated Markdown tables live under
+`report/results/`.
 
 After TPU JSON artifacts are copied back locally, compare existing result files
 without TPU access:
