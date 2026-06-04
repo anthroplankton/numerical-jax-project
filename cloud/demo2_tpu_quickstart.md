@@ -374,9 +374,10 @@ export REPO_URL="<REPO_URL>"
 export BRANCH="<BRANCH>"
 # export COMMIT_SHA="<real commit SHA>"
 
-# Example for this repository and current evidence branch:
+# Example for this repository; replace the branch with one that contains the
+# fine-tuning workflow when using Path C:
 # export REPO_URL="https://github.com/anthroplankton/numerical-jax-project.git"
-# export BRANCH="feat/demo2-tpu-evidence"
+# export BRANCH="<BRANCH>"
 ```
 
 `COMMIT_SHA` is optional. Choose one checkout mode:
@@ -670,7 +671,7 @@ ViT fine-tuning and not an accuracy benchmark.
 Run this section from **Google Cloud Shell or a local terminal with `gcloud`**.
 GCS is used as a durable copy of checkpoints and artifacts. Orbax still writes
 local checkpoint files first under the TPU VM run directory. Use a temporary
-class-demo bucket rather than a shared bucket for commands that later show
+demo bucket rather than a shared bucket for commands that later show
 destructive cleanup examples.
 
 ```bash
@@ -690,8 +691,8 @@ gcloud storage buckets update "gs://$BUCKET_NAME" --clear-soft-delete
 gcloud storage buckets describe "gs://$BUCKET_NAME"
 ```
 
-For short-lived class demo buckets, clear soft delete immediately after bucket
-creation. For a class reset, use a new bucket name and clear soft delete at
+For short-lived demo buckets, clear soft delete immediately after bucket
+creation. For a repeatable reset, use a new bucket name and clear soft delete at
 creation time. The `GCS_RUN_ROOT` prefix is arbitrary, but it must stay
 consistent across first-run checkpoint copy, restore, artifact copy, and
 cleanup.
@@ -748,59 +749,88 @@ test -d data/local/imagenette2-320/train
 test -d data/local/imagenette2-320/val
 ```
 
-Build small train/eval manifests from the existing Imagenette files:
+Build small balanced train/eval manifests from the existing Imagenette files:
 
 ```bash
 uv run python scripts/build_image_manifest.py \
   data/local/imagenette2-320/train \
-  --output data/local/imagenette2-320/train/manifest_train_64.txt \
-  --limit 64
+  --output data/local/imagenette2-320/train/manifest_train_balanced_50.txt \
+  --per-class-limit 5
 
 uv run python scripts/build_image_manifest.py \
   data/local/imagenette2-320/val \
-  --output data/local/imagenette2-320/val/manifest_val_64.txt \
-  --limit 64
+  --output data/local/imagenette2-320/val/manifest_val_balanced_50.txt \
+  --per-class-limit 5
 ```
 
-Set absolute run paths. Do not use relative checkpoint paths for TPU fine
-tuning; Orbax can fail with `ValueError: Checkpoint path should be absolute`.
+Balanced manifests make class distribution easier to inspect in `summary.json`.
+They are still tiny smoke inputs, not an Imagenette accuracy protocol.
+
+### Fine-Tuning Command Profiles
+
+Use one of these profiles depending on the evidence needed. Always use absolute
+`RUN_DIR` and `CKPT_DIR` values before passing `--output-dir` and
+`--checkpoint-dir`; Orbax can fail with `ValueError: Checkpoint path should be
+absolute`.
+
+**Short interactive smoke profile**
+
+This fixed-step profile is suitable for quick verification and report-friendly
+curves. Add `--reinit-head --seed 0` only when a clearer learning-curve
+demonstration is useful; the default keeps the pretrained classifier head.
 
 ```bash
-export RUN_NAME="demo2_cloud_vit_head_finetune_tpu_first"
+export RUN_NAME="demo2_cloud_vit_head_finetune_tpu_curve"
 export RUN_DIR="$(pwd)/runs/vit-finetune/$RUN_NAME"
 export CKPT_DIR="$RUN_DIR/checkpoints"
 mkdir -p "$RUN_DIR" "$CKPT_DIR"
-```
 
-Run the time-controlled TPU smoke command:
-
-```bash
 uv run --group pretrained --group training python examples/demo2_pretrained_vit_finetune.py \
   --jax-platform tpu \
-  --train-manifest data/local/imagenette2-320/train/manifest_train_64.txt \
-  --eval-manifest data/local/imagenette2-320/val/manifest_val_64.txt \
+  --train-manifest data/local/imagenette2-320/train/manifest_train_balanced_50.txt \
+  --eval-manifest data/local/imagenette2-320/val/manifest_val_balanced_50.txt \
   --batch-size 8 \
   --learning-rate 0.001 \
-  --max-steps 100000 \
-  --min-train-seconds 120 \
-  --checkpoint-every-steps 0 \
-  --checkpoint-every-seconds 30 \
+  --max-steps 300 \
+  --min-train-seconds 0 \
+  --checkpoint-every-steps 100 \
+  --checkpoint-every-seconds 0 \
+  --eval-every-steps 25 \
   --checkpoint-dir "$CKPT_DIR" \
   --output-dir "$RUN_DIR" \
   --save-predictions
 ```
 
-`--max-steps 100000` is only an upper bound so the run can be controlled by
-`--min-train-seconds`; it is not a large benchmark target. Prefer
-`--checkpoint-every-steps 0` and `--checkpoint-every-seconds 30` on TPU.
-Step-based checkpointing such as `--checkpoint-every-steps 20` created too many
-checkpoints on TPU and made live GCS sync fragile.
+**Checkpoint/resume evidence profile**
 
-After training completes, copy the final run directory and checkpoint directory
-to GCS:
+This deterministic profile avoids relying on real spot preemption. The first
+run stops at step `300`, then the resume run continues to step `500`; expected
+resume evidence is `start_step=300` and `final_step=500`.
+
+First run:
 
 ```bash
+export RUN_NAME="demo2_cloud_vit_head_finetune_tpu_resume_first"
+export RUN_DIR="$(pwd)/runs/vit-finetune/$RUN_NAME"
+export CKPT_DIR="$RUN_DIR/checkpoints"
 export GCS_RUN_ROOT="gs://<BUCKET_NAME>/numerical-jax-project/demo2-vit-finetune"
+mkdir -p "$RUN_DIR" "$CKPT_DIR"
+
+uv run --group pretrained --group training python examples/demo2_pretrained_vit_finetune.py \
+  --jax-platform tpu \
+  --train-manifest data/local/imagenette2-320/train/manifest_train_balanced_50.txt \
+  --eval-manifest data/local/imagenette2-320/val/manifest_val_balanced_50.txt \
+  --batch-size 8 \
+  --learning-rate 0.001 \
+  --max-steps 300 \
+  --min-train-seconds 0 \
+  --checkpoint-every-steps 100 \
+  --checkpoint-every-seconds 0 \
+  --eval-every-steps 50 \
+  --checkpoint-dir "$CKPT_DIR" \
+  --output-dir "$RUN_DIR" \
+  --save-predictions
+
 export GCS_RUN_URI="$GCS_RUN_ROOT/artifacts/$RUN_NAME"
 export GCS_CKPT_URI="$GCS_RUN_ROOT/checkpoints/$RUN_NAME"
 
@@ -809,18 +839,11 @@ gcloud storage rsync --recursive "$CKPT_DIR" "$GCS_CKPT_URI"
 gcloud storage ls "$GCS_CKPT_URI/"
 ```
 
-The observed first run produced durable GCS checkpoint copies at steps `15100`,
-`15120`, and `15140`.
-
-### Restore And Resume From GCS Checkpoint
-
-Run this section on the replacement or resumed **TPU VM shell** after repository
-checkout, dependency setup, JAX TPU verification, Imagenette preparation, and
-manifest generation are complete.
+Resume run after restoring the checkpoint directory from GCS:
 
 ```bash
 export GCS_RUN_ROOT="gs://<BUCKET_NAME>/numerical-jax-project/demo2-vit-finetune"
-export BASE_RUN_NAME="demo2_cloud_vit_head_finetune_tpu_first"
+export BASE_RUN_NAME="demo2_cloud_vit_head_finetune_tpu_resume_first"
 export RESUME_RUN_NAME="demo2_cloud_vit_head_finetune_tpu_resume"
 export RESUME_RUN_DIR="$(pwd)/runs/vit-finetune/$RESUME_RUN_NAME"
 export RESUME_CKPT_DIR="$RESUME_RUN_DIR/checkpoints"
@@ -829,21 +852,18 @@ export GCS_CKPT_URI="$GCS_RUN_ROOT/checkpoints/$BASE_RUN_NAME"
 mkdir -p "$RESUME_RUN_DIR" "$RESUME_CKPT_DIR"
 gcloud storage rsync --recursive "$GCS_CKPT_URI" "$RESUME_CKPT_DIR"
 find "$RESUME_CKPT_DIR" -name "*.orbax-checkpoint-tmp" -type d -prune -exec rm -rf {} +
-```
 
-Resume from the latest restored Orbax checkpoint:
-
-```bash
 uv run --group pretrained --group training python examples/demo2_pretrained_vit_finetune.py \
   --jax-platform tpu \
-  --train-manifest data/local/imagenette2-320/train/manifest_train_64.txt \
-  --eval-manifest data/local/imagenette2-320/val/manifest_val_64.txt \
+  --train-manifest data/local/imagenette2-320/train/manifest_train_balanced_50.txt \
+  --eval-manifest data/local/imagenette2-320/val/manifest_val_balanced_50.txt \
   --batch-size 8 \
   --learning-rate 0.001 \
-  --max-steps 100000 \
-  --min-train-seconds 120 \
-  --checkpoint-every-steps 0 \
-  --checkpoint-every-seconds 30 \
+  --max-steps 500 \
+  --min-train-seconds 0 \
+  --checkpoint-every-steps 100 \
+  --checkpoint-every-seconds 0 \
+  --eval-every-steps 50 \
   --checkpoint-dir "$RESUME_CKPT_DIR" \
   --output-dir "$RESUME_RUN_DIR" \
   --resume \
@@ -862,8 +882,8 @@ summary = json.loads((Path(os.environ["RESUME_RUN_DIR"]) / "summary.json").read_
 checks = {
     "backend": summary["backend"] == "tpu",
     "resumed_from_checkpoint": summary["resumed_from_checkpoint"] is True,
-    "start_step": summary["start_step"] > 0,
-    "final_step": summary["final_step"] > summary["start_step"],
+    "start_step": summary["start_step"] == 300,
+    "final_step": summary["final_step"] == 500,
     "trainable_scope": summary["trainable_scope"] == "classifier_head_only",
     "frozen_scope": summary["frozen_scope"] == "vit_backbone",
 }
@@ -880,10 +900,44 @@ raise SystemExit(f"failed checks: {failed}" if failed else 0)
 PY
 ```
 
-In the observed workflow, the resume restored checkpoint step `15140` and
+The observed longer workflow restored checkpoint step `15140` and
 completed successfully with `backend=tpu`, `resumed_from_checkpoint=true`,
 `start_step=15140`, `final_step=51538`, `trainable_scope=classifier_head_only`,
-and `frozen_scope=vit_backbone`.
+and `frozen_scope=vit_backbone`. That longer run remains useful as
+checkpoint/resume evidence, but the fixed-step profile above is easier to
+explain in reports.
+
+**Throughput/time smoke profile**
+
+This profile keeps the time-controlled command shape for timing and checkpoint
+stress evidence. It is not intended to produce a useful loss curve.
+
+```bash
+export RUN_NAME="demo2_cloud_vit_head_finetune_tpu_time"
+export RUN_DIR="$(pwd)/runs/vit-finetune/$RUN_NAME"
+export CKPT_DIR="$RUN_DIR/checkpoints"
+mkdir -p "$RUN_DIR" "$CKPT_DIR"
+
+uv run --group pretrained --group training python examples/demo2_pretrained_vit_finetune.py \
+  --jax-platform tpu \
+  --train-manifest data/local/imagenette2-320/train/manifest_train_balanced_50.txt \
+  --eval-manifest data/local/imagenette2-320/val/manifest_val_balanced_50.txt \
+  --batch-size 8 \
+  --learning-rate 0.001 \
+  --max-steps 100000 \
+  --min-train-seconds 120 \
+  --checkpoint-every-steps 0 \
+  --checkpoint-every-seconds 30 \
+  --eval-every-steps 0 \
+  --checkpoint-dir "$CKPT_DIR" \
+  --output-dir "$RUN_DIR" \
+  --save-predictions
+```
+
+`--max-steps 100000` is only an upper bound for the time-controlled smoke run.
+Prefer `--checkpoint-every-steps 0` and `--checkpoint-every-seconds 30` in this
+profile. Step-based checkpointing such as `--checkpoint-every-steps 20` created
+too many checkpoints on TPU and made live GCS sync fragile.
 
 ### Monitoring While Training Runs
 
@@ -939,6 +993,7 @@ Inspect these generated artifacts under the run directory:
 ```text
 summary.json
 metrics.csv
+eval_metrics.csv
 train.log
 predictions_before.json
 predictions_after.json
@@ -952,6 +1007,7 @@ ls -lh "$RUN_DIR"
 uv run python -m json.tool "$RUN_DIR/summary.json" | head -80
 head -5 "$RUN_DIR/metrics.csv"
 tail -5 "$RUN_DIR/metrics.csv"
+cat "$RUN_DIR/eval_metrics.csv"
 tail -40 "$RUN_DIR/train.log"
 ```
 
@@ -967,6 +1023,13 @@ Expected `summary.json` fields include:
 - `final_step`
 - `resumed_from_checkpoint`
 - `latest_checkpoint_step`
+- `train_label_counts`
+- `eval_label_counts`
+- `num_train_classes`
+- `num_eval_classes`
+- `eval_every_steps`
+- `reinit_head`
+- `seed`
 - `initial_loss`
 - `final_loss`
 - `mean_step_time_sec`
@@ -976,14 +1039,26 @@ Expected `summary.json` fields include:
 - `git_branch`
 - `git_dirty`
 
-`mean_step_time_sec` and `examples_per_second` measure training-step time and
-exclude checkpoint write time. `total_runtime_sec` includes setup, evaluation,
-checkpointing, prediction writing, and summary writing overhead.
+`metrics.csv` contains per-step training loss, training accuracy, step time,
+throughput, and checkpoint-save flags. `eval_metrics.csv` contains
+`step`, `eval_loss`, and `eval_accuracy`, and is intended to be easy to load in
+pandas from an ipynb report notebook. `mean_step_time_sec` and
+`examples_per_second` measure training-step time and exclude checkpoint write
+time. `total_runtime_sec` includes setup, evaluation, checkpointing, prediction
+writing, and summary writing overhead.
 
-Near-zero loss can be expected in the tiny `train64`/`val64` smoke setup and
-does not imply dataset-level accuracy. The manifest limit may select a small
-and class-skewed subset. Treat this path as workflow evidence,
-checkpoint/resume evidence, and TPU execution evidence, not an accuracy study.
+Near-zero loss can be expected in a tiny smoke setup and does not imply
+dataset-level accuracy. The subset may be easy, class-skewed, or already well
+served by the pretrained ImageNet classifier head. Use `train_label_counts` and
+`eval_label_counts` to make that visible in reports. Treat this path as
+workflow evidence, checkpoint/resume evidence, and TPU execution evidence, not
+an accuracy study.
+
+For notebook/report plots, load local ignored artifacts such as `summary.json`,
+`metrics.csv`, `eval_metrics.csv`, `predictions_before.json`, and
+`predictions_after.json`. Do not commit raw checkpoints, logs, datasets, model
+caches, GCS objects, or generated notebook outputs; commit only intentionally
+curated derived summaries under `report/results/`.
 
 ### Fine-Tuning Artifact Retrieval
 
@@ -1041,7 +1116,7 @@ gcloud compute tpus tpu-vm list \
 ```
 
 Optionally delete GCS checkpoint and artifact objects after retrieving evidence.
-Do this only for a temporary class-demo bucket that is not shared with other
+Do this only for a temporary demo bucket that is not shared with other
 work. Before deleting a demo bucket, save a small local manual note describing
 what was retrieved and why the bucket can be removed.
 
@@ -1050,7 +1125,7 @@ gcloud storage rm --recursive "gs://$BUCKET_NAME/**"
 gcloud storage buckets delete "gs://$BUCKET_NAME"
 ```
 
-For future class demos, use a new bucket name and clear soft delete at creation
+For future demo runs, use a new bucket name and clear soft delete at creation
 time:
 
 ```bash

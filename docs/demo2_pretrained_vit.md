@@ -281,7 +281,23 @@ only.
 Prepare small path-only Imagenette manifests from existing local data. The
 script derives labels from Imagenette class directory names such as
 `n01440764/` and maps them to the corresponding ImageNet class indices used by
-`google/vit-base-patch16-224`.
+`google/vit-base-patch16-224`. For report-friendly learning curves, prefer the
+balanced manifest mode so the tiny smoke input is less class-skewed:
+
+```bash
+uv run python scripts/build_image_manifest.py \
+  data/local/imagenette2-320/train \
+  --output data/local/imagenette2-320/train/manifest_train_balanced_50.txt \
+  --per-class-limit 5
+
+uv run python scripts/build_image_manifest.py \
+  data/local/imagenette2-320/val \
+  --output data/local/imagenette2-320/val/manifest_val_balanced_50.txt \
+  --per-class-limit 5
+```
+
+The original global-limit form is still available when class balance is not the
+goal:
 
 ```bash
 uv run python scripts/build_image_manifest.py \
@@ -295,45 +311,68 @@ uv run python scripts/build_image_manifest.py \
   --limit 64
 ```
 
-These generated manifests are small smoke inputs. They are not automatically
-balanced across classes and should not be treated as dataset-level evaluation.
+These generated manifests are small smoke inputs. Even the balanced form is not
+a dataset-level evaluation protocol; it only makes class distribution easier to
+inspect in `summary.json`.
 
 Run a local CPU smoke test:
 
 ```bash
 uv run --group pretrained --group training python examples/demo2_pretrained_vit_finetune.py \
   --jax-platform cpu \
-  --train-manifest data/local/imagenette2-320/train/manifest_train_64.txt \
-  --eval-manifest data/local/imagenette2-320/val/manifest_val_64.txt \
+  --train-manifest data/local/imagenette2-320/train/manifest_train_balanced_50.txt \
+  --eval-manifest data/local/imagenette2-320/val/manifest_val_balanced_50.txt \
   --batch-size 8 \
   --learning-rate 0.001 \
   --max-steps 20 \
   --checkpoint-every-steps 10 \
   --checkpoint-every-seconds 30 \
-  --checkpoint-dir runs/vit-finetune/demo2_local_train64_cpu/checkpoints \
-  --output-dir runs/vit-finetune/demo2_local_train64_cpu \
+  --eval-every-steps 5 \
+  --checkpoint-dir runs/vit-finetune/demo2_local_balanced50_cpu/checkpoints \
+  --output-dir runs/vit-finetune/demo2_local_balanced50_cpu \
   --save-predictions
 ```
+
+By default the script starts from the pretrained classifier head. For an
+optional learning-curve demonstration, add `--reinit-head --seed 0` to
+randomly reinitialize only the classifier head while keeping the ViT backbone
+frozen. This mode is useful for plotting a clearer loss curve; it is not the
+default evidence path and is not a model-quality claim.
 
 Expected generated artifacts:
 
 ```text
-runs/vit-finetune/demo2_local_train64_cpu/summary.json
-runs/vit-finetune/demo2_local_train64_cpu/metrics.csv
-runs/vit-finetune/demo2_local_train64_cpu/predictions_before.json
-runs/vit-finetune/demo2_local_train64_cpu/predictions_after.json
-runs/vit-finetune/demo2_local_train64_cpu/train.log
-runs/vit-finetune/demo2_local_train64_cpu/checkpoints/
+runs/vit-finetune/demo2_local_balanced50_cpu/summary.json
+runs/vit-finetune/demo2_local_balanced50_cpu/metrics.csv
+runs/vit-finetune/demo2_local_balanced50_cpu/eval_metrics.csv
+runs/vit-finetune/demo2_local_balanced50_cpu/predictions_before.json
+runs/vit-finetune/demo2_local_balanced50_cpu/predictions_after.json
+runs/vit-finetune/demo2_local_balanced50_cpu/train.log
+runs/vit-finetune/demo2_local_balanced50_cpu/checkpoints/
 ```
 
 `summary.json` records the mode, model name, trainable scope
 `classifier_head_only`, frozen scope `vit_backbone`, backend/devices, manifests,
-batch size, learning rate, start/final step, resume status, checkpoint path,
+label counts, class counts, batch size, learning rate, `eval_every_steps`,
+`reinit_head`, seed, start/final step, resume status, checkpoint path,
 initial/final loss, step timing, throughput, total runtime, and privacy-safe Git
-metadata when available. In that summary, `mean_step_time_sec` and
-`examples_per_second` measure training-step execution time and exclude
-checkpoint write time, while `total_runtime_sec` includes setup, evaluation,
-checkpointing, prediction writing, and summary writing overhead.
+metadata when available. `metrics.csv` is the per-step training CSV.
+`eval_metrics.csv` has `step`, `eval_loss`, and `eval_accuracy` rows for the
+initial state, final state, and optional periodic eval points. In
+`summary.json`, `mean_step_time_sec` and `examples_per_second` measure
+training-step execution time and exclude checkpoint write time, while
+`total_runtime_sec` includes setup, evaluation, checkpointing, prediction
+writing, and summary writing overhead.
+
+For notebook-based report plots, load the local ignored artifacts directly:
+`summary.json`, `metrics.csv`, `eval_metrics.csv`,
+`predictions_before.json`, and `predictions_after.json`. Commit only curated
+derived summaries or small report-ready Markdown under `report/results/`, not
+raw checkpoints, logs, datasets, model caches, or generated notebook outputs.
+Near-zero loss in a tiny `train64`/`val64` or balanced smoke setup can happen if
+the selected subset is easy, class-skewed, or already aligned with the
+pretrained ImageNet classifier head; do not interpret it as Imagenette
+dataset-level accuracy.
 
 For TPU runs, use absolute `RUN_DIR` and `CKPT_DIR` values before passing
 `--output-dir` and `--checkpoint-dir`. Orbax writes local checkpoint files

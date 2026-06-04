@@ -207,16 +207,20 @@ uv run --group pretrained --group training python examples/demo2_pretrained_vit_
   --eval-manifest data/local/imagenette2-320/val/manifest_val_64.txt \
   --batch-size 8 \
   --max-steps 20 \
+  --eval-every-steps 5 \
   --checkpoint-dir runs/vit-finetune/demo2_local_train64_cpu/checkpoints \
   --output-dir runs/vit-finetune/demo2_local_train64_cpu
 ```
 
-Fine-tuning outputs stay under ignored `runs/vit-finetune/`. Do not commit
-checkpoints, model caches, dataset files, raw cloud logs, or large generated
-artifacts. The TPU smoke workflow uses local Orbax checkpoints first and copies
-durable checkpoint evidence to GCS for resume after spot or maintenance risk;
-see the TPU quickstart for the exact GCS setup, first-run, restore/resume,
-monitoring, retrieval, and cleanup steps.
+Fine-tuning outputs stay under ignored `runs/vit-finetune/`, including
+`summary.json`, `metrics.csv`, optional periodic `eval_metrics.csv`,
+predictions, logs, and checkpoints. `summary.json` records label distribution
+metadata so report notebooks can see class skew in tiny smoke manifests. Do not
+commit checkpoints, model caches, dataset files, raw cloud logs, or large
+generated artifacts. The TPU smoke workflow uses local Orbax checkpoints first
+and copies durable checkpoint evidence to GCS for resume after spot or
+maintenance risk; see the TPU quickstart for the exact GCS setup, command
+profiles, monitoring, retrieval, and cleanup steps.
 
 For TPU execution, use these documents by role:
 

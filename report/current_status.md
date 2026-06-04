@@ -69,6 +69,9 @@ workflow evidence, not full ViT fine-tuning or accuracy benchmark evidence.
   - freezes the ViT backbone and trains only the classifier head
   - uses Orbax checkpoint/resume for head params, optimizer state, step, and
     minimal metadata only
+  - writes report-friendly `summary.json`, `metrics.csv`, and
+    `eval_metrics.csv`; `summary.json` includes train/eval label counts and
+    class counts so tiny-manifest skew is visible
   - generated outputs belong under ignored `runs/vit-finetune/`
 - Local CPU public example images:
   - `examples/assets/chihuahua_pet_licorice.jpg`

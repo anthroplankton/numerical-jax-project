@@ -54,8 +54,10 @@ benchmark study or a universal TPU speedup claim.
 
 The optional Demo 2 fine-tuning extension writes generated artifacts under
 `runs/vit-finetune/`, including `summary.json`, `metrics.csv`,
-`predictions_before.json`, `predictions_after.json`, `train.log`, and Orbax
-checkpoint directories. These files are ignored by Git. Add a curated
+`eval_metrics.csv`, `predictions_before.json`, `predictions_after.json`,
+`train.log`, and Orbax checkpoint directories. These files are ignored by Git.
+`summary.json` includes label-count metadata, and `eval_metrics.csv` is the
+preferred lightweight source for notebook learning-curve plots. Add a curated
 report-facing summary under `report/results/` only after a real run is executed
 and the summary is intentionally reduced for the report.
 
@@ -74,6 +76,10 @@ Curated fine-tuning smoke evidence:
 This is workflow, checkpoint/resume, and TPU execution evidence. It is not full
 ViT fine-tuning, not an Imagenette accuracy study, and not a controlled
 hardware benchmark.
+
+Notebook plots should be generated from local ignored CSV/JSON artifacts or
+from intentionally reduced derived summaries. Do not commit raw checkpoints,
+raw logs, GCS objects, model caches, datasets, or generated notebook outputs.
 
 ### Generated Summary Tables
 

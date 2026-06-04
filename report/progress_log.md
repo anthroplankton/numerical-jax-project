@@ -597,6 +597,30 @@
   - This documentation update did not run cloud commands, TPU jobs, model
     downloads, `gcloud` resource creation/deletion, commits, or pushes。
 
+## Phase 5.14: Demo 2 Fine-Tuning Metrics And Report Usability
+
+- Date / phase label：2026-06-05 Demo 2 fine-tuning metrics/report usability
+- What changed：
+  - Added balanced manifest support through `scripts/build_image_manifest.py`
+    with `--per-class-limit` for tiny report-friendly Imagenette smoke inputs。
+  - Extended the optional classifier-head fine-tuning workflow to record
+    `train_label_counts`, `eval_label_counts`, `num_train_classes`, and
+    `num_eval_classes` in `summary.json`。
+  - Added optional periodic evaluation output in `eval_metrics.csv` with
+    `step`, `eval_loss`, and `eval_accuracy` columns for notebook plotting。
+  - Added optional `--reinit-head --seed` support to reinitialize only the
+    classifier head for clearer learning-curve demonstrations while keeping the
+    pretrained classifier head as the default。
+  - Updated reusable docs with short smoke, checkpoint/resume, and
+    throughput/time command profiles。
+- Claim boundary：
+  - This remains a classifier-head-only workflow with the ViT backbone frozen。
+  - The added metrics support report analysis and plotting, but does not make
+    the run a full ViT fine-tuning study, Imagenette dataset-level accuracy
+    benchmark, or controlled hardware benchmark。
+  - This patch did not run cloud commands, TPU jobs, model downloads, `gcloud`
+    resource creation/deletion, commits, or pushes。
+
 ## Planned Phases
 
 ### Phase 6: Real MNIST/Fashion-MNIST and Curated Local Result
