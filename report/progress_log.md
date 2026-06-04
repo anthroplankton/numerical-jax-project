@@ -126,10 +126,10 @@
   - Selected default model：`google/vit-base-patch16-224`。
   - Added an optional `pretrained` dependency group for the ViT demo only, keeping pretrained dependencies out of the default environment。
   - Added a local inference benchmark script using Hugging Face `AutoImageProcessor` and `FlaxViTForImageClassification`。
-  - Added `--jax-platform` to the ViT script with choices `default`, `cpu`, `cuda`, and `tpu`; the default is `cpu` for stable local classroom runs。
+  - Added `--jax-platform` to the ViT script with choices `default`, `cpu`, `cuda`, and `tpu`; the default is `cpu` for stable local runs。
   - Added documentation for local setup, first-run model download behavior, expected metrics, and limitations。
   - Added lightweight tests for argument parsing and metrics helpers that do not download model weights。
-  - Added a public example image set under `examples/assets/` for reproducible classroom use。
+  - Added a public example image set under `examples/assets/` for reproducible public demos。
   - Added support for a local-only private image manifest under ignored `data/local/demo2_vit_images/` for live demos。
   - The public example manifest now contains 5 tracked images。
   - The local live-demo manifest is expected to contain 15 images, including the local banana image and local copies of the four public Wikimedia examples。

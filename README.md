@@ -163,27 +163,10 @@ wc -l data/local/imagenette2-320/val/manifest_val_64.txt
 head data/local/imagenette2-320/val/manifest_val_64.txt
 ```
 
-Curated Demo 2 Markdown tables:
-
-```text
-report/results/demo2_local_public_examples_cpu.md
-report/results/demo2_external_ryzen7735hs_wsl_public_examples_cpu.md
-report/results/demo2_local_imagenette320_val64_cpu.md
-report/results/demo2_external_ryzen7735hs_wsl_imagenette320_val64_cpu.md
-report/results/demo2_local_imagenette320_val256_cpu.md
-report/results/demo2_external_ryzen7735hs_wsl_imagenette320_val256_cpu.md
-report/results/demo2_cloud_imagenette320_val64_tpu.md
-report/results/demo2_cloud_imagenette320_val256_tpu.md
-report/results/demo2_cloud_imagenette320_valfull_tpu.md
-report/results/demo2_local_private_examples_cpu.md
-report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md
-```
-
-For grouped report-ready summaries, start with
-[report/results/README.md](report/results/README.md). It documents the generated
-`demo2_imagenette320_overview.md`, `demo2_imagenette320_batch_scaling.md`,
-`demo2_imagenette320_cpu_vs_tpu.md`, `demo2_cpu_machine_comparison.md`, and
-`demo2_public_examples_summary.md` files.
+For curated result tables and grouped report-ready summaries, start with
+[report/results/README.md](report/results/README.md). It indexes the local CPU,
+supplementary external CPU, cloud TPU Imagenette, public smoke-comparison, and
+generated overview tables under `report/results/`.
 
 Local CPU tables are the primary current-machine evidence. External Ryzen
 7735HS WSL CPU tables are supplementary and are kept separate. The cloud TPU
@@ -209,24 +192,9 @@ For TPU execution, use these documents by role:
 - [report/google_cloud_trc_setup.md](report/google_cloud_trc_setup.md):
   course-specific Google Cloud / TRC setup and evidence record.
 
-TRC confirmation has been received. A first Demo 2 TPU smoke run used a TRC
-spot queued resource in `us-east1-d` with Google Cloud accelerator type `v6e-1`,
-runtime `v2-alpha-tpuv6e`, and JSON-visible device kind `TPU v6 lite`; cleanup
-was verified after artifact retrieval. Later retrieved Imagenette 320 TPU JSON
-artifacts for `val64`, `val256`, and `val_full` are kept under ignored
-`runs/vit-inference/`; their curated Markdown tables live under
-`report/results/`.
-
-After TPU JSON artifacts are copied back locally, compare existing result files
-without TPU access:
-
-```bash
-uv run python scripts/compare_vit_results.py \
-  runs/vit-inference/demo2_local_public_examples_cpu_b4.json \
-  runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json \
-  --output runs/vit-inference/demo2_local_cpu_vs_cloud_tpu_public_examples_b4_compare.json \
-  --markdown-output report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md
-```
+TRC confirmation has been received and the first Demo 2 TPU smoke run has
+cleanup verification. Course-specific setup and evidence details are summarized
+in [report/google_cloud_trc_setup.md](report/google_cloud_trc_setup.md).
 
 ## Demo 1: Preserved Raw-JAX CNN Foundation
 

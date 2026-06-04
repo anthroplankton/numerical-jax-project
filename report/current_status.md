@@ -10,24 +10,21 @@ pretrained ViT inference benchmark with JAX/Flax**。
 - model：`google/vit-base-patch16-224`
 - runtime：JAX/Flax
 - demo script：`examples/pretrained_vit_inference.py`
-- stable classroom backend：local CPU
+- stable local backend：local CPU
 - public image set：5 tracked images under `examples/assets/`
 - single-image smoke input：`examples/assets/chihuahua_pet_licorice.jpg`
 - raw JSON benchmark outputs：ignored/generated `runs/vit-inference/`
 - curated report-ready Markdown tables：`report/results/`
-- Google Cloud / TRC setup state：dedicated Google Cloud project 已建立，
-  billing 已 linked，budget alerts 已設定，Cloud TPU API 已啟用，
-  project number 已提交到 TRC form；TRC confirmation 已收到；第一個 Demo 2
-  TPU public-example smoke run 已完成，artifact 已取回，CPU-vs-TPU comparison
-  table 已產生；Imagenette 320 `val64`、`val256`、`val_full` TPU inference
-  JSON artifacts 已取回並整理成 curated Markdown tables；已記錄的 TPU resource
-  cleanup 完成並確認 selected zone 沒有剩餘 queued resource 或 TPU VM
-- report-ready setup record：`report/google_cloud_trc_setup.md`
+- Google Cloud / TRC setup state：TRC confirmation 已收到；第一個 Demo 2 TPU
+  public-example smoke run、artifact retrieval、comparison table、cleanup
+  verification，以及 Imagenette 320 TPU inference tables 都已有 privacy-safe
+  report record
+- report-ready setup/evidence record：`report/google_cloud_trc_setup.md`
 - remaining benchmark work after TPU inference evidence：若時間與 quota 允許，
-  可再規劃 controlled hardware comparison、較完整 monitoring evidence，或
-  dataset-level accuracy evaluation；目前 Imagenette workflow 仍維持
-  local-only data preparation，不自動下載、不進 pytest/CI，也不提交
-  `data/local/` 內容
+  可再規劃 controlled hardware comparison、較完整 monitoring evidence，或明確
+  定義過的 dataset-level accuracy evaluation；目前 Imagenette workflow 仍維持
+  local-only data preparation，不自動下載、不進 pytest/CI，也不提交 `data/local/`
+  內容
 
 TPU execution evidence now exists for both a small public-example smoke run and
 Imagenette 320 validation-manifest inference timing. It should not be described
@@ -54,7 +51,7 @@ controlled hardware comparison, or a universal TPU speedup claim.
   Face workflow。
 - Pretrained ViT inference script:
   - `examples/pretrained_vit_inference.py`
-- Local CPU classroom public images:
+- Local CPU public example images:
   - `examples/assets/chihuahua_pet_licorice.jpg`
   - `examples/assets/adelie_penguins_brooding.jpg`
   - `examples/assets/doge_homemade_meme.jpg`
@@ -102,30 +99,10 @@ controlled hardware comparison, or a universal TPU speedup claim.
     TRC setup/evidence records
   - Cloud TPU workflow reference is documented with placeholders, resource
     variants, cleanup guidance, and first smoke-run evidence appendix
-  - dedicated Google Cloud project was created outside the repository
-  - project ID and project number were verified with `gcloud projects describe`
-    and kept private
-  - billing account was linked outside the repository
-  - budget alerts were configured:
-    `numerical-jax-first-warning` at 10 USD and
-    `numerical-jax-main-limit` at 60 USD
-  - Cloud TPU API was enabled outside the repository
-  - project number was submitted to TRC and TRC confirmation has been received
-  - setup record is documented in `report/google_cloud_trc_setup.md`
-  - initial v4 queued resource in `us-central2-b` remained in
-    `WAITING_FOR_RESOURCES` for several days and was abandoned
-  - successful smoke run used a TRC spot queued resource in `us-east1-d` with
-    Google Cloud accelerator type `v6e-1`, runtime `v2-alpha-tpuv6e`, and
-    JSON-visible device kind `TPU v6 lite`
-  - successful TPU run used branch `feat/demo2-tpu-evidence`; the exact TPU
-    checkout commit was not preserved in the available report notes
-  - Demo 2 TPU JSON artifact was generated and retrieved:
-    `runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json`
-  - CPU-vs-TPU comparison table was generated:
-    `report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md`
-  - cleanup completed after artifact retrieval; queued-resource deletion
-    succeeded, and both queued-resource list and TPU-VM list returned zero items
-    in `us-east1-d`
+  - course-specific setup, TPU smoke-run evidence, Imagenette TPU evidence, and
+    cleanup status are summarized in `report/google_cloud_trc_setup.md`
+  - exact TPU checkout commit was not preserved in the available report notes;
+    do not substitute a later local commit SHA
 - Lightweight tests that do not download model weights:
   - `tests/test_pretrained_vit_inference.py`
 
@@ -287,11 +264,14 @@ Default tests remain lightweight and offline:
 - `tests/test_cnn_mnist.py`
 - `tests/test_pretrained_vit_inference.py`
 - `tests/test_compare_vit_results.py`
+- `tests/test_generate_vit_summary_tables.py`
+- `tests/test_demo2_tpu_helper.py`
 - `tests/test_build_image_manifest.py`
 
-The Demo 2 tests check argument parsing, metrics helper behavior, and platform
-environment helper behavior. They do not require GPU, TPU, network access,
-Hugging Face access, image opening, or model weight download.
+The Demo 2 tests check argument parsing, metrics helper behavior, generated
+summary-table behavior, optional helper script syntax/static safety, and
+platform environment helper behavior. They do not require GPU, TPU, network
+access, Hugging Face access, image opening, or model weight download.
 
 ## Next Technical Milestones
 

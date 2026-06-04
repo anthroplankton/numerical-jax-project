@@ -46,7 +46,7 @@ uv run pytest
 ```
 
 `scripts/check_jax_device.sh` defaults `JAX_PLATFORMS` to `cpu` unless the
-caller already set it. This keeps the local classroom sanity path explicit and
+caller already set it. This keeps the local CPU sanity path explicit and
 avoids misleading GPU plugin initialization during CPU-only checks on machines
 with unrelated GPU drivers installed.
 
@@ -75,7 +75,7 @@ dataset.
 ## Public Example Images
 
 The repository includes five public Wikimedia Commons images for reproducible
-classroom demos:
+public demos:
 
 ```text
 examples/assets/chihuahua_pet_licorice.jpg
@@ -94,7 +94,7 @@ or downloaded model weights.
 
 ## Private Local Image Set
 
-For a live classroom demo with private photos, keep local-only files under:
+For a private local demo with private photos, keep local-only files under:
 
 ```text
 data/local/demo2_vit_images/
@@ -524,8 +524,8 @@ Expected manifest metadata for the current image sets:
 - The benchmark uses warmup steps before timed steps and calls
   `block_until_ready()` so asynchronous JAX execution is included in the timing.
 - The `--jax-platform` option accepts `default`, `cpu`, `cuda`, or `tpu`. The
-  classroom command uses `cpu` for stable local evidence. The actual backend and
-  devices are still recorded from JAX at runtime.
+  documented local commands use `cpu` for stable local evidence. The actual
+  backend and devices are still recorded from JAX at runtime.
 
 ## Curated CPU Result Tables
 
