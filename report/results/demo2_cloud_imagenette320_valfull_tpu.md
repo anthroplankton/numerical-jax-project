@@ -6,6 +6,6 @@ Scope: ViT inference only; no training; no dataset-level accuracy evaluation; no
 
 | Result | Mode | Backend | Batch | Images | Padded | Mean step (s) | Throughput (img/s) | Speedup |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| demo2_external_ryzen7735hs_wsl_imagenette320_val256_cpu_b1.json | image_manifest | cpu | 1 | 256 | 0 | 0.0834544 | 11.9826 | 1x |
-| demo2_external_ryzen7735hs_wsl_imagenette320_val256_cpu_b4.json | image_manifest | cpu | 4 | 256 | 0 | 0.284359 | 14.0667 | 1.17x |
-| demo2_external_ryzen7735hs_wsl_imagenette320_val256_cpu_b8.json | image_manifest | cpu | 8 | 256 | 0 | 0.580369 | 13.7843 | 1.15x |
+| demo2_cloud_imagenette320_valfull_tpu_b1.json | image_manifest | tpu | 1 | 3925 | 0 | 0.000539034 | 1855.17 | 1x |
+| demo2_cloud_imagenette320_valfull_tpu_b4.json | image_manifest | tpu | 4 | 3925 | 3 | 0.00108021 | 3700.17 | 1.99x |
+| demo2_cloud_imagenette320_valfull_tpu_b8.json | image_manifest | tpu | 8 | 3925 | 3 | 0.001846 | 4330.39 | 2.33x |

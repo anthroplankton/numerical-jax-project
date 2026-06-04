@@ -1,20 +1,24 @@
 # Demo 2: Pretrained ViT Inference Benchmark
 
-Demo 2 is now a local CPU Vision Transformer inference benchmark baseline with
-JAX/Flax. It uses raw JSON outputs under ignored `runs/vit-inference/`, curated
+Demo 2 is now a Vision Transformer inference benchmark workflow with JAX/Flax.
+It uses raw JSON outputs under ignored `runs/vit-inference/`, curated
 report-ready Markdown tables under `report/results/`, manifest batching, public
-example assets, supplementary external CPU evidence, and a documented pre-TRC
-Google Cloud TPU workflow. The default model is `google/vit-base-patch16-224`
-from Hugging Face.
+example assets, supplementary external CPU evidence, a completed Google Cloud
+TPU public-example smoke run, and retrieved Imagenette 320 TPU inference
+artifacts. The default model is `google/vit-base-patch16-224` from Hugging
+Face.
 
 Because of current course presentation constraints, this is the primary demo
 path for the project. Demo 1 remains preserved as background raw-JAX CNN work,
 and Demo 3 remains optional future work.
 
 This demo is inference-only. It does not fine-tune the model, and it does not
-claim TPU execution has been completed. The pre-TRC TPU workflow is documented in
-`cloud/demo2_pretrained_vit_tpu_workflow.md`; the next step is executing that workflow on a
-TPU VM after TRC confirmation, cost, zone, and cleanup readiness are confirmed.
+perform dataset-level accuracy evaluation. TPU evidence now includes a small
+public-example smoke run plus Imagenette 320 `val64`, `val256`, and `val_full`
+inference timing tables, but it is still not a full controlled benchmark. For
+actual TPU execution, use `cloud/demo2_tpu_quickstart.md`. For resource
+variants, monitoring/evidence guidance, cleanup discipline, and course evidence
+appendices, see `cloud/demo2_pretrained_vit_tpu_workflow.md`.
 
 ## Setup
 
@@ -42,7 +46,7 @@ uv run pytest
 ```
 
 `scripts/check_jax_device.sh` defaults `JAX_PLATFORMS` to `cpu` unless the
-caller already set it. This keeps the local classroom sanity path explicit and
+caller already set it. This keeps the local CPU sanity path explicit and
 avoids misleading GPU plugin initialization during CPU-only checks on machines
 with unrelated GPU drivers installed.
 
@@ -59,6 +63,10 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --output runs/vit-inference/demo2_public_examples_smoke_cpu_b4.json
 ```
 
+This smoke filename is temporary local output. It is not automatically included
+in the generated report summaries, which use the curated
+`demo2_local_public_examples_cpu_b*.json` artifact naming scheme.
+
 Optional Imagenette benchmarks require separately prepared local data. Current
 curated local and supplementary external CPU tables exist, but project scripts
 and tests do not download Imagenette, and pytest/CI should not depend on that
@@ -67,7 +75,7 @@ dataset.
 ## Public Example Images
 
 The repository includes five public Wikimedia Commons images for reproducible
-classroom demos:
+public demos:
 
 ```text
 examples/assets/chihuahua_pet_licorice.jpg
@@ -86,7 +94,7 @@ or downloaded model weights.
 
 ## Private Local Image Set
 
-For a live classroom demo with private photos, keep local-only files under:
+For a private local demo with private photos, keep local-only files under:
 
 ```text
 data/local/demo2_vit_images/
@@ -160,9 +168,25 @@ already exist:
 data/local/imagenette2-320/val
 ```
 
-If that path is missing, manually download and extract Imagenette 320 first.
-`scripts/build_image_manifest.py` only scans existing local images; it does not
-download datasets or create the Imagenette directory tree.
+### Download and extract
+
+Run from the repository root. This downloads the official fastai Imagenette 320
+archive into ignored local storage and extracts it under `data/local/`:
+
+```bash
+mkdir -p data/local
+curl -L --fail --show-error -o data/local/imagenette2-320.tgz https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz
+tar -xzf data/local/imagenette2-320.tgz -C data/local
+test -d data/local/imagenette2-320/val
+find data/local/imagenette2-320/val -type f | wc -l
+```
+
+Imagenette files remain under ignored `data/local/`, and generated manifests
+remain under ignored `data/local/imagenette2-320/`. Raw JSON benchmark outputs
+remain under ignored `runs/vit-inference/`. Tests and CI must not require
+Imagenette, and project scripts still do not automatically download it:
+`scripts/build_image_manifest.py` only scans existing local images and does not
+create the Imagenette directory tree.
 
 Build manifests before running benchmarks. Use these names for the validation
 split:
@@ -213,6 +237,21 @@ images, require labels, or add files to Git. Do not commit Imagenette images or
 the generated manifests under `data/local/`. The generated manifest includes
 one header line, so `wc -l` reports one more line than the `--limit` image
 count.
+
+For cloud TPU Imagenette runs, preserve the same repository-relative paths on
+the TPU VM. Either download and extract Imagenette 320 on the TPU VM, or copy a
+prepared local `data/local/imagenette2-320/` directory to the TPU VM. The
+benchmark commands expect:
+
+```text
+data/local/imagenette2-320/val
+data/local/imagenette2-320/val/manifest_val_64.txt
+data/local/imagenette2-320/val/manifest_val_256.txt
+data/local/imagenette2-320/val/manifest_val_full.txt
+```
+
+Keep `data/local/`, generated manifests, dataset files, model caches, and raw
+JSON benchmark outputs uncommitted.
 
 ## Imagenette 320 Local CPU Benchmark Commands
 
@@ -329,6 +368,9 @@ that count.
   "processing_mode": "repeated_single_image",
   "command_used": "python examples/pretrained_vit_inference.py --jax-platform cpu ...",
   "output_path": "runs/vit-inference/metrics.json",
+  "git_commit": "0123456789abcdef0123456789abcdef01234567",
+  "git_branch": "feat/demo2-tpu-evidence",
+  "git_dirty": false,
   "model_name": "google/vit-base-patch16-224",
   "selected_jax_platform": "cpu",
   "backend": "cpu",
@@ -377,6 +419,9 @@ mistaken for whole-run predictions:
   "mode": "image_manifest",
   "command_used": "python examples/pretrained_vit_inference.py --jax-platform cpu ...",
   "output_path": "runs/vit-inference/demo2_local_private_examples_cpu_b4.json",
+  "git_commit": "0123456789abcdef0123456789abcdef01234567",
+  "git_branch": "feat/demo2-tpu-evidence",
+  "git_dirty": false,
   "manifest_path": "data/local/demo2_vit_images/manifest.txt",
   "manifest_kind": "local_private",
   "input_shape": [4, 3, 224, 224],
@@ -413,18 +458,24 @@ mistaken for whole-run predictions:
 Each `image_results` entry includes that image's input shape, batch index,
 position inside its batch, and qualitative top-k predictions. Manifest timing is
 reported at the batch/run level rather than as separate per-image timing.
-New CLI-generated JSON outputs also include `command_used` and `output_path` so
-local CPU and future TPU artifacts can be compared with clearer provenance.
+New CLI-generated JSON outputs also include `command_used`, `output_path`, and
+privacy-safe Git provenance fields (`git_commit`, `git_branch`, and
+`git_dirty`) so local CPU and TPU artifacts can be compared with clearer
+provenance. `git_commit` is the observed checkout from `git rev-parse HEAD`, and
+`git_dirty` is derived from `git status --short` without storing the full status
+output. The Git fields are nullable: legacy artifacts, runs outside a Git
+checkout, or environments without Git may report `null` values.
 Curated Markdown tables under `report/results/` summarize selected fields from
 the raw JSON files.
 
 ## Result JSON Fields
 
-CPU and future TPU comparison should rely on these stable top-level fields when
+CPU and TPU comparison should rely on these stable top-level fields when
 present:
 
 - `mode` and `processing_mode`
 - `model_name`, `selected_jax_platform`, actual `backend`, and `devices`
+- `git_commit`, `git_branch`, and `git_dirty`
 - `batch_size`, `warmup_steps`, `benchmark_steps`, `timed_batch_runs`
 - `num_images`, `num_batches`, `num_padded_images`, and `last_batch_policy`
 - `mean_step_time_sec`, `total_timed_inference_sec`,
@@ -473,8 +524,8 @@ Expected manifest metadata for the current image sets:
 - The benchmark uses warmup steps before timed steps and calls
   `block_until_ready()` so asynchronous JAX execution is included in the timing.
 - The `--jax-platform` option accepts `default`, `cpu`, `cuda`, or `tpu`. The
-  classroom command uses `cpu` for stable local evidence. The actual backend and
-  devices are still recorded from JAX at runtime.
+  documented local commands use `cpu` for stable local evidence. The actual
+  backend and devices are still recorded from JAX at runtime.
 
 ## Curated CPU Result Tables
 
@@ -488,12 +539,26 @@ The following report-ready Markdown tables summarize real JSON artifacts from
 - `report/results/demo2_local_imagenette320_val256_cpu.md`
 - `report/results/demo2_external_ryzen7735hs_wsl_imagenette320_val256_cpu.md`
 - `report/results/demo2_local_private_examples_cpu.md`
+- `report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md`
+
+For grouped report-ready summaries, start with
+`report/results/README.md`. The generated summary set includes
+`demo2_imagenette320_overview.md`, `demo2_imagenette320_batch_scaling.md`,
+`demo2_imagenette320_cpu_vs_tpu.md`, `demo2_cpu_machine_comparison.md`, and
+`demo2_public_examples_summary.md`.
 
 Local CPU tables are the primary current-machine evidence. External Ryzen 7735HS
-WSL CPU tables are supplementary and kept separate. For the current pre-TPU
-progress report, the `val256` tables are the main CPU benchmark evidence;
-`val64` remains a lighter supporting path. The external public examples table
-currently has `b1` and `b4` only; external public `b8` is pending.
+WSL CPU tables are supplementary and kept separate. The
+`demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md` table is the first local
+CPU `b4` versus cloud TPU `b4` smoke-run comparison for the public five-image
+manifest. It should be interpreted as smoke-run evidence only: five images,
+batch size 4, three padded final-batch entries, a short benchmark loop, no
+dataset-level accuracy evaluation, and no controlled hardware benchmark.
+
+For the historical pre-TPU progress report, the `val256` tables were the main
+CPU benchmark evidence; `val64` remains a lighter supporting path. The external
+public examples table currently has `b1` and `b4` only; external public `b8` is
+pending.
 
 ## Report Table Generation Patterns
 
@@ -524,8 +589,8 @@ If a batch size is intentionally unavailable, omit that JSON and document the
 missing batch as pending. This is the current external public examples case:
 `b1` and `b4` exist, while external public `b8` is pending.
 
-A future horizontal comparison should compare local CPU and cloud TPU for the
-same input set and batch size. Create this only after a real TPU JSON artifact
+The current horizontal comparison compares local CPU and cloud TPU for the same
+public input set and batch size. Generate it only after a real TPU JSON artifact
 exists and has been retrieved:
 
 ```bash
@@ -538,14 +603,14 @@ uv run python scripts/compare_vit_results.py \
 
 The JSON comparison output remains an ignored/generated artifact under
 `runs/vit-inference/`. Only the intentionally curated report-ready Markdown table
-belongs under `report/results/`. The local CPU vs cloud TPU table above is a
-future pattern, not current evidence.
+belongs under `report/results/`. The current table reports about 1931.76x
+throughput speedup for this specific small public smoke-run comparison; it
+should not be generalized to TPU performance overall.
 
 Do not mix external Ryzen 7735HS WSL CPU artifacts into the primary local CPU vs
 cloud TPU table. External CPU evidence is supplementary cross-machine CPU
-evidence. If a future three-way view is useful, use a separately named
-supplementary table such as
-`report/results/demo2_cross_machine_public_examples_b4.md`; it should not be
+evidence. The current three-way public-example smoke/demo view belongs in the
+separate `report/results/demo2_public_examples_summary.md`; it should not be
 treated as the primary local-vs-TPU result because it mixes hardware, OS/WSL,
 cache, and thermal variables.
 
@@ -568,16 +633,18 @@ uv run python scripts/compare_vit_results.py \
   --markdown-output report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md
 ```
 
-The helper only reads existing JSON files. It summarizes command metadata when
-available, input image or manifest, backend, devices, batch size, image count,
-total timed runtime, throughput, derived per-image time, and output path. The
-optional Markdown output is intended for report-ready benchmark tables. This
-CPU-vs-TPU example remains pending until a real TPU JSON artifact exists.
+The helper only reads existing JSON files. It summarizes command metadata and
+Git provenance when available, input image or manifest, backend, devices, batch
+size, image count, total timed runtime, throughput, derived per-image time, and
+output path. The optional Markdown output is intended for report-ready benchmark
+tables and keeps the main performance table focused on timing, throughput, and
+speedup. Use the comparison JSON output when detailed provenance fields are
+needed.
 
 ## Limitations
 
-- This is a local CPU benchmark baseline with curated artifacts, not a final
-  local-vs-TPU benchmark result.
+- The completed TPU evidence includes a public-example smoke run and Imagenette
+  320 inference timing tables, not a final local-vs-TPU benchmark study.
 - The default pytest suite does not download the model or require Hugging Face
   network access.
 - First-run download time is not part of the timed inference loop.
@@ -585,14 +652,19 @@ CPU-vs-TPU example remains pending until a real TPU JSON artifact exists.
   uses real mixed-image batches, with final-batch padding if needed. Both modes
   remain systems-oriented inference measurements rather than dataset-level
   evaluations.
+- The TPU smoke run used five public example images, batch size 4, one warmup
+  step, five benchmark steps, and `num_padded_images = 3`.
+- The Imagenette TPU tables are ViT inference timing evidence for retrieved
+  JSON artifacts. They do not train or fine-tune the model, compute Imagenette
+  accuracy, or establish a universal TPU speedup claim.
 - Private manifest runs are qualitative local demonstrations, not public
   benchmark datasets or classification-accuracy measurements.
-- TPU execution, monitoring, cleanup, and local-vs-TPU comparison remain planned
-  work and have not been completed by this demo.
+- Dataset-level accuracy evaluation, longer benchmark loops, monitoring
+  analysis, and controlled hardware comparison remain future work.
 
 ## Next Planned Step
 
-Execute the documented pre-TRC Google Cloud TPU VM workflow for Demo 2 after
-TRC/quota readiness, using `examples/pretrained_vit_inference.py --jax-platform
-tpu`, then capture TPU metrics, logs, monitoring notes, and cleanup evidence if
-resources are created.
+Extend the TPU evidence only when a larger controlled comparison is actually
+executed. The likely next benchmark step is a more controlled CPU-vs-TPU
+comparison with longer timing loops, recorded environment metadata, monitoring
+notes, and the same cleanup discipline.

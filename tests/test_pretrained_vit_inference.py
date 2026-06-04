@@ -550,6 +550,86 @@ def test_apply_jax_platform_rejects_invalid_value() -> None:
         module.apply_jax_platform("gpu")
 
 
+def test_collect_git_metadata_records_privacy_safe_fields(monkeypatch) -> None:
+    module = load_vit_example_module()
+    calls = []
+    outputs = {
+        ("git", "rev-parse", "HEAD"): "0123456789abcdef0123456789abcdef01234567\n",
+        ("git", "symbolic-ref", "--quiet", "--short", "HEAD"): "feat/demo\n",
+        ("git", "status", "--short"): "",
+    }
+
+    def fake_run(command, **kwargs):
+        calls.append((tuple(command), kwargs))
+        assert kwargs["shell"] is False
+        assert kwargs["timeout"] == module.GIT_METADATA_TIMEOUT_SEC
+        assert kwargs["check"] is True
+        assert kwargs["capture_output"] is True
+        assert kwargs["text"] is True
+        return module.subprocess.CompletedProcess(
+            command,
+            0,
+            stdout=outputs[tuple(command)],
+            stderr="",
+        )
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    metadata = module.collect_git_metadata(cwd=Path("/repo"))
+
+    assert metadata == {
+        "git_commit": "0123456789abcdef0123456789abcdef01234567",
+        "git_branch": "feat/demo",
+        "git_dirty": False,
+    }
+    assert [call[0] for call in calls] == list(outputs)
+
+
+def test_collect_git_metadata_records_dirty_state(monkeypatch) -> None:
+    module = load_vit_example_module()
+    observed_commit = "0123456789abcdef0123456789abcdef01234567"
+
+    def fake_run(command, **kwargs):
+        outputs = {
+            ("git", "rev-parse", "HEAD"): f"{observed_commit}\n",
+            ("git", "symbolic-ref", "--quiet", "--short", "HEAD"): "feat/demo\n",
+            ("git", "status", "--short"): " M docs/demo2_pretrained_vit.md\n",
+        }
+        return module.subprocess.CompletedProcess(
+            command,
+            0,
+            stdout=outputs[tuple(command)],
+            stderr="",
+        )
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    metadata = module.collect_git_metadata(cwd=Path("/repo"))
+
+    assert metadata["git_commit"] == observed_commit
+    assert metadata["git_branch"] == "feat/demo"
+    assert metadata["git_dirty"] is True
+
+
+def test_collect_git_metadata_returns_null_fields_when_git_unavailable(
+    monkeypatch,
+) -> None:
+    module = load_vit_example_module()
+
+    def fake_run(command, **kwargs):
+        raise FileNotFoundError
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    metadata = module.collect_git_metadata(cwd=Path("/not-a-repo"))
+
+    assert metadata == {
+        "git_commit": None,
+        "git_branch": None,
+        "git_dirty": None,
+    }
+
+
 def test_add_cli_run_metadata_records_command_and_output_path() -> None:
     module = load_vit_example_module()
 
@@ -561,6 +641,11 @@ def test_add_cli_run_metadata_records_command_and_output_path() -> None:
             "examples/assets/chihuahua_pet_licorice.jpg",
         ],
         output_path=Path("runs/vit-inference/demo2_cpu_b1.json"),
+        git_metadata={
+            "git_commit": "0123456789abcdef0123456789abcdef01234567",
+            "git_branch": "feat/demo",
+            "git_dirty": True,
+        },
     )
 
     assert metrics["backend"] == "cpu"
@@ -569,3 +654,6 @@ def test_add_cli_run_metadata_records_command_and_output_path() -> None:
         "--image examples/assets/chihuahua_pet_licorice.jpg"
     )
     assert metrics["output_path"] == "runs/vit-inference/demo2_cpu_b1.json"
+    assert metrics["git_commit"] == "0123456789abcdef0123456789abcdef01234567"
+    assert metrics["git_branch"] == "feat/demo"
+    assert metrics["git_dirty"] is True

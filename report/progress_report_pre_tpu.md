@@ -4,6 +4,13 @@
 > Status: pre-TPU execution, awaiting TRC confirmation  
 > Scope: Demo 2 local CPU benchmark evidence and TPU workflow preparation
 
+> Superseded note: this file is a historical pre-TPU snapshot dated
+> 2026-05-22. Its "awaiting TRC confirmation" and "TPU execution pending"
+> statements are no longer current project status. It is superseded by later
+> Demo 2 TPU smoke-run evidence, including
+> `report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md` and the
+> updated status/progress records.
+
 ## 1. 專案目標與目前進度
 
 此專案是 Numerical Computation with JAX 的課程專案，目標是用 Python 與

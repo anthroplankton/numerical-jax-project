@@ -2,13 +2,22 @@
 
 ## Purpose
 
-本文件記錄 Demo 2 pretrained ViT image inference benchmark 進入 Google
-Cloud TPU / TRC execution 之前，已完成的 Google Cloud onboarding setup。
-這份紀錄的用途是提供 course report 可以引用的 setup evidence，並保留
-後續 CPU-vs-TPU comparison 的脈絡。
+本文件記錄 Demo 2 pretrained ViT image inference benchmark 的 Google
+Cloud onboarding setup、TRC confirmation，以及第一個 Cloud TPU public-example
+smoke run 的 privacy-safe 狀態。這份紀錄的用途是提供 course report 可以引用
+的 setup / execution evidence，並保留 CPU-vs-TPU comparison 的脈絡。
 
-本文件只記錄 setup 狀態，不代表 TPU VM 已建立，也不代表 TPU benchmark
-已完成。目前已完成的 benchmark evidence 仍是 local CPU Demo 2 artifacts。
+本文件不是 generic user quickstart。可重用的 TPU execution instructions
+請看 `cloud/demo2_tpu_quickstart.md`；較完整的 resource / evidence reference
+請看 `cloud/demo2_pretrained_vit_tpu_workflow.md`。
+
+TRC 是本課程專案使用的 quota / funding path，不是程式本身的需求。其他使用者只要
+有其他有效的 Google Cloud TPU quota / funding path，也可以依照 quickstart 執行
+Demo 2 TPU smoke run。
+
+目前已完成的 TPU evidence 包含 small public smoke run，以及 Imagenette 320
+validation-manifest inference timing tables。這些仍不是 training、full
+controlled benchmark study，也不是 dataset-level accuracy evaluation。
 
 ## Privacy And Placeholders
 
@@ -52,40 +61,75 @@ private cloud screenshots。
    | `numerical-jax-main-limit` | 60 USD |
 
 5. 啟用 Cloud TPU API。
-6. 將 `<PROJECT_NUMBER>` 提交到 TRC short form，等待 TRC confirmation。
+6. 將 `<PROJECT_NUMBER>` 提交到 TRC short form。
+7. TRC confirmation 已收到；TRC email content、project-specific identifiers
+   與 private cloud details 不記錄於 repository。
 
-## Current Pending State
+## Current Setup State
 
-- TRC confirmation 仍在等待中。
-- repository 尚未記錄可建立 TPU resources 的核准狀態。
-- 尚未建立 Cloud TPU VM。
-- 尚未執行 `examples/pretrained_vit_inference.py --jax-platform tpu`。
-- 尚未產生 cloud TPU benchmark JSON、logs、monitoring notes 或 screenshots。
-- 尚未完成 local CPU vs TPU comparison。
+- TRC confirmation 已收到。
+- repository 只記錄 confirmation status，不記錄 TRC email content、real
+  project ID、real project number、billing account ID、credentials 或 private
+  cloud identifiers。
+- 第一個 Demo 2 TPU public-example smoke run 已完成。
+- 成功的 TPU resource 使用：
+  - zone：`us-east1-d`
+  - accelerator type：`v6e-1`
+  - runtime version：`v2-alpha-tpuv6e`
+  - quota/funding type：TRC spot quota
+  - JSON-visible device kind：`TPU v6 lite`
+- 成功的 TPU run 使用 branch：`feat/demo2-tpu-evidence`。
+- exact TPU checkout commit 沒有保存在目前可用的 report notes 中；不可用
+  post-edit local commit SHA 代替，這是 reproducibility limitation。
+- TPU JSON artifact 已產生並取回：
+  `runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json`。
+- CPU-vs-TPU comparison Markdown table 已產生：
+  `report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md`。
+- Imagenette 320 TPU inference JSON artifacts 已取回，範圍包含 `val64`、
+  `val256`、`val_full` 的 `b1`、`b4`、`b8`。
+- Imagenette 320 TPU curated Markdown tables 已產生：
+  - `report/results/demo2_cloud_imagenette320_val64_tpu.md`
+  - `report/results/demo2_cloud_imagenette320_val256_tpu.md`
+  - `report/results/demo2_cloud_imagenette320_valfull_tpu.md`
+- 已記錄的 TPU resource cleanup 已完成；queued resource deletion succeeded，且
+  `gcloud compute tpus queued-resources list` 與
+  `gcloud compute tpus tpu-vm list` 在 selected zone 回傳 0 items。
 
-因此，目前不能宣稱 TPU execution、TPU performance result、cloud benchmark
-或 CPU-vs-TPU comparison 已完成。
+因此，目前可以宣稱已完成第一個 TPU smoke run 與 artifact retrieval /
+comparison / cleanup verification，也可以宣稱已整理 Imagenette 320 TPU
+inference timing evidence。不能宣稱 training、fine-tuning、full benchmark
+study、dataset-level accuracy evaluation、controlled hardware comparison，或 TPU
+generally 1931x faster。
 
-## Not Done Yet
+## Operational Notes
 
-以下工作尚未進行，需等 TRC confirmation 或明確的 fallback funding decision
-之後再處理：
+- Initial attempt：一個 v4 queued resource 在 `us-central2-b` 維持
+  `WAITING_FOR_RESOURCES` 數日後放棄。這是 availability / queue behavior
+  note，不是 performance claim。
+- Successful attempt：改用較小的 v6e TRC spot queued resource，在
+  `us-east1-d` 完成 public-example smoke run。
+- Network / subnet note：成功的 first smoke run 使用 selected region 的
+  default VPC network 與 default subnet。Earlier resource attempts showed that
+  subnet availability can matter; missing regional default subnet can block TPU
+  resource creation。除非有明確且安全的需求，不在 repository 記錄 private IPs、
+  subnet CIDR ranges、hostnames 或 detailed network topology。
 
-- 選定 `<ZONE>`、`<TPU_NAME>`、`<ACCELERATOR_TYPE>` 與 `<RUNTIME_VERSION>`。
-- 建立或啟動 TPU VM。
-- 在 TPU VM 上 clone 或 update repository。
-- 在 TPU VM 上安裝 pretrained demo dependencies 與 TPU-compatible JAX。
-- 在 TPU VM 上確認 JAX backend/devices。
-- 在 TPU VM 上執行 Demo 2 benchmark。
-- 下載或整理 TPU result artifacts。
-- 擷取 monitoring evidence 或 redacted screenshots。
-- 刪除 TPU VM 並記錄 cleanup evidence。
-- 使用 `scripts/compare_vit_results.py` 產生 CPU-vs-TPU comparison。
+## Remaining Work
+
+以下工作仍屬後續延伸，不應在尚未執行前寫成 completed evidence：
+
+- 保存更完整的 branch / exact commit / environment metadata。
+- 擷取可公開的 monitoring evidence 或 redacted screenshots。
+- 執行較長 benchmark loop 或 controlled Imagenette CPU-vs-TPU comparison。
+- 進行 controlled local-vs-TPU hardware comparison。
+- 加入 dataset-level accuracy evaluation，若後續定義 labels / top-k
+  evaluation workflow。
 
 ## Cost-Control Principles
 
-- 在 TRC confirmation、zone、accelerator type、run command、artifact retrieval
-  command 與 cleanup command 都明確之前，不建立 TPU resources。
+- 雖然第一個 TPU smoke run 已完成，未來任何 TPU resource 建立前仍需先確認
+  zone、accelerator type、run command、artifact retrieval command 與 cleanup
+  command。
 - 任何 TPU VM 建立前，都先確認 cleanup command：
 
   ```bash
@@ -101,20 +145,16 @@ private cloud screenshots。
 - Cloud resources 建立、啟動、停止或刪除都應由使用者手動確認，不由 repo
   automation 自動執行。
 
-## Next Planned Steps After TRC Confirmation
+## Next Planned Steps
 
-1. 根據 TRC confirmation，確認可用的 `<ZONE>`、`<ACCELERATOR_TYPE>` 與
-   `<RUNTIME_VERSION>`。
-2. Review `cloud/demo2_pretrained_vit_tpu_workflow.md`，確認 create、verify、run、
+1. 保留第一個 TPU smoke-run evidence，但不要提交 raw JSON under
+   `runs/vit-inference/`。
+2. 將 curated comparison table 保留在：
+   `report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md`。
+3. 若後續再建立 TPU resource，重新 review
+   `cloud/demo2_pretrained_vit_tpu_workflow.md`，確認 create、verify、run、
    retrieve、compare、cleanup commands 都仍符合當時環境。
-3. 在 local machine 先執行 local preflight checks，包括 `git status`、
-   Ruff、pytest，以及確認 local CPU Demo 2 artifacts。
-4. 建立 TPU VM 前，再次確認 cleanup command 與成本風險。
-5. 在 TPU VM 上執行 JAX backend/device verification。
-6. 以 `--jax-platform tpu` 執行 Demo 2 pretrained ViT inference benchmark。
-7. 取回 TPU JSON metrics、terminal logs、monitoring notes，並在必要時加入
-   redacted screenshots。
-8. 刪除 TPU VM，確認沒有遺留 running resources。
-9. 使用 `scripts/compare_vit_results.py` 比較 local CPU 與 TPU result files。
-10. 將實際 TPU execution、metrics、cleanup 與 comparison evidence 補到
-    `report/results/`、`report/progress_log.md` 或 final report material。
+4. 未來 run 應保存 exact commit SHA、backend/device verification、artifact
+   retrieval、monitoring notes、cleanup transcript 與 deletion verification。
+5. 若時間與 quota 允許，再執行更 controlled 的 local-vs-TPU comparison、
+   monitoring evidence collection，或 dataset-level accuracy evaluation。

@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 import shlex
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -33,6 +34,7 @@ JAX_PLATFORM_CHOICES = ("default", "cpu", "cuda", "tpu")
 DEFAULT_PRIVATE_IMAGE_DIR = Path("data/local/demo2_vit_images")
 PUBLIC_EXAMPLE_MANIFEST_PATH = Path("examples/assets/manifest.txt")
 DATA_LOCAL_DIR = Path("data/local")
+GIT_METADATA_TIMEOUT_SEC = 2.0
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -628,14 +630,69 @@ def write_metrics(metrics: Mapping[str, Any], output_path: Path) -> None:
     output_path.write_text(json.dumps(metrics, indent=2, sort_keys=True) + "\n")
 
 
+def collect_git_metadata(cwd: Path | None = None) -> dict[str, Any]:
+    """Collect privacy-safe Git metadata for the current checkout if available."""
+    workdir = Path.cwd() if cwd is None else cwd
+    commit_output = _run_git_command(["rev-parse", "HEAD"], cwd=workdir)
+    commit = _nonempty_stripped_output(commit_output)
+    branch_output = _run_git_command(
+        ["symbolic-ref", "--quiet", "--short", "HEAD"],
+        cwd=workdir,
+    )
+    dirty_output = _run_git_command(["status", "--short"], cwd=workdir)
+
+    return {
+        "git_commit": commit,
+        "git_branch": _nonempty_stripped_output(branch_output),
+        "git_dirty": None if dirty_output is None else bool(dirty_output.strip()),
+    }
+
+
+def _run_git_command(args: Sequence[str], *, cwd: Path) -> str | None:
+    """Run one Git command, returning stdout on success and None on failure."""
+    try:
+        completed = subprocess.run(
+            ["git", *args],
+            cwd=cwd,
+            check=True,
+            capture_output=True,
+            text=True,
+            shell=False,
+            timeout=GIT_METADATA_TIMEOUT_SEC,
+        )
+    except (
+        FileNotFoundError,
+        subprocess.CalledProcessError,
+        subprocess.TimeoutExpired,
+    ):
+        return None
+    return completed.stdout
+
+
+def _nonempty_stripped_output(output: str | None) -> str | None:
+    """Return stripped command output, or None for missing/empty output."""
+    if output is None:
+        return None
+    value = output.strip()
+    return value or None
+
+
 def add_cli_run_metadata(
-    metrics: Mapping[str, Any], *, argv: Sequence[str], output_path: Path
+    metrics: Mapping[str, Any],
+    *,
+    argv: Sequence[str],
+    output_path: Path,
+    git_metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Add reproducibility metadata available only at CLI execution time."""
+    resolved_git_metadata = (
+        collect_git_metadata() if git_metadata is None else dict(git_metadata)
+    )
     return {
         **dict(metrics),
         "command_used": shlex.join(["python", *argv]),
         "output_path": str(output_path),
+        **resolved_git_metadata,
     }
 
 

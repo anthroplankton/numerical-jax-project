@@ -4,10 +4,25 @@ Course project repository for Numerical Computation with JAX.
 
 The current course presentation focus is **Demo 2: pretrained ViT inference
 with JAX/Flax** using `google/vit-base-patch16-224`. Local CPU inference has
-been run successfully. Raw JSON benchmark outputs live under ignored
-`runs/vit-inference/`, and curated report-ready Markdown tables live under
-`report/results/`. Google Cloud TPU execution is the next planned workflow and
-has not been completed yet.
+been run successfully. Google Cloud TPU evidence now includes the first
+public-example smoke run and Imagenette 320 validation-manifest inference runs
+for `val64`, `val256`, and `val_full`. Raw JSON benchmark outputs live under
+ignored `runs/vit-inference/`, and curated report-ready Markdown tables live
+under `report/results/`.
+
+The TPU evidence remains inference-only. The public smoke comparison used five
+public example images, batch size 4, one warmup step, five benchmark steps, and
+final-batch padding with `num_padded_images = 3`. The Imagenette 320 TPU tables
+cover `b1`, `b4`, and `b8` for 64-image, 256-image, and full validation
+manifests. These results are not training evidence, not dataset-level accuracy
+evaluation, not a full controlled benchmark study, and not a universal TPU
+speedup claim. A controlled local-versus-TPU hardware comparison remains future
+work.
+
+Local CPU remains the stable default path. TPU execution is optional and
+requires suitable Google Cloud TPU quota/funding, Cloud TPU API access, and
+cleanup discipline. The course project used TRC spot quota for the completed
+smoke run, but TRC is not mandatory for the code.
 
 Demo 1 remains in the repository as preserved background work: a raw-JAX
 hand-written CNN benchmark foundation. Demo 3 remains optional future work for a
@@ -63,6 +78,10 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --output runs/vit-inference/demo2_public_examples_smoke_cpu_b4.json
 ```
 
+This smoke filename is temporary local output. It is not automatically included
+in the generated report summaries, which use the curated
+`demo2_local_public_examples_cpu_b*.json` artifact naming scheme.
+
 Imagenette 320 is not downloaded by tests or project scripts. Before running
 Imagenette benchmarks, manually download and extract `imagenette2-320` so this
 local ignored path exists:
@@ -70,6 +89,9 @@ local ignored path exists:
 ```text
 data/local/imagenette2-320/val
 ```
+
+Concrete `curl` and `tar` commands using the official fastai Imagenette 320
+archive are in [docs/demo2_pretrained_vit.md](docs/demo2_pretrained_vit.md).
 
 ## Demo 2: Pretrained ViT Inference
 
@@ -121,13 +143,15 @@ padding. The current local live-demo manifest is expected to contain 15 images.
 The private manifest workflow is for qualitative live predictions only; it is
 not a public benchmark dataset or an accuracy benchmark.
 
-For optional local benchmark work, use Imagenette 320 (`imagenette2-320`) as a
-local-only dataset. Current curated tables exist for local and supplementary
-external CPU Imagenette runs, but the extracted dataset and generated manifests
-remain under ignored `data/local/imagenette2-320/`. Build a manifest before
-running a benchmark. `scripts/build_image_manifest.py` scans existing local
-images only; it does not download Imagenette. The lightweight documented path is
-the 64-image validation manifest:
+For optional benchmark work, use Imagenette 320 (`imagenette2-320`) as a
+local-only dataset input. Current curated tables exist for local CPU,
+supplementary external CPU, and cloud TPU Imagenette inference runs, but the
+extracted dataset and generated manifests remain under ignored
+`data/local/imagenette2-320/`. Build a manifest before running a benchmark.
+`scripts/build_image_manifest.py` scans existing local images only; it does not
+download Imagenette. If the dataset path is missing, follow the download and
+extraction steps in [docs/demo2_pretrained_vit.md](docs/demo2_pretrained_vit.md).
+The lightweight documented path is the 64-image validation manifest:
 
 ```bash
 uv run python scripts/build_image_manifest.py \
@@ -139,44 +163,38 @@ wc -l data/local/imagenette2-320/val/manifest_val_64.txt
 head data/local/imagenette2-320/val/manifest_val_64.txt
 ```
 
-Curated Demo 2 Markdown tables:
-
-```text
-report/results/demo2_local_public_examples_cpu.md
-report/results/demo2_external_ryzen7735hs_wsl_public_examples_cpu.md
-report/results/demo2_local_imagenette320_val64_cpu.md
-report/results/demo2_external_ryzen7735hs_wsl_imagenette320_val64_cpu.md
-report/results/demo2_local_imagenette320_val256_cpu.md
-report/results/demo2_external_ryzen7735hs_wsl_imagenette320_val256_cpu.md
-report/results/demo2_local_private_examples_cpu.md
-```
+For curated result tables and grouped report-ready summaries, start with
+[report/results/README.md](report/results/README.md). It indexes the local CPU,
+supplementary external CPU, cloud TPU Imagenette, public smoke-comparison, and
+generated overview tables under `report/results/`.
 
 Local CPU tables are the primary current-machine evidence. External Ryzen
-7735HS WSL CPU tables are supplementary and are kept separate.
-For the current pre-TPU progress report, the `val256` curated tables are the
-main CPU benchmark evidence because b1/b4/b8 all use 256 real images with 0
+7735HS WSL CPU tables are supplementary and are kept separate. The cloud TPU
+Imagenette tables are direct TPU inference timing tables generated from
+retrieved TPU JSON artifacts. The
+`demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md` table is the first
+CPU-vs-TPU smoke-run comparison table and should be interpreted with its
+small-run limitations.
+For the historical pre-TPU progress report, the `val256` curated tables were the
+main CPU benchmark evidence because b1/b4/b8 all used 256 real images with 0
 padded images.
 
 For full local instructions, expected output, model notes, and limitations, see
 [docs/demo2_pretrained_vit.md](docs/demo2_pretrained_vit.md).
 
-For the planned TPU workflow, see
-[cloud/demo2_pretrained_vit_tpu_workflow.md](cloud/demo2_pretrained_vit_tpu_workflow.md). The
-Google Cloud / TRC setup record is tracked in
-[report/google_cloud_trc_setup.md](report/google_cloud_trc_setup.md). This is
-documentation-only at the current stage; TRC confirmation is pending and no TPU
-run is claimed.
+For TPU execution, use these documents by role:
 
-After TPU JSON artifacts are copied back locally, compare existing result files
-without TPU access:
+- [cloud/demo2_tpu_quickstart.md](cloud/demo2_tpu_quickstart.md): reusable
+  user-facing TPU quickstart from local baseline through cleanup.
+- [cloud/demo2_pretrained_vit_tpu_workflow.md](cloud/demo2_pretrained_vit_tpu_workflow.md):
+  reference workflow with resource variants, evidence checklist, cleanup
+  guidance, troubleshooting, and the course smoke-run appendix.
+- [report/google_cloud_trc_setup.md](report/google_cloud_trc_setup.md):
+  course-specific Google Cloud / TRC setup and evidence record.
 
-```bash
-uv run python scripts/compare_vit_results.py \
-  runs/vit-inference/demo2_local_public_examples_cpu_b4.json \
-  runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json \
-  --output runs/vit-inference/demo2_local_cpu_vs_cloud_tpu_public_examples_b4_compare.json \
-  --markdown-output report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md
-```
+TRC confirmation has been received and the first Demo 2 TPU smoke run has
+cleanup verification. Course-specific setup and evidence details are summarized
+in [report/google_cloud_trc_setup.md](report/google_cloud_trc_setup.md).
 
 ## Demo 1: Preserved Raw-JAX CNN Foundation
 
