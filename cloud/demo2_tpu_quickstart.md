@@ -1213,6 +1213,16 @@ gcloud storage rm --recursive "gs://$BUCKET_NAME/**"
 gcloud storage buckets delete "gs://$BUCKET_NAME"
 ```
 
+To inspect for leftover Demo 2 buckets after cleanup, run this read-only check;
+if matching buckets still appear, inspect their contents and purpose before
+deleting anything:
+
+```bash
+gcloud storage buckets list "gs://${PROJECT_ID}-demo2-*" \
+  --project "$PROJECT_ID" \
+  --format="table(name,location,storageClass)"
+```
+
 For future demo runs, use a new bucket name and clear soft delete at creation
 time:
 
