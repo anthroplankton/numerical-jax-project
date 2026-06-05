@@ -37,6 +37,9 @@ pretrained = [
     "pillow",
     "transformers<5",
 ]
+report = [
+    "matplotlib>=3.10.9",
+]
 training = [
     "optax",
     "orbax-checkpoint",
