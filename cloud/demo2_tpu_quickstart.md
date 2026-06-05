@@ -69,19 +69,22 @@ These variables are used from **Google Cloud Shell or a local terminal with
 
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
-export REGION="<REGION>"
-export ZONE="<ZONE>"
-export TPU_NAME="<TPU_NAME>"
-export QUEUED_RESOURCE_ID="<QUEUED_RESOURCE_ID>"
-export ACCELERATOR_TYPE="<ACCELERATOR_TYPE>"
-export RUNTIME_VERSION="<RUNTIME_VERSION>"
-export NETWORK_NAME="<NETWORK_NAME>"
-export SUBNET_NAME="<SUBNET_NAME>"
+export REGION="us-east1"
+export ZONE="us-east1-d"
+export TPU_NAME="demo2-vit-v6e1-use1-spot"
+export QUEUED_RESOURCE_ID="${TPU_NAME}-qr"
+export ACCELERATOR_TYPE="v6e-1"
+export RUNTIME_VERSION="v2-alpha-tpuv6e"
+export NETWORK_NAME="default"
+export SUBNET_NAME="default"
 ```
 
-The selected subnet must exist in the region corresponding to the selected TPU
-zone. Network and subnet names are not secrets, but project-specific network
-topology details should still be documented conservatively.
+These common variable names are reused by the scenario blocks below. The
+example values above match the public-example inference smoke shape; replace
+them with the selected scenario values before creating resources. The selected
+subnet must exist in the region corresponding to the selected TPU zone. Network
+and subnet names are not secrets, but project-specific network topology details
+should still be documented conservatively.
 
 ### Scenario-Specific TPU Blocks
 
@@ -108,8 +111,8 @@ shape, subject to matching quota and funding availability.
 export PROJECT_ID="<PROJECT_ID>"
 export REGION="us-east1"
 export ZONE="us-east1-d"
-export TPU_NAME="<TPU_NAME>"
-export QUEUED_RESOURCE_ID="<QUEUED_RESOURCE_ID>"
+export TPU_NAME="demo2-vit-ft-v6e1-use1-spot"
+export QUEUED_RESOURCE_ID="${TPU_NAME}-qr"
 export ACCELERATOR_TYPE="v6e-1"
 export RUNTIME_VERSION="v2-alpha-tpuv6e"
 export NETWORK_NAME="default"
@@ -164,12 +167,40 @@ consistently across first-run checkpoint copy, restore, artifact copy, and
 cleanup.
 
 ```bash
-export BUCKET_NAME="<BUCKET_NAME>"
+export BUCKET_SUFFIX="chihuahua"
+export BUCKET_NAME="${PROJECT_ID}-demo2-vit-ft-${BUCKET_SUFFIX}"
 export GCS_RUN_ROOT="gs://$BUCKET_NAME/numerical-jax-project/demo2-vit-finetune"
 ```
 
-Use placeholders in reusable docs. Do not publish real personal bucket names or
-project identifiers.
+Keep `PROJECT_ID` as a placeholder in reusable docs. Do not publish real
+personal bucket names or project identifiers. `BUCKET_SUFFIX` must be lowercase
+and should make the bucket globally unique when combined with `PROJECT_ID`;
+change it if the bucket name already exists.
+
+Example Path C variable block:
+
+```bash
+export PROJECT_ID="<PROJECT_ID>"
+export REGION="europe-west4"
+export ZONE="europe-west4-a"
+
+export TPU_NAME="demo2-vit-ft-v6e1-ew4a-spot"
+export QUEUED_RESOURCE_ID="${TPU_NAME}-qr"
+
+export ACCELERATOR_TYPE="v6e-1"
+export RUNTIME_VERSION="v2-alpha-tpuv6e"
+export NETWORK_NAME="default"
+export SUBNET_NAME="default"
+
+export BUCKET_SUFFIX="chihuahua"
+export BUCKET_NAME="${PROJECT_ID}-demo2-vit-ft-${BUCKET_SUFFIX}"
+export GCS_RUN_ROOT="gs://$BUCKET_NAME/numerical-jax-project/demo2-vit-finetune"
+```
+
+This generated `BUCKET_NAME` is intended for a short-lived demo or report run.
+Change it if the name conflicts, if the project ID is too long for a practical
+bucket name, or if your project naming policy requires a different prefix. Keep
+`BUCKET_SUFFIX` lowercase.
 
 ### TPU VM Checkout Variables
 
@@ -178,8 +209,9 @@ Repository checkout variables such as `REPO_URL`, `BRANCH`, and optional
 before SSH do not automatically exist inside the TPU VM shell.
 
 ```bash
-export REPO_URL="<REPO_URL>"
-export BRANCH="<BRANCH>"
+export REPO_URL="https://github.com/anthroplankton/numerical-jax-project.git"
+export BRANCH="main"  # after the fine-tuning workflow is merged
+# export BRANCH="<branch-containing-demo2-finetune>"  # before merge
 # export COMMIT_SHA="<real commit SHA>"
 ```
 
@@ -190,7 +222,7 @@ TPU VM shell. Fine-tuning uses absolute paths because Orbax checkpoint paths
 must be absolute.
 
 ```bash
-export RUN_NAME="<RUN_NAME>"
+export RUN_NAME="demo2_cloud_vit_head_finetune_tpu_resume"
 export RUN_DIR="$(pwd)/runs/vit-finetune/$RUN_NAME"
 export CKPT_DIR="$RUN_DIR/checkpoints"
 ```
@@ -370,14 +402,13 @@ Set repository checkout variables inside the TPU VM shell if they were not
 already set:
 
 ```bash
-export REPO_URL="<REPO_URL>"
-export BRANCH="<BRANCH>"
+export REPO_URL="https://github.com/anthroplankton/numerical-jax-project.git"
+export BRANCH="main"  # after the fine-tuning workflow is merged
+# export BRANCH="<branch-containing-demo2-finetune>"  # before merge
 # export COMMIT_SHA="<real commit SHA>"
 
-# Example for this repository; replace the branch with one that contains the
-# fine-tuning workflow when using Path C:
-# export REPO_URL="https://github.com/anthroplankton/numerical-jax-project.git"
-# export BRANCH="<BRANCH>"
+# Before merge, replace BRANCH with one that contains the fine-tuning workflow
+# when using Path C.
 ```
 
 `COMMIT_SHA` is optional. Choose one checkout mode:
@@ -509,11 +540,11 @@ does not run, retrieve, or compare Imagenette 320 TPU artifacts.
 
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
-export ZONE="<ZONE>"
-export TPU_NAME="<TPU_NAME>"
-export QUEUED_RESOURCE_ID="<QUEUED_RESOURCE_ID>"
-export REPO_URL="<REPO_URL>"
-export BRANCH="<BRANCH>"
+export ZONE="us-east1-d"
+export TPU_NAME="demo2-vit-v6e1-use1-spot"
+export QUEUED_RESOURCE_ID="${TPU_NAME}-qr"
+export REPO_URL="https://github.com/anthroplankton/numerical-jax-project.git"
+export BRANCH="main"
 
 bash scripts/demo2_tpu_run_when_active.sh
 ```
@@ -676,8 +707,9 @@ destructive cleanup examples.
 
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
-export REGION="<REGION>"
-export BUCKET_NAME="<BUCKET_NAME>"
+export REGION="europe-west4"
+export BUCKET_SUFFIX="chihuahua"
+export BUCKET_NAME="${PROJECT_ID}-demo2-vit-ft-${BUCKET_SUFFIX}"
 export GCS_RUN_ROOT="gs://$BUCKET_NAME/numerical-jax-project/demo2-vit-finetune"
 
 gcloud config set project "$PROJECT_ID"
@@ -713,10 +745,16 @@ gcloud storage rsync --recursive "$GCS_RUN_ROOT/preflight/local" "$LOCAL_PREFLIG
 cat "$LOCAL_PREFLIGHT_READBACK/local.txt"
 ```
 
-After SSH to the TPU VM, run a TPU VM GCS write preflight:
+After SSH to the TPU VM, run a TPU VM GCS write preflight. Shell variables set
+before SSH do not automatically exist inside the TPU VM shell, so re-export the
+same `BUCKET_NAME` and `GCS_RUN_ROOT` values before TPU VM preflight, restore,
+or artifact-copy commands. Use the same `BUCKET_SUFFIX` that created the bucket.
 
 ```bash
-export GCS_RUN_ROOT="gs://<BUCKET_NAME>/numerical-jax-project/demo2-vit-finetune"
+export PROJECT_ID="<PROJECT_ID>"
+export BUCKET_SUFFIX="chihuahua"
+export BUCKET_NAME="${PROJECT_ID}-demo2-vit-ft-${BUCKET_SUFFIX}"
+export GCS_RUN_ROOT="gs://$BUCKET_NAME/numerical-jax-project/demo2-vit-finetune"
 export TPU_PREFLIGHT_DIR="/tmp/demo2-vit-ft-tpu-preflight"
 
 mkdir -p "$TPU_PREFLIGHT_DIR"
@@ -733,6 +771,9 @@ before running fine-tuning:
 
 ```bash
 uv sync --frozen --group pretrained --group training
+
+uv pip install -U "jax[tpu]" \
+  -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
 
 uv run python -c "import jax; print('jax_version=', jax.__version__); print('default_backend=', jax.default_backend()); print('device_count=', jax.device_count()); print('local_device_count=', jax.local_device_count()); print('devices=', jax.devices()); raise SystemExit(0 if jax.default_backend() == 'tpu' else 1)"
 ```
@@ -807,15 +848,27 @@ This deterministic profile avoids relying on real spot preemption. The first
 run stops at step `300`, then the resume run continues to step `500`; expected
 resume evidence is `start_step=300` and `final_step=500`.
 
+The first-run commands below use post-run GCS sync. Orbax writes local
+checkpoints first under `CKPT_DIR`, and `gcloud storage rsync` runs only after
+the training command exits successfully. This keeps the profile simple and
+deterministic, but it is not fully preemption-safe: if the spot TPU is
+preempted before `rsync` runs, local-only checkpoints may be lost.
+
+For better durability on spot TPU without adding background live-sync
+automation, use short segmented runs: run step `0` to `100`, sync completed
+artifacts and checkpoints to GCS, restore from GCS, then resume from `100` to
+`300` or `500`.
+
 First run:
 
 ```bash
 export RUN_NAME="demo2_cloud_vit_head_finetune_tpu_resume_first"
 export RUN_DIR="$(pwd)/runs/vit-finetune/$RUN_NAME"
 export CKPT_DIR="$RUN_DIR/checkpoints"
-export GCS_RUN_ROOT="gs://<BUCKET_NAME>/numerical-jax-project/demo2-vit-finetune"
+export GCS_RUN_ROOT="gs://$BUCKET_NAME/numerical-jax-project/demo2-vit-finetune"
 mkdir -p "$RUN_DIR" "$CKPT_DIR"
 
+set -e
 uv run --group pretrained --group training python examples/demo2_pretrained_vit_finetune.py \
   --jax-platform tpu \
   --train-manifest data/local/imagenette2-320/train/manifest_train_balanced_50.txt \
@@ -831,6 +884,7 @@ uv run --group pretrained --group training python examples/demo2_pretrained_vit_
   --output-dir "$RUN_DIR" \
   --save-predictions
 
+test -f "$RUN_DIR/summary.json"
 export GCS_RUN_URI="$GCS_RUN_ROOT/artifacts/$RUN_NAME"
 export GCS_CKPT_URI="$GCS_RUN_ROOT/checkpoints/$RUN_NAME"
 
@@ -842,7 +896,7 @@ gcloud storage ls "$GCS_CKPT_URI/"
 Resume run after restoring the checkpoint directory from GCS:
 
 ```bash
-export GCS_RUN_ROOT="gs://<BUCKET_NAME>/numerical-jax-project/demo2-vit-finetune"
+export GCS_RUN_ROOT="gs://$BUCKET_NAME/numerical-jax-project/demo2-vit-finetune"
 export BASE_RUN_NAME="demo2_cloud_vit_head_finetune_tpu_resume_first"
 export RESUME_RUN_NAME="demo2_cloud_vit_head_finetune_tpu_resume"
 export RESUME_RUN_DIR="$(pwd)/runs/vit-finetune/$RESUME_RUN_NAME"
@@ -953,23 +1007,43 @@ gcloud compute tpus tpu-vm list \
   --zone "$ZONE"
 ```
 
-From the **TPU VM shell**:
+From the **TPU VM shell**, re-enter the repository root before re-exporting run
+paths. `RUN_DIR` uses `$(pwd)`, so setting it from `~` instead of
+`~/numerical-jax-project` points monitoring commands at the wrong
+`runs/vit-finetune/` directory. For resume runs, use `RESUME_RUN_NAME`,
+`RESUME_RUN_DIR`, and `RESUME_CKPT_DIR` instead.
+
+```bash
+cd ~/numerical-jax-project
+export RUN_NAME="demo2_cloud_vit_head_finetune_tpu_resume_first"
+export RUN_DIR="$(pwd)/runs/vit-finetune/$RUN_NAME"
+export CKPT_DIR="$RUN_DIR/checkpoints"
+```
+
+Run `tail -f` and the metrics loop one at a time, or in separate terminals.
+
+Tail the training log:
 
 ```bash
 tail -f "$RUN_DIR/train.log"
+```
 
+Watch recent metrics:
+
+```bash
 while true; do
   date
   tail -n 5 "$RUN_DIR/metrics.csv"
   sleep 10
 done
+```
 
+Inspect checkpoint files:
+
+```bash
 ls -lh "$CKPT_DIR"
 find "$CKPT_DIR" -maxdepth 2 -type f | head
 ```
-
-For a resume run, replace `RUN_DIR` and `CKPT_DIR` with `RESUME_RUN_DIR` and
-`RESUME_CKPT_DIR`.
 
 From **GCS**:
 
@@ -983,8 +1057,9 @@ Avoid live-rsyncing the entire Orbax checkpoint root while Orbax is actively
 writing checkpoints. In the observed run, `rsync` of the whole checkpoint root
 could race with Orbax checkpoint creation or cleanup and report
 `FileNotFoundError` for `_CHECKPOINT_METADATA`. Prefer final `rsync` after
-training completes. If live sync is needed, sync only a completed/stable
-checkpoint step directory and document it as experimental.
+training completes. Treat live sync as advanced and experimental; if it is
+attempted, sync only a completed/stable checkpoint step directory, not the whole
+checkpoint root while Orbax is writing.
 
 ### Metrics And Report Review After Training
 
@@ -1003,6 +1078,12 @@ checkpoints/
 Useful inspection commands:
 
 ```bash
+cd ~/numerical-jax-project
+export RUN_NAME="<RUN_NAME>"
+export RUN_DIR="$(pwd)/runs/vit-finetune/$RUN_NAME"
+export CKPT_DIR="$RUN_DIR/checkpoints"
+test -d "$RUN_DIR"
+
 ls -lh "$RUN_DIR"
 uv run python -m json.tool "$RUN_DIR/summary.json" | head -80
 head -5 "$RUN_DIR/metrics.csv"
@@ -1076,11 +1157,14 @@ gcloud compute tpus tpu-vm scp --recurse \
 ```
 
 If the final artifact copy was written to GCS, retrieve from the GCS artifact
-prefix instead:
+prefix instead. Use the same `BUCKET_SUFFIX` that created the bucket.
 
 ```bash
-export RUN_NAME="<RUN_NAME>"
-export GCS_RUN_ROOT="gs://<BUCKET_NAME>/numerical-jax-project/demo2-vit-finetune"
+export PROJECT_ID="<PROJECT_ID>"
+export BUCKET_SUFFIX="chihuahua"
+export BUCKET_NAME="${PROJECT_ID}-demo2-vit-ft-${BUCKET_SUFFIX}"
+export RUN_NAME="demo2_cloud_vit_head_finetune_tpu_resume"
+export GCS_RUN_ROOT="gs://$BUCKET_NAME/numerical-jax-project/demo2-vit-finetune"
 export GCS_RUN_URI="$GCS_RUN_ROOT/artifacts/$RUN_NAME"
 export GCS_CKPT_URI="$GCS_RUN_ROOT/checkpoints/$RUN_NAME"
 
@@ -1121,6 +1205,10 @@ work. Before deleting a demo bucket, save a small local manual note describing
 what was retrieved and why the bucket can be removed.
 
 ```bash
+export PROJECT_ID="<PROJECT_ID>"
+export BUCKET_SUFFIX="chihuahua"
+export BUCKET_NAME="${PROJECT_ID}-demo2-vit-ft-${BUCKET_SUFFIX}"
+
 gcloud storage rm --recursive "gs://$BUCKET_NAME/**"
 gcloud storage buckets delete "gs://$BUCKET_NAME"
 ```
