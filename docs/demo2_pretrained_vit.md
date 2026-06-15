@@ -604,6 +604,8 @@ present:
 - `mode` and `processing_mode`
 - `model_name`, `selected_jax_platform`, actual `backend`, and `devices`
 - `git_commit`, `git_branch`, and `git_dirty`
+- `sharding`, which records requested batch-sharding settings and resolved
+  runtime facts
 - `batch_size`, `warmup_steps`, `benchmark_steps`, `timed_batch_runs`
 - `num_images`, `num_batches`, `num_padded_images`, and `last_batch_policy`
 - `mean_step_time_sec`, `total_timed_inference_sec`,
@@ -618,6 +620,50 @@ For `b1` single-image mode, `batch_size` is 1, `num_images` is 1,
 manifest creates two batches and pads the final one with three repeated copies
 of the last real image. Padded entries are excluded from predictions and
 throughput counts.
+
+## Explicit Batch-Axis Sharding Option
+
+The previous Demo 2 TPU workflow showed TPU backend execution, but it did not
+yet show explicit multi-device JAX sharding. The inference script now includes a
+planned manual validation path for batch-axis data sharding:
+
+- `--batch-sharding none|data`: defaults to `none`; `data` uses explicit
+  batch-axis sharding for image batches.
+- `--mesh-axis-name`: names the one-dimensional device mesh axis; defaults to
+  `data`.
+- `--require-multiple-devices`: fails if the requested runtime does not expose
+  enough JAX devices.
+- `--min-shard-devices`: minimum visible JAX devices for data sharding or the
+  multiple-device guard; defaults to 2.
+
+When `--batch-sharding data` is selected, image batches shaped
+`[batch_size, 3, 224, 224]` use `PartitionSpec('data', None, None, None)` and
+logits shaped `[batch_size, num_classes]` try to use
+`PartitionSpec('data', None)`. Model parameters remain unsharded. The global
+batch size must be divisible by the mesh device count.
+
+Planned TPU VM inference command after a multi-device TPU resource is prepared:
+
+```bash
+uv run --group pretrained python examples/pretrained_vit_inference.py \
+  --jax-platform tpu \
+  --image-manifest examples/assets/manifest.txt \
+  --batch-size 4 \
+  --batch-sharding data \
+  --mesh-axis-name data \
+  --require-multiple-devices \
+  --min-shard-devices 2 \
+  --warmup-steps 1 \
+  --benchmark-steps 5 \
+  --output runs/vit-inference/demo2_sharded_public_examples_tpu_b4.json
+```
+
+The generated JSON includes a top-level `sharding` object with the requested
+mode, mesh axis name, device counts, mesh shape, per-device batch size,
+partition specs, and whether explicit jit shardings were applied. This is a
+planned evidence target until an actual sharded TPU JSON artifact is generated
+and retrieved; do not describe explicit sharded TPU execution as completed based
+on this command alone.
 
 Expected manifest metadata for the current image sets:
 

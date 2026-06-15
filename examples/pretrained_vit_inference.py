@@ -31,6 +31,10 @@ DEFAULT_BENCHMARK_STEPS = 5
 DEFAULT_JAX_PLATFORM = "cpu"
 DEFAULT_TOP_K = 5
 JAX_PLATFORM_CHOICES = ("default", "cpu", "cuda", "tpu")
+BATCH_SHARDING_CHOICES = ("none", "data")
+DEFAULT_BATCH_SHARDING = "none"
+DEFAULT_MESH_AXIS_NAME = "data"
+DEFAULT_MIN_SHARD_DEVICES = 2
 DEFAULT_PRIVATE_IMAGE_DIR = Path("data/local/demo2_vit_images")
 PUBLIC_EXAMPLE_MANIFEST_PATH = Path("examples/assets/manifest.txt")
 DATA_LOCAL_DIR = Path("data/local")
@@ -64,6 +68,37 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         type=_positive_int,
         default=DEFAULT_BATCH_SIZE,
         help=f"Number of repeated images per inference step. Default: {DEFAULT_BATCH_SIZE}.",
+    )
+    parser.add_argument(
+        "--batch-sharding",
+        choices=BATCH_SHARDING_CHOICES,
+        default=DEFAULT_BATCH_SHARDING,
+        help=(
+            "Batch-axis sharding mode. Use 'data' for explicit data sharding "
+            f"over a named device mesh. Default: {DEFAULT_BATCH_SHARDING}."
+        ),
+    )
+    parser.add_argument(
+        "--mesh-axis-name",
+        default=DEFAULT_MESH_AXIS_NAME,
+        help=f"Device mesh axis name for --batch-sharding data. Default: {DEFAULT_MESH_AXIS_NAME}.",
+    )
+    parser.add_argument(
+        "--require-multiple-devices",
+        action="store_true",
+        help=(
+            "Fail unless at least --min-shard-devices JAX devices are visible. "
+            "Intended for TPU/manual multi-device checks."
+        ),
+    )
+    parser.add_argument(
+        "--min-shard-devices",
+        type=_positive_int,
+        default=DEFAULT_MIN_SHARD_DEVICES,
+        help=(
+            "Minimum visible JAX devices required for --batch-sharding data or "
+            f"--require-multiple-devices. Default: {DEFAULT_MIN_SHARD_DEVICES}."
+        ),
     )
     parser.add_argument(
         "--warmup-steps",
@@ -113,6 +148,10 @@ def run_vit_inference_benchmark(
     benchmark_steps: int,
     selected_jax_platform: str = DEFAULT_JAX_PLATFORM,
     top_k: int = DEFAULT_TOP_K,
+    batch_sharding: str = DEFAULT_BATCH_SHARDING,
+    mesh_axis_name: str = DEFAULT_MESH_AXIS_NAME,
+    require_multiple_devices: bool = False,
+    min_shard_devices: int = DEFAULT_MIN_SHARD_DEVICES,
 ) -> dict[str, Any]:
     """Run local JAX/Flax ViT inference and return benchmark metrics."""
     return run_vit_inference_benchmarks(
@@ -123,6 +162,10 @@ def run_vit_inference_benchmark(
         benchmark_steps=benchmark_steps,
         selected_jax_platform=selected_jax_platform,
         top_k=top_k,
+        batch_sharding=batch_sharding,
+        mesh_axis_name=mesh_axis_name,
+        require_multiple_devices=require_multiple_devices,
+        min_shard_devices=min_shard_devices,
     )
 
 
@@ -136,6 +179,10 @@ def run_vit_inference_benchmarks(
     selected_jax_platform: str = DEFAULT_JAX_PLATFORM,
     top_k: int = DEFAULT_TOP_K,
     manifest_path: Path | None = None,
+    batch_sharding: str = DEFAULT_BATCH_SHARDING,
+    mesh_axis_name: str = DEFAULT_MESH_AXIS_NAME,
+    require_multiple_devices: bool = False,
+    min_shard_devices: int = DEFAULT_MIN_SHARD_DEVICES,
 ) -> dict[str, Any]:
     """Run local JAX/Flax ViT inference for one or more image paths."""
     if not image_paths:
@@ -158,6 +205,29 @@ def run_vit_inference_benchmarks(
     try:
         import jax
         import jax.numpy as jnp
+    except ImportError as exc:
+        msg = (
+            "Missing pretrained demo dependencies. Install or run with the optional "
+            "dependency group, for example: "
+            "`uv run --group pretrained python examples/pretrained_vit_inference.py ...`"
+        )
+        raise RuntimeError(msg) from exc
+
+    from jax_tpu_project.sharding import BatchShardingConfig, resolve_batch_sharding
+
+    sharding_config = BatchShardingConfig(
+        mode=batch_sharding,
+        mesh_axis_name=mesh_axis_name,
+        min_shard_devices=min_shard_devices,
+        require_multiple_devices=require_multiple_devices,
+    )
+    resolved_sharding = resolve_batch_sharding(
+        sharding_config,
+        global_batch_size=batch_size,
+        jax_module=jax,
+    )
+
+    try:
         from PIL import Image
         from transformers import AutoImageProcessor, FlaxViTForImageClassification
     except ImportError as exc:
@@ -172,9 +242,45 @@ def run_vit_inference_benchmarks(
     model = FlaxViTForImageClassification.from_pretrained(model_name)
     params = model.params
 
-    @jax.jit
-    def inference_step(model_params: Mapping[str, Any], inputs: Any) -> Any:
+    def inference_step_impl(model_params: Mapping[str, Any], inputs: Any) -> Any:
         return model(pixel_values=inputs, params=model_params, train=False).logits
+
+    def build_inference_step(*, include_output_sharding: bool) -> Any:
+        if not resolved_sharding.enabled:
+            return jax.jit(inference_step_impl)
+
+        jit_kwargs = {"in_shardings": (None, resolved_sharding.image_sharding)}
+        if include_output_sharding:
+            jit_kwargs["out_shardings"] = resolved_sharding.logits_sharding
+        return jax.jit(inference_step_impl, **jit_kwargs)
+
+    explicit_output_sharding = resolved_sharding.enabled
+    resolved_sharding = resolved_sharding.with_jit_sharding_status(
+        explicit_input_sharding=resolved_sharding.enabled,
+        explicit_output_sharding=explicit_output_sharding,
+    )
+    inference_step = build_inference_step(
+        include_output_sharding=explicit_output_sharding
+    )
+
+    def run_inference_step(model_params: Mapping[str, Any], inputs: Any) -> Any:
+        nonlocal explicit_output_sharding, inference_step, resolved_sharding
+        try:
+            return inference_step(model_params, inputs)
+        except Exception as exc:
+            if not (resolved_sharding.enabled and explicit_output_sharding):
+                raise
+            explicit_output_sharding = False
+            resolved_sharding = resolved_sharding.with_jit_sharding_status(
+                explicit_input_sharding=True,
+                explicit_output_sharding=False,
+                fallback=(
+                    "explicit logits out_shardings failed with "
+                    f"{type(exc).__name__}; reran with explicit input sharding only"
+                ),
+            )
+            inference_step = build_inference_step(include_output_sharding=False)
+            return inference_step(model_params, inputs)
 
     if manifest_path is None:
         image_path = image_paths[0]
@@ -185,16 +291,20 @@ def run_vit_inference_benchmarks(
 
         pixel_values = jnp.asarray(processed["pixel_values"])
         batched_pixel_values = jnp.repeat(pixel_values, repeats=batch_size, axis=0)
+        batched_pixel_values = resolved_sharding.shard_image_batch(
+            batched_pixel_values,
+            jax_module=jax,
+        )
 
         logits = None
         for _ in range(warmup_steps):
-            logits = inference_step(params, batched_pixel_values)
+            logits = run_inference_step(params, batched_pixel_values)
             logits.block_until_ready()
 
         step_times: list[float] = []
         for _ in range(benchmark_steps):
             start_time = time.perf_counter()
-            logits = inference_step(params, batched_pixel_values)
+            logits = run_inference_step(params, batched_pixel_values)
             logits.block_until_ready()
             step_times.append(time.perf_counter() - start_time)
 
@@ -229,6 +339,7 @@ def run_vit_inference_benchmarks(
             benchmark_steps=benchmark_steps,
             image_results=[image_result],
             manifest_path=None,
+            sharding_metadata=resolved_sharding.metadata,
         )
 
     rgb_images = []
@@ -242,17 +353,20 @@ def run_vit_inference_benchmarks(
         batch_size=batch_size,
     )
     input_batches = [
-        pad_manifest_batch(
-            pixel_values[batch_spec["start_index"] : batch_spec["end_index"]],
-            padding_count=batch_spec["padding_count"],
-            jnp_module=jnp,
+        resolved_sharding.shard_image_batch(
+            pad_manifest_batch(
+                pixel_values[batch_spec["start_index"] : batch_spec["end_index"]],
+                padding_count=batch_spec["padding_count"],
+                jnp_module=jnp,
+            ),
+            jax_module=jax,
         )
         for batch_spec in batch_specs
     ]
 
     for _ in range(warmup_steps):
         for input_batch in input_batches:
-            logits = inference_step(params, input_batch)
+            logits = run_inference_step(params, input_batch)
             logits.block_until_ready()
 
     batch_step_times: list[float] = []
@@ -261,7 +375,7 @@ def run_vit_inference_benchmarks(
         latest_batch_logits = []
         for input_batch in input_batches:
             start_time = time.perf_counter()
-            logits = inference_step(params, input_batch)
+            logits = run_inference_step(params, input_batch)
             logits.block_until_ready()
             batch_step_times.append(time.perf_counter() - start_time)
             latest_batch_logits.append(logits)
@@ -311,6 +425,7 @@ def run_vit_inference_benchmarks(
         ),
         last_batch_policy="pad_with_last_image",
         step_times=batch_step_times,
+        sharding_metadata=resolved_sharding.metadata,
     )
 
 
@@ -483,6 +598,7 @@ def build_run_metrics(
     num_padded_images: int = 0,
     last_batch_policy: str | None = None,
     step_times: Sequence[float] | None = None,
+    sharding_metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the final JSON payload for single-image or manifest mode."""
     if not image_results:
@@ -497,6 +613,7 @@ def build_run_metrics(
         "batch_size": batch_size,
         "warmup_steps": warmup_steps,
         "benchmark_steps": benchmark_steps,
+        "sharding": dict(sharding_metadata or {}),
     }
     if manifest_path is None:
         return {
@@ -725,6 +842,10 @@ def main() -> None:
         selected_jax_platform=args.jax_platform,
         top_k=args.top_k,
         manifest_path=args.image_manifest,
+        batch_sharding=args.batch_sharding,
+        mesh_axis_name=args.mesh_axis_name,
+        require_multiple_devices=args.require_multiple_devices,
+        min_shard_devices=args.min_shard_devices,
     )
     metrics = add_cli_run_metadata(
         metrics,
