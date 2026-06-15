@@ -28,7 +28,11 @@ from typing import Any, Mapping, Sequence
 import numpy as np
 
 from pretrained_vit_inference import (
+    BATCH_SHARDING_CHOICES,
+    DEFAULT_BATCH_SHARDING,
     DEFAULT_JAX_PLATFORM,
+    DEFAULT_MESH_AXIS_NAME,
+    DEFAULT_MIN_SHARD_DEVICES,
     DEFAULT_MODEL_NAME,
     DEFAULT_TOP_K,
     JAX_PLATFORM_CHOICES,
@@ -128,6 +132,40 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         type=_positive_int,
         default=DEFAULT_BATCH_SIZE,
         help=f"Training batch size. Default: {DEFAULT_BATCH_SIZE}.",
+    )
+    parser.add_argument(
+        "--batch-sharding",
+        choices=BATCH_SHARDING_CHOICES,
+        default=DEFAULT_BATCH_SHARDING,
+        help=(
+            "Batch-axis sharding mode. Use 'data' for explicit data sharding "
+            f"over a named device mesh. Default: {DEFAULT_BATCH_SHARDING}."
+        ),
+    )
+    parser.add_argument(
+        "--mesh-axis-name",
+        default=DEFAULT_MESH_AXIS_NAME,
+        help=(
+            "Device mesh axis name for --batch-sharding data. "
+            f"Default: {DEFAULT_MESH_AXIS_NAME}."
+        ),
+    )
+    parser.add_argument(
+        "--require-multiple-devices",
+        action="store_true",
+        help=(
+            "Fail unless at least --min-shard-devices JAX devices are visible. "
+            "Intended for TPU/manual multi-device checks."
+        ),
+    )
+    parser.add_argument(
+        "--min-shard-devices",
+        type=_positive_int,
+        default=DEFAULT_MIN_SHARD_DEVICES,
+        help=(
+            "Minimum visible JAX devices required for --batch-sharding data or "
+            f"--require-multiple-devices. Default: {DEFAULT_MIN_SHARD_DEVICES}."
+        ),
     )
     parser.add_argument(
         "--learning-rate",
@@ -620,6 +658,35 @@ def build_batches(
     return batches
 
 
+def shard_training_batches(
+    batches: Sequence[TrainingBatch],
+    *,
+    resolved_sharding: Any,
+    jax_module: Any,
+) -> list[TrainingBatch]:
+    """Place padded training/eval batch arrays on resolved batch shardings."""
+    return [
+        TrainingBatch(
+            pixel_values=resolved_sharding.shard_image_batch(
+                batch.pixel_values,
+                jax_module=jax_module,
+            ),
+            labels=resolved_sharding.shard_label_batch(
+                batch.labels,
+                jax_module=jax_module,
+            ),
+            mask=resolved_sharding.shard_mask_batch(
+                batch.mask,
+                jax_module=jax_module,
+            ),
+            start_index=batch.start_index,
+            real_size=batch.real_size,
+            padding_count=batch.padding_count,
+        )
+        for batch in batches
+    ]
+
+
 def write_metrics_header(metrics_path: Path) -> None:
     """Create the per-step CSV metric artifact."""
     metrics_path.parent.mkdir(parents=True, exist_ok=True)
@@ -711,6 +778,7 @@ def build_summary(
     interrupted: bool,
     stop_signal_name: str | None,
     git_metadata: Mapping[str, Any],
+    sharding_metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the run summary JSON payload."""
     total_step_time = sum(step_times)
@@ -734,6 +802,7 @@ def build_summary(
         "num_train_classes": len(train_label_counts),
         "num_eval_classes": len(eval_label_counts),
         "batch_size": batch_size,
+        "sharding": dict(sharding_metadata or {}),
         "learning_rate": learning_rate,
         "eval_every_steps": eval_every_steps,
         "reinit_head": reinit_head,
@@ -804,6 +873,44 @@ def run_finetune(args: argparse.Namespace) -> dict[str, Any]:
     reset_signal_state()
     args = resolve_run_paths(args)
     apply_jax_platform(args.jax_platform)
+
+    try:
+        import jax
+        import jax.numpy as jnp
+    except ImportError as exc:
+        msg = (
+            "Missing Demo 2 fine-tuning dependencies. Install or run with the "
+            "optional dependency groups, for example: "
+            "`uv run --group pretrained --group training python "
+            "examples/demo2_pretrained_vit_finetune.py ...`"
+        )
+        raise RuntimeError(msg) from exc
+
+    from jax_tpu_project.sharding import BatchShardingConfig, resolve_batch_sharding
+
+    sharding_config = BatchShardingConfig(
+        mode=args.batch_sharding,
+        mesh_axis_name=args.mesh_axis_name,
+        min_shard_devices=args.min_shard_devices,
+        require_multiple_devices=args.require_multiple_devices,
+    )
+    resolved_sharding = resolve_batch_sharding(
+        sharding_config,
+        global_batch_size=args.batch_size,
+        jax_module=jax,
+    )
+    explicit_prediction_output_sharding = (
+        resolved_sharding.enabled and args.save_predictions
+    )
+    resolved_sharding = resolved_sharding.with_jit_sharding_status(
+        explicit_input_sharding=resolved_sharding.enabled,
+        explicit_output_sharding=explicit_prediction_output_sharding,
+    )
+    if not explicit_prediction_output_sharding:
+        resolved_sharding = resolved_sharding.with_metadata_updates(
+            logits_partition_spec=None,
+        )
+
     install_signal_handlers()
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -817,8 +924,6 @@ def run_finetune(args: argparse.Namespace) -> dict[str, Any]:
     git_metadata = collect_git_metadata()
 
     try:
-        import jax
-        import jax.numpy as jnp
         import optax
         from transformers import AutoImageProcessor, FlaxViTForImageClassification
     except ImportError as exc:
@@ -866,6 +971,16 @@ def run_finetune(args: argparse.Namespace) -> dict[str, Any]:
         batch_size=args.batch_size,
         jnp_module=jnp,
     )
+    train_batches = shard_training_batches(
+        train_batches,
+        resolved_sharding=resolved_sharding,
+        jax_module=jax,
+    )
+    eval_batches = shard_training_batches(
+        eval_batches,
+        resolved_sharding=resolved_sharding,
+        jax_module=jax,
+    )
 
     optimizer = optax.adam(args.learning_rate)
     state = HeadTrainState(
@@ -910,8 +1025,7 @@ def run_finetune(args: argparse.Namespace) -> dict[str, Any]:
             resumed_from_checkpoint = True
             restored_checkpoint_step = checkpoint_manager.latest_step()
 
-    @jax.jit
-    def train_step(
+    def train_step_impl(
         head_params: Any,
         optimizer_state: Any,
         pixel_batch: Any,
@@ -942,8 +1056,21 @@ def run_finetune(args: argparse.Namespace) -> dict[str, Any]:
         accuracy = correct / jnp.sum(mask)
         return head_params, optimizer_state, loss, accuracy
 
-    @jax.jit
-    def eval_step(
+    def build_train_step() -> Any:
+        if not resolved_sharding.enabled:
+            return jax.jit(train_step_impl)
+        return jax.jit(
+            train_step_impl,
+            in_shardings=(
+                None,
+                None,
+                resolved_sharding.image_sharding,
+                resolved_sharding.label_sharding,
+                resolved_sharding.mask_sharding,
+            ),
+        )
+
+    def eval_step_impl(
         head_params: Any,
         pixel_batch: Any,
         label_batch: Any,
@@ -958,6 +1085,43 @@ def run_finetune(args: argparse.Namespace) -> dict[str, Any]:
         loss = jnp.sum(losses * mask) / jnp.sum(mask)
         correct = jnp.sum((jnp.argmax(logits, axis=-1) == label_batch) * mask)
         return loss, correct
+
+    def build_eval_step() -> Any:
+        if not resolved_sharding.enabled:
+            return jax.jit(eval_step_impl)
+        return jax.jit(
+            eval_step_impl,
+            in_shardings=(
+                None,
+                resolved_sharding.image_sharding,
+                resolved_sharding.label_sharding,
+                resolved_sharding.mask_sharding,
+            ),
+        )
+
+    def predict_step_impl(head_params: Any, pixel_batch: Any) -> Any:
+        return model(
+            pixel_values=pixel_batch,
+            params={"vit": backbone_params, "classifier": head_params},
+            train=False,
+        ).logits
+
+    def build_predict_step() -> Any:
+        if not resolved_sharding.enabled:
+            return jax.jit(predict_step_impl)
+        jit_kwargs = {
+            "in_shardings": (
+                None,
+                resolved_sharding.image_sharding,
+            )
+        }
+        if explicit_prediction_output_sharding:
+            jit_kwargs["out_shardings"] = resolved_sharding.logits_sharding
+        return jax.jit(predict_step_impl, **jit_kwargs)
+
+    train_step = build_train_step()
+    eval_step = build_eval_step()
+    predict_step = build_predict_step()
 
     def evaluate(head_params: Any) -> dict[str, float]:
         total_loss = 0.0
@@ -982,11 +1146,17 @@ def run_finetune(args: argparse.Namespace) -> dict[str, Any]:
     def collect_predictions(head_params: Any) -> list[dict[str, Any]]:
         predictions = []
         for batch in eval_batches:
-            logits = model(
-                pixel_values=batch.pixel_values,
-                params={"vit": backbone_params, "classifier": head_params},
-                train=False,
-            ).logits
+            try:
+                logits = predict_step(head_params, batch.pixel_values)
+            except Exception as exc:
+                if resolved_sharding.enabled:
+                    msg = (
+                        "sharded prediction step failed with --batch-sharding "
+                        "data enabled; prediction collection is not falling "
+                        "back to an unsharded path"
+                    )
+                    raise RuntimeError(msg) from exc
+                raise
             logits.block_until_ready()
             for offset in range(batch.real_size):
                 entry = eval_entries[batch.start_index + offset]
@@ -1164,6 +1334,7 @@ def run_finetune(args: argparse.Namespace) -> dict[str, Any]:
         interrupted=STOP_REQUESTED,
         stop_signal_name=STOP_SIGNAL_NAME,
         git_metadata=git_metadata,
+        sharding_metadata=resolved_sharding.metadata,
     )
     write_metrics(summary, args.output_dir / "summary.json")
     append_log(

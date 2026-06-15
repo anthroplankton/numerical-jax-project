@@ -814,6 +814,12 @@ Use one of these profiles depending on the evidence needed. Always use absolute
 `--checkpoint-dir`; Orbax can fail with `ValueError: Checkpoint path should be
 absolute`.
 
+The `v6e-1` smoke and resume profiles below remain unsharded because the
+observed `v6e-1` smoke shape exposes one visible JAX device, while
+`--batch-sharding data` intentionally requires at least two visible devices.
+Use the separate multi-device sharded validation profile after selecting an
+`<ACCELERATOR_TYPE>` that exposes at least two visible JAX devices.
+
 **Short interactive smoke profile**
 
 This fixed-step profile is suitable for quick verification and report-friendly
@@ -993,6 +999,49 @@ Prefer `--checkpoint-every-steps 0` and `--checkpoint-every-seconds 30` in this
 profile. Step-based checkpointing such as `--checkpoint-every-steps 20` created
 too many checkpoints on TPU and made live GCS sync fragile.
 
+### Optional Multi-Device Sharded Fine-Tuning Validation
+
+This is planned manual validation, not completed TPU evidence. Use it only
+after selecting a TPU VM shape such as `<ACCELERATOR_TYPE>` in `<ZONE>` with
+`<TPU_NAME>` and `<RUNTIME_VERSION>` that exposes at least two visible JAX
+devices to the process.
+
+Before running a sharded profile on the TPU VM, confirm the visible device
+count:
+
+```bash
+uv run python - <<'PY'
+import jax
+
+print("device_count", jax.device_count())
+print("local_device_count", jax.local_device_count())
+print(jax.devices())
+PY
+```
+
+For a sharded variant, keep the same profile settings above and add the
+following flags immediately after `--batch-size 8`:
+
+```bash
+  --batch-sharding data \
+  --mesh-axis-name data \
+  --require-multiple-devices \
+  --min-shard-devices 2 \
+```
+
+The short interactive sharded profile should still use `--max-steps 300`.
+The checkpoint/resume sharded profile should still use `--max-steps 300` for
+the first run and `--max-steps 500` for the resume run. Use distinct
+`RUN_NAME` values for sharded validation artifacts so they are not confused
+with the unsharded `v6e-1` smoke and resume evidence.
+
+When `--batch-sharding data` is used, the selected batch size must be divisible
+by the visible mesh device count. The existing `--batch-size 8` examples are
+suitable only when the visible device count divides 8, such as common 4-device
+or 8-device targets. If the selected `<ACCELERATOR_TYPE>` exposes a different
+visible device count, adjust `--batch-size` accordingly or disable batch
+sharding.
+
 ### Monitoring While Training Runs
 
 From **Google Cloud Shell or a local terminal with `gcloud`**:
@@ -1119,6 +1168,7 @@ Expected `summary.json` fields include:
 - `git_commit`
 - `git_branch`
 - `git_dirty`
+- `sharding`
 
 `metrics.csv` contains per-step training loss, training accuracy, step time,
 throughput, and checkpoint-save flags. `eval_metrics.csv` contains

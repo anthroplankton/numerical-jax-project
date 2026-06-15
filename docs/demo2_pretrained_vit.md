@@ -353,8 +353,9 @@ runs/vit-finetune/demo2_local_balanced50_cpu/checkpoints/
 
 `summary.json` records the mode, model name, trainable scope
 `classifier_head_only`, frozen scope `vit_backbone`, backend/devices, manifests,
-label counts, class counts, batch size, learning rate, `eval_every_steps`,
-`reinit_head`, seed, start/final step, resume status, checkpoint path,
+label counts, class counts, batch size, batch-sharding metadata, learning rate,
+`eval_every_steps`, `reinit_head`, seed, start/final step, resume status,
+checkpoint path,
 initial/final loss, step timing, throughput, total runtime, and privacy-safe Git
 metadata when available. `metrics.csv` is the per-step training CSV.
 `eval_metrics.csv` has `step`, `eval_loss`, and `eval_accuracy` rows for the
@@ -624,8 +625,9 @@ throughput counts.
 ## Explicit Batch-Axis Sharding Option
 
 The previous Demo 2 TPU workflow showed TPU backend execution, but it did not
-yet show explicit multi-device JAX sharding. The inference script now includes a
-planned manual validation path for batch-axis data sharding:
+yet show explicit multi-device JAX sharding. The inference script and optional
+classifier-head fine-tuning script now include a planned manual validation path
+for batch-axis data sharding:
 
 - `--batch-sharding none|data`: defaults to `none`; `data` uses explicit
   batch-axis sharding for image batches.
@@ -636,11 +638,21 @@ planned manual validation path for batch-axis data sharding:
 - `--min-shard-devices`: minimum visible JAX devices for data sharding or the
   multiple-device guard; defaults to 2.
 
-When `--batch-sharding data` is selected, image batches shaped
+For inference, when `--batch-sharding data` is selected, image batches shaped
 `[batch_size, 3, 224, 224]` use `PartitionSpec('data', None, None, None)` and
 logits shaped `[batch_size, num_classes]` try to use
 `PartitionSpec('data', None)`. Model parameters remain unsharded. The global
 batch size must be divisible by the mesh device count.
+
+For classifier-head fine-tuning, image batches use
+`PartitionSpec('data', None, None, None)`, labels use
+`PartitionSpec('data')`, and masks use `PartitionSpec('data')`. The ViT
+backbone parameters, classifier-head parameters, optimizer state, and checkpoint
+identity metadata remain unsharded. `train_step` and `eval_step` use explicit
+input shardings for batch arguments. When `--save-predictions` is used with
+batch sharding, prediction collection uses a jitted prediction step rather than
+falling back to an unsharded prediction path. Scalar loss and accuracy outputs
+do not use explicit output shardings.
 
 Planned TPU VM inference command after a multi-device TPU resource is prepared:
 
@@ -658,12 +670,12 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --output runs/vit-inference/demo2_sharded_public_examples_tpu_b4.json
 ```
 
-The generated JSON includes a top-level `sharding` object with the requested
-mode, mesh axis name, device counts, mesh shape, per-device batch size,
-partition specs, and whether explicit jit shardings were applied. This is a
-planned evidence target until an actual sharded TPU JSON artifact is generated
-and retrieved; do not describe explicit sharded TPU execution as completed based
-on this command alone.
+The generated inference JSON and fine-tuning `summary.json` include a top-level
+`sharding` object with the requested mode, mesh axis name, device counts, mesh
+shape, per-device batch size, partition specs, and whether explicit jit
+shardings were applied. This is a planned evidence target until an actual
+sharded TPU artifact is generated and retrieved; do not describe explicit
+sharded TPU execution as completed based on these commands alone.
 
 Expected manifest metadata for the current image sets:
 

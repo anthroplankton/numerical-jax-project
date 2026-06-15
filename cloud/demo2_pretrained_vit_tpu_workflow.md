@@ -213,12 +213,15 @@ TPU and the Demo 2 command completes on the TPU VM.
 Optional classifier-head fine-tuning is also part of Demo 2. The script
 `examples/demo2_pretrained_vit_finetune.py` freezes the ViT backbone, updates
 only the classifier head, and writes generated artifacts under
-`runs/vit-finetune/`. Use the quickstart for the executable TPU command and
+`runs/vit-finetune/`. It now shares the explicit batch-axis sharding CLI surface
+used by inference. Use the quickstart for the executable TPU command and
 GCS-backed resume sequence. The observed fine-tuning evidence is a smoke
 workflow result only: a first `v6e-1` spot run in `us-east1-d`, a real spot or
 maintenance interruption after that run, GCS checkpoint copies at steps `15100`,
 `15120`, and `15140`, and a successful restore/resume run on `v6e-1` spot in
-`europe-west4-a`. Do not describe this as full ViT fine-tuning or an accuracy
+`europe-west4-a`. Explicit sharded fine-tuning TPU execution is still a planned
+manual validation target until a real sharded artifact is generated and
+retrieved. Do not describe this as full ViT fine-tuning or an accuracy
 benchmark.
 
 ## Imagenette 320 Cloud TPU Inference Evidence
@@ -336,6 +339,9 @@ Capture these items for each real TPU attempt:
 - For fine-tuning attempts: `summary.json`, `metrics.csv`, checkpoint directory,
   latest checkpoint step, resume command, resume start step, final step, and
   whether controlled SIGTERM or real spot interruption was used.
+- For sharded fine-tuning attempts: the `summary.json` top-level `sharding`
+  object, including requested mode, mesh axis, device counts, partition specs,
+  and explicit jit sharding status.
 - For GCS-backed resume: bucket placeholder, checkpoint object prefix, copied
   checkpoint steps, restore source, resume run output path, and confirmation
   that Orbax stored only the classifier head, optimizer state, step, and

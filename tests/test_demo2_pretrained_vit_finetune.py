@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -28,6 +30,38 @@ def load_finetune_module():
     return module
 
 
+def test_module_import_does_not_import_jax_before_platform_selection() -> None:
+    probe = """
+import importlib.util
+import json
+import sys
+from pathlib import Path
+
+examples_dir = Path("examples").resolve()
+sys.path.insert(0, str(examples_dir))
+script_path = examples_dir / "demo2_pretrained_vit_finetune.py"
+spec = importlib.util.spec_from_file_location("finetune_import_probe", script_path)
+module = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = module
+spec.loader.exec_module(module)
+loaded = {
+    "jax": "jax" in sys.modules,
+    "jax.sharding": "jax.sharding" in sys.modules,
+}
+print(json.dumps(loaded, sort_keys=True))
+raise SystemExit(1 if any(loaded.values()) else 0)
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", probe],
+        cwd=PROJECT_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert json.loads(completed.stdout) == {"jax": False, "jax.sharding": False}
+
+
 def test_parse_args_uses_small_cpu_safe_defaults() -> None:
     module = load_finetune_module()
 
@@ -44,6 +78,10 @@ def test_parse_args_uses_small_cpu_safe_defaults() -> None:
     assert args.train_manifest == TRAIN_MANIFEST
     assert args.eval_manifest == EVAL_MANIFEST
     assert args.batch_size == 8
+    assert args.batch_sharding == "none"
+    assert args.mesh_axis_name == "data"
+    assert args.require_multiple_devices is False
+    assert args.min_shard_devices == 2
     assert args.learning_rate == pytest.approx(1e-3)
     assert args.max_steps == 20
     assert args.min_train_seconds == 0.0
@@ -72,6 +110,13 @@ def test_parse_args_accepts_tpu_resume_and_time_controlled_settings() -> None:
             str(EVAL_MANIFEST),
             "--jax-platform",
             "tpu",
+            "--batch-sharding",
+            "data",
+            "--mesh-axis-name",
+            "batch",
+            "--require-multiple-devices",
+            "--min-shard-devices",
+            "4",
             "--max-steps",
             "100000",
             "--min-train-seconds",
@@ -95,6 +140,10 @@ def test_parse_args_accepts_tpu_resume_and_time_controlled_settings() -> None:
     )
 
     assert args.jax_platform == "tpu"
+    assert args.batch_sharding == "data"
+    assert args.mesh_axis_name == "batch"
+    assert args.require_multiple_devices is True
+    assert args.min_shard_devices == 4
     assert args.max_steps == 100000
     assert args.min_train_seconds == pytest.approx(120.0)
     assert args.checkpoint_every_steps == 20
@@ -106,6 +155,22 @@ def test_parse_args_accepts_tpu_resume_and_time_controlled_settings() -> None:
     assert args.seed == 123
     assert args.resume is True
     assert args.save_predictions is True
+
+
+def test_parse_args_rejects_invalid_sharding_settings() -> None:
+    module = load_finetune_module()
+
+    base_args = [
+        "--train-manifest",
+        str(TRAIN_MANIFEST),
+        "--eval-manifest",
+        str(EVAL_MANIFEST),
+    ]
+    with pytest.raises(SystemExit):
+        module.parse_args([*base_args, "--batch-sharding", "model"])
+
+    with pytest.raises(SystemExit):
+        module.parse_args([*base_args, "--min-shard-devices", "0"])
 
 
 def test_resolve_run_paths_makes_output_and_checkpoint_dirs_absolute(
@@ -212,6 +277,54 @@ def test_build_batch_mask_marks_padding() -> None:
     )
 
     np.testing.assert_array_equal(mask, np.asarray([1.0, 1.0, 1.0, 0.0]))
+
+
+def test_shard_training_batches_routes_arrays_through_resolved_sharding() -> None:
+    module = load_finetune_module()
+
+    class FakeResolvedSharding:
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
+        def shard_image_batch(self, value, *, jax_module):
+            self.calls.append(f"image:{jax_module}")
+            return ("image", value)
+
+        def shard_label_batch(self, value, *, jax_module):
+            self.calls.append(f"label:{jax_module}")
+            return ("label", value)
+
+        def shard_mask_batch(self, value, *, jax_module):
+            self.calls.append(f"mask:{jax_module}")
+            return ("mask", value)
+
+    resolved_sharding = FakeResolvedSharding()
+    batch = module.TrainingBatch(
+        pixel_values=np.asarray([[1.0]]),
+        labels=np.asarray([1]),
+        mask=np.asarray([1.0]),
+        start_index=3,
+        real_size=1,
+        padding_count=0,
+    )
+
+    sharded = module.shard_training_batches(
+        [batch],
+        resolved_sharding=resolved_sharding,
+        jax_module="jax",
+    )
+
+    assert resolved_sharding.calls == ["image:jax", "label:jax", "mask:jax"]
+    assert len(sharded) == 1
+    assert sharded[0].pixel_values[0] == "image"
+    assert sharded[0].labels[0] == "label"
+    assert sharded[0].mask[0] == "mask"
+    np.testing.assert_array_equal(sharded[0].pixel_values[1], batch.pixel_values)
+    np.testing.assert_array_equal(sharded[0].labels[1], batch.labels)
+    np.testing.assert_array_equal(sharded[0].mask[1], batch.mask)
+    assert sharded[0].start_index == 3
+    assert sharded[0].real_size == 1
+    assert sharded[0].padding_count == 0
 
 
 def test_training_loop_continuation_uses_time_control_as_upper_bound_shape() -> None:
@@ -394,6 +507,23 @@ def test_validate_restored_checkpoint_metadata_rejects_identity_mismatch() -> No
         module.validate_restored_checkpoint_metadata(restored, expected)
 
 
+def test_checkpoint_identity_validation_ignores_sharding_metadata() -> None:
+    module = load_finetune_module()
+    expected = {
+        "mode": module.MODE,
+        "model_name": "google/vit-base-patch16-224",
+        "trainable_scope": module.TRAINABLE_SCOPE,
+        "frozen_scope": module.FROZEN_SCOPE,
+        "sharding": {"mode": "data"},
+    }
+    restored = {
+        **expected,
+        "sharding": {"mode": "none"},
+    }
+
+    module.validate_restored_checkpoint_metadata(restored, expected)
+
+
 def test_build_summary_has_expected_schema() -> None:
     module = load_finetune_module()
 
@@ -430,6 +560,13 @@ def test_build_summary_has_expected_schema() -> None:
             "git_branch": "main",
             "git_dirty": False,
         },
+        sharding_metadata={
+            "enabled": True,
+            "mode": "data",
+            "mesh_axis_name": "data",
+            "label_partition_spec": "PartitionSpec('data')",
+            "mask_partition_spec": "PartitionSpec('data')",
+        },
     )
 
     assert summary["mode"] == "demo2_vit_head_finetune"
@@ -439,6 +576,13 @@ def test_build_summary_has_expected_schema() -> None:
     assert summary["eval_label_counts"] == {"n01440764": 16, "n03445777": 48}
     assert summary["num_train_classes"] == 2
     assert summary["num_eval_classes"] == 2
+    assert summary["sharding"] == {
+        "enabled": True,
+        "mode": "data",
+        "mesh_axis_name": "data",
+        "label_partition_spec": "PartitionSpec('data')",
+        "mask_partition_spec": "PartitionSpec('data')",
+    }
     assert summary["eval_every_steps"] == 25
     assert summary["reinit_head"] is True
     assert summary["seed"] == 123

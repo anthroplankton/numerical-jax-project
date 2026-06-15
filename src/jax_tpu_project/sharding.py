@@ -20,6 +20,7 @@ DEFAULT_MESH_AXIS_NAME = "data"
 DEFAULT_MIN_SHARD_DEVICES = 2
 IMAGE_PARTITION_SPEC_RANK = 4
 LOGITS_PARTITION_SPEC_RANK = 2
+BATCH_VECTOR_PARTITION_SPEC_RANK = 1
 
 
 @dataclass(frozen=True)
@@ -53,6 +54,8 @@ class ResolvedBatchSharding:
     mesh: Any | None
     image_sharding: Any | None
     logits_sharding: Any | None
+    label_sharding: Any | None
+    mask_sharding: Any | None
     metadata: dict[str, Any]
 
     def shard_image_batch(self, image_batch: Any, *, jax_module: Any) -> Any:
@@ -60,6 +63,22 @@ class ResolvedBatchSharding:
         if not self.enabled:
             return image_batch
         return jax_module.device_put(image_batch, self.image_sharding)
+
+    def shard_label_batch(self, label_batch: Any, *, jax_module: Any) -> Any:
+        """Place a label batch on the configured batch-vector sharding."""
+        if not self.enabled:
+            return label_batch
+        return jax_module.device_put(label_batch, self.label_sharding)
+
+    def shard_mask_batch(self, mask_batch: Any, *, jax_module: Any) -> Any:
+        """Place a mask batch on the configured batch-vector sharding."""
+        if not self.enabled:
+            return mask_batch
+        return jax_module.device_put(mask_batch, self.mask_sharding)
+
+    def with_metadata_updates(self, **updates: Any) -> "ResolvedBatchSharding":
+        """Return a copy with JSON metadata fields updated."""
+        return replace(self, metadata={**self.metadata, **updates})
 
     def with_jit_sharding_status(
         self,
@@ -114,6 +133,8 @@ def resolve_batch_sharding(
             mesh=None,
             image_sharding=None,
             logits_sharding=None,
+            label_sharding=None,
+            mask_sharding=None,
             metadata=build_sharding_metadata(
                 config=config,
                 enabled=False,
@@ -138,8 +159,10 @@ def resolve_batch_sharding(
     mesh = Mesh(devices, (config.mesh_axis_name,))
     image_spec = PartitionSpec(config.mesh_axis_name, None, None, None)
     logits_spec = PartitionSpec(config.mesh_axis_name, None)
+    batch_vector_spec = PartitionSpec(config.mesh_axis_name)
     image_sharding = NamedSharding(mesh, image_spec)
     logits_sharding = NamedSharding(mesh, logits_spec)
+    batch_vector_sharding = NamedSharding(mesh, batch_vector_spec)
 
     return ResolvedBatchSharding(
         enabled=True,
@@ -147,6 +170,8 @@ def resolve_batch_sharding(
         mesh=mesh,
         image_sharding=image_sharding,
         logits_sharding=logits_sharding,
+        label_sharding=batch_vector_sharding,
+        mask_sharding=batch_vector_sharding,
         metadata=build_sharding_metadata(
             config=config,
             enabled=True,
@@ -162,6 +187,14 @@ def resolve_batch_sharding(
             logits_partition_spec=format_partition_spec(
                 config.mesh_axis_name,
                 rank=LOGITS_PARTITION_SPEC_RANK,
+            ),
+            label_partition_spec=format_partition_spec(
+                config.mesh_axis_name,
+                rank=BATCH_VECTOR_PARTITION_SPEC_RANK,
+            ),
+            mask_partition_spec=format_partition_spec(
+                config.mesh_axis_name,
+                rank=BATCH_VECTOR_PARTITION_SPEC_RANK,
             ),
             explicit_jit_input_sharding=True,
             explicit_jit_output_sharding=True,
@@ -227,6 +260,8 @@ def build_sharding_metadata(
     per_device_batch_size: int | None = None,
     image_partition_spec: str | None = None,
     logits_partition_spec: str | None = None,
+    label_partition_spec: str | None = None,
+    mask_partition_spec: str | None = None,
     explicit_jit_input_sharding: bool = False,
     explicit_jit_output_sharding: bool = False,
     fallback: str | None = None,
@@ -261,6 +296,8 @@ def build_sharding_metadata(
         "per_device_batch_size": per_device_batch_size,
         "image_partition_spec": image_partition_spec,
         "logits_partition_spec": logits_partition_spec,
+        "label_partition_spec": label_partition_spec,
+        "mask_partition_spec": mask_partition_spec,
         "explicit_jit_shardings": (
             explicit_jit_input_sharding or explicit_jit_output_sharding
         ),

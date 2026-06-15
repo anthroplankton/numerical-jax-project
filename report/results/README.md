@@ -56,10 +56,13 @@ The optional Demo 2 fine-tuning extension writes generated artifacts under
 `runs/vit-finetune/`, including `summary.json`, `metrics.csv`,
 `eval_metrics.csv`, `predictions_before.json`, `predictions_after.json`,
 `train.log`, and Orbax checkpoint directories. These files are ignored by Git.
-`summary.json` includes label-count metadata, and `eval_metrics.csv` is the
-preferred lightweight source for notebook learning-curve plots. Add a curated
-report-facing summary under `report/results/` only after a real run is executed
-and the summary is intentionally reduced for the report.
+`summary.json` includes label-count metadata and, for new runs, a top-level
+`sharding` object with requested and resolved batch-sharding facts.
+`eval_metrics.csv` is the preferred lightweight source for notebook
+learning-curve plots. Add a curated report-facing summary under
+`report/results/` only after a real run is executed and the summary is
+intentionally reduced for the report. Do not add a sharded TPU fine-tuning
+summary until an actual sharded TPU artifact exists.
 
 Fine-tuning checkpoints should not include the frozen ViT backbone or Hugging
 Face model cache. The intended checkpoint evidence is classifier-head

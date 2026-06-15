@@ -621,6 +621,31 @@
   - This patch did not run cloud commands, TPU jobs, model downloads, `gcloud`
     resource creation/deletion, commits, or pushes。
 
+## Phase 5.15: Demo 2 Explicit Batch-Axis Sharding For Fine-Tuning
+
+- Date / phase label：2026-06-16 Demo 2 fine-tuning explicit JAX sharding
+  support
+- What changed：
+  - Extended the shared batch-axis sharding helper for fine-tuning batch-vector
+    inputs：labels use `PartitionSpec('data')` and masks use
+    `PartitionSpec('data')`。
+  - Added the inference-matching sharding CLI surface to the optional
+    classifier-head fine-tuning workflow：`--batch-sharding none|data`,
+    `--mesh-axis-name`, `--require-multiple-devices`, and
+    `--min-shard-devices`。
+  - Kept ViT backbone parameters, classifier-head parameters, optimizer state,
+    checkpoints, and checkpoint identity metadata unsharded。
+  - Updated `summary.json` to include a top-level `sharding` object for
+    requested settings and resolved runtime sharding facts。
+  - Updated docs/status wording so planned sharded TPU fine-tuning commands are
+    clear without claiming completed sharded TPU evidence。
+- Claim boundary：
+  - This phase adds code/tests/docs support only；it did not run `gcloud`,
+    create/start/stop/delete cloud resources, run TPU jobs, download datasets,
+    download model weights, or create/update notebooks。
+  - Sharded TPU fine-tuning execution remains planned manual validation until a
+    real artifact exists。
+
 ## Planned Phases
 
 ### Phase 6: Real MNIST/Fashion-MNIST and Curated Local Result

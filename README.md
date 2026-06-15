@@ -215,12 +215,17 @@ uv run --group pretrained --group training python examples/demo2_pretrained_vit_
 Fine-tuning outputs stay under ignored `runs/vit-finetune/`, including
 `summary.json`, `metrics.csv`, optional periodic `eval_metrics.csv`,
 predictions, logs, and checkpoints. `summary.json` records label distribution
-metadata so report notebooks can see class skew in tiny smoke manifests. Do not
-commit checkpoints, model caches, dataset files, raw cloud logs, or large
-generated artifacts. The TPU smoke workflow uses local Orbax checkpoints first
-and copies durable checkpoint evidence to GCS for resume after spot or
-maintenance risk; see the TPU quickstart for the exact GCS setup, command
-profiles, monitoring, retrieval, and cleanup steps.
+metadata and batch-sharding metadata so report notebooks can see class skew and
+the resolved runtime sharding configuration in tiny smoke manifests. The
+fine-tuning script accepts the same `--batch-sharding none|data`,
+`--mesh-axis-name`, `--require-multiple-devices`, and `--min-shard-devices`
+surface as inference; default local runs remain unsharded. Do not commit
+checkpoints, model caches, dataset files, raw cloud logs, or large generated
+artifacts. The TPU smoke workflow uses local Orbax checkpoints first and copies
+durable checkpoint evidence to GCS for resume after spot or maintenance risk;
+see the TPU quickstart for the exact GCS setup, planned sharded command
+profiles, monitoring, retrieval, and cleanup steps. Sharded TPU fine-tuning
+execution remains a manual validation target until real artifacts exist.
 
 For TPU execution, use these documents by role:
 

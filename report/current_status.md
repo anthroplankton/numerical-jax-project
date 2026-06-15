@@ -24,6 +24,9 @@ pretrained ViT workflow with JAX/Flax**。
   上觀察到 first run、spot/maintenance interruption、GCS checkpoint copies，
   以及 replacement TPU VM restore/resume；raw artifacts 仍維持在 ignored
   `runs/vit-finetune/` 或暫存 GCS，不進 Git
+- explicit JAX sharding state：Demo 2 inference 與 optional classifier-head
+  fine-tuning now expose planned explicit batch-axis sharding paths；目前尚未有
+  completed sharded TPU fine-tuning artifact
 - report-ready setup/evidence record：`report/google_cloud_trc_setup.md`
 - remaining benchmark work after TPU inference evidence：若時間與 quota 允許，
   可再規劃 controlled hardware comparison、較完整 monitoring evidence，或明確
@@ -67,11 +70,15 @@ workflow evidence, not full ViT fine-tuning or accuracy benchmark evidence.
 - Optional Demo 2 classifier-head fine-tuning script:
   - `examples/demo2_pretrained_vit_finetune.py`
   - freezes the ViT backbone and trains only the classifier head
+  - exposes explicit batch-axis sharding flags matching inference:
+    `--batch-sharding`, `--mesh-axis-name`, `--require-multiple-devices`, and
+    `--min-shard-devices`
   - uses Orbax checkpoint/resume for head params, optimizer state, step, and
     minimal metadata only
   - writes report-friendly `summary.json`, `metrics.csv`, and
-    `eval_metrics.csv`; `summary.json` includes train/eval label counts and
-    class counts so tiny-manifest skew is visible
+    `eval_metrics.csv`; `summary.json` includes train/eval label counts,
+    class counts, and sharding metadata so tiny-manifest skew and resolved
+    runtime sharding settings are visible
   - generated outputs belong under ignored `runs/vit-finetune/`
 - Local CPU public example images:
   - `examples/assets/chihuahua_pet_licorice.jpg`
