@@ -2,12 +2,14 @@
 
 ## Purpose
 
-This is the reusable Cloud TPU quickstart for Demo 2 pretrained ViT inference.
-It runs the same small public-example TPU smoke test documented in the course
-project, retrieves the JSON artifact, runs local comparison commands, and keeps
-cleanup visible. It also documents how to retrieve the full
-`runs/vit-inference/` folder and regenerate curated Imagenette 320 TPU Markdown
-tables after those JSON artifacts exist.
+This is the reusable Cloud TPU quickstart for Demo 2 pretrained ViT inference
+and the optional classifier-head fine-tuning smoke extension.
+It separates shared resource setup from three executable paths: public-example
+TPU inference smoke, Imagenette 320 TPU inference artifacts, and optional
+classifier-head fine-tuning with GCS checkpoint/resume. It also documents
+artifact retrieval, local comparison commands, and cleanup. Fine-tuning outputs
+use `runs/vit-finetune/` and are not part of the existing inference result
+tables.
 
 Local CPU remains the stable default path for this repository. TPU execution is
 optional and requires a Google Cloud project, billing or another funding path,
@@ -54,29 +56,44 @@ JSON unless a later artifact policy explicitly changes.
 
 ## Environment Variables
 
-These cloud resource variables are used from **Google Cloud Shell or a local
-terminal with `gcloud`**. Use this generic block first, replacing placeholders
-with values available to your project and quota path:
+Use this section as a variable hierarchy. The common cloud resource variables
+apply to every TPU path. Scenario-specific blocks then set the zone, TPU shape,
+runtime, and resource names for a particular run. GCS variables are needed only
+for the optional fine-tuning checkpoint/resume workflow. Repository checkout and
+run-directory variables are used only after SSH inside the TPU VM shell.
+
+### Common Cloud Resource Variables
+
+These variables are used from **Google Cloud Shell or a local terminal with
+`gcloud`**:
 
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
-export ZONE="<ZONE>"
-export REGION="<REGION>"
-export TPU_NAME="<TPU_NAME>"
-export QUEUED_RESOURCE_ID="<QUEUED_RESOURCE_ID>"
-export ACCELERATOR_TYPE="<ACCELERATOR_TYPE>"
-export RUNTIME_VERSION="<RUNTIME_VERSION>"
-export NETWORK_NAME="<NETWORK_NAME>"
-export SUBNET_NAME="<SUBNET_NAME>"
+export REGION="us-east1"
+export ZONE="us-east1-d"
+export TPU_NAME="demo2-vit-v6e1-use1-spot"
+export QUEUED_RESOURCE_ID="${TPU_NAME}-qr"
+export ACCELERATOR_TYPE="v6e-1"
+export RUNTIME_VERSION="v2-alpha-tpuv6e"
+export NETWORK_NAME="default"
+export SUBNET_NAME="default"
 ```
 
-Optional concrete cloud-resource block for reproducing the successful course
-smoke-run shape:
+These common variable names are reused by the scenario blocks below. The
+example values above match the public-example inference smoke shape; replace
+them with the selected scenario values before creating resources. The selected
+subnet must exist in the region corresponding to the selected TPU zone. Network
+and subnet names are not secrets, but project-specific network topology details
+should still be documented conservatively.
+
+### Scenario-Specific TPU Blocks
+
+**A. Public-example inference smoke run**
 
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
-export ZONE="us-east1-d"
 export REGION="us-east1"
+export ZONE="us-east1-d"
 export TPU_NAME="demo2-vit-v6e1-use1-spot"
 export QUEUED_RESOURCE_ID="demo2-vit-v6e1-use1-spot-qr"
 export ACCELERATOR_TYPE="v6e-1"
@@ -85,19 +102,130 @@ export NETWORK_NAME="default"
 export SUBNET_NAME="default"
 ```
 
-The second block reproduces the successful course smoke-run resource shape, but
-it requires matching quota and funding availability. `<PROJECT_ID>` remains a
-placeholder.
+This reproduces the successful public-example inference smoke-run resource
+shape, subject to matching quota and funding availability.
 
-The successful course smoke run used the default VPC network and default subnet
-in the selected region. Other users may use another valid VPC/subnet. The subnet
-must exist in the region corresponding to the selected TPU zone. Network and
-subnet names are not secrets, but project-specific network topology details
-should still be documented conservatively.
+**B. Fine-tuning first-run shape**
+
+```bash
+export PROJECT_ID="<PROJECT_ID>"
+export REGION="us-east1"
+export ZONE="us-east1-d"
+export TPU_NAME="demo2-vit-ft-v6e1-use1-spot"
+export QUEUED_RESOURCE_ID="${TPU_NAME}-qr"
+export ACCELERATOR_TYPE="v6e-1"
+export RUNTIME_VERSION="v2-alpha-tpuv6e"
+export NETWORK_NAME="default"
+export SUBNET_NAME="default"
+# Use --spot when creating the queued resource.
+```
+
+This shape produced a successful first classifier-head fine-tuning smoke run,
+but `us-east1-d` `v6e-1` spot later repeatedly showed maintenance or
+preemption risk. Do not treat the zone as guaranteed stable.
+
+**C. Fine-tuning GCS resume shape**
+
+```bash
+export PROJECT_ID="<PROJECT_ID>"
+export REGION="europe-west4"
+export ZONE="europe-west4-a"
+export TPU_NAME="demo2-vit-ft-v6e1-ew4a-spot"
+export QUEUED_RESOURCE_ID="demo2-vit-ft-v6e1-ew4a-spot-qr"
+export ACCELERATOR_TYPE="v6e-1"
+export RUNTIME_VERSION="v2-alpha-tpuv6e"
+export NETWORK_NAME="default"
+export SUBNET_NAME="default"
+# Use --spot when creating the queued resource.
+```
+
+This was the successful GCS checkpoint restore/resume region in the observed
+workflow. Do not overgeneralize it as guaranteed stable.
+
+**D. On-demand fallback candidate**
+
+```bash
+export PROJECT_ID="<PROJECT_ID>"
+export REGION="us-central2"
+export ZONE="us-central2-b"
+export TPU_NAME="demo2-vit-ft-v4-32-usc2-ondemand"
+export QUEUED_RESOURCE_ID="demo2-vit-ft-v4-32-usc2-ondemand-qr"
+export ACCELERATOR_TYPE="v4-32"
+export RUNTIME_VERSION="<check with gcloud compute tpus versions list>"
+export NETWORK_NAME="default"
+export SUBNET_NAME="default"
+```
+
+Do not claim the on-demand path was run unless there is artifact evidence.
+On-demand should not use `--spot`; it may cost more, but is less exposed to
+spot preemption.
+
+### Fine-Tuning GCS Variables
+
+These are used only for Path C. The prefix is arbitrary, but use one value
+consistently across first-run checkpoint copy, restore, artifact copy, and
+cleanup.
+
+```bash
+export BUCKET_SUFFIX="chihuahua"
+export BUCKET_NAME="${PROJECT_ID}-demo2-vit-ft-${BUCKET_SUFFIX}"
+export GCS_RUN_ROOT="gs://$BUCKET_NAME/numerical-jax-project/demo2-vit-finetune"
+```
+
+Keep `PROJECT_ID` as a placeholder in reusable docs. Do not publish real
+personal bucket names or project identifiers. `BUCKET_SUFFIX` must be lowercase
+and should make the bucket globally unique when combined with `PROJECT_ID`;
+change it if the bucket name already exists.
+
+Example Path C variable block:
+
+```bash
+export PROJECT_ID="<PROJECT_ID>"
+export REGION="europe-west4"
+export ZONE="europe-west4-a"
+
+export TPU_NAME="demo2-vit-ft-v6e1-ew4a-spot"
+export QUEUED_RESOURCE_ID="${TPU_NAME}-qr"
+
+export ACCELERATOR_TYPE="v6e-1"
+export RUNTIME_VERSION="v2-alpha-tpuv6e"
+export NETWORK_NAME="default"
+export SUBNET_NAME="default"
+
+export BUCKET_SUFFIX="chihuahua"
+export BUCKET_NAME="${PROJECT_ID}-demo2-vit-ft-${BUCKET_SUFFIX}"
+export GCS_RUN_ROOT="gs://$BUCKET_NAME/numerical-jax-project/demo2-vit-finetune"
+```
+
+This generated `BUCKET_NAME` is intended for a short-lived demo or report run.
+Change it if the name conflicts, if the project ID is too long for a practical
+bucket name, or if your project naming policy requires a different prefix. Keep
+`BUCKET_SUFFIX` lowercase.
+
+### TPU VM Checkout Variables
 
 Repository checkout variables such as `REPO_URL`, `BRANCH`, and optional
 `COMMIT_SHA` are used later inside the **TPU VM shell**. Shell variables exported
 before SSH do not automatically exist inside the TPU VM shell.
+
+```bash
+export REPO_URL="https://github.com/anthroplankton/numerical-jax-project.git"
+export BRANCH="main"  # after the fine-tuning workflow is merged
+# export BRANCH="<branch-containing-demo2-finetune>"  # before merge
+# export COMMIT_SHA="<real commit SHA>"
+```
+
+### TPU VM Run Variables
+
+`RUN_NAME`, `RUN_DIR`, and `CKPT_DIR` are scoped to one command run inside the
+TPU VM shell. Fine-tuning uses absolute paths because Orbax checkpoint paths
+must be absolute.
+
+```bash
+export RUN_NAME="demo2_cloud_vit_head_finetune_tpu_resume"
+export RUN_DIR="$(pwd)/runs/vit-finetune/$RUN_NAME"
+export CKPT_DIR="$RUN_DIR/checkpoints"
+```
 
 ## Cloud Preflight
 
@@ -242,6 +370,18 @@ Interpret the state conservatively:
 - `ACTIVE`: TPU VM should exist.
 - If the run window is blocked, delete the queued resource before trying another
   zone or accelerator type.
+- A queued resource can become `ACTIVE` but still be unusable if the TPU VM
+  immediately shows maintenance or `PREEMPTED` behavior. Inspect the queued
+  resource and TPU VM list, delete the unusable queued resource, then try
+  another zone/type or an on-demand fallback if the run window requires more
+  stability.
+
+Observed pattern, not a guarantee:
+
+- `us-east1-d` `v6e-1` spot completed a first fine-tuning run, but later
+  repeatedly showed maintenance/preemption risk.
+- `europe-west4-a` `v6e-1` spot completed the GCS checkpoint restore/resume
+  run.
 
 ## SSH
 
@@ -254,20 +394,21 @@ gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
   --zone "$ZONE"
 ```
 
-## TPU VM Setup And Run
+## Shared TPU VM Checkout And Setup
 
 Run inside the **TPU VM shell**.
 
-Set repository checkout variables inside the TPU VM shell:
+Set repository checkout variables inside the TPU VM shell if they were not
+already set:
 
 ```bash
-export REPO_URL="<REPO_URL>"
-export BRANCH="<BRANCH>"
+export REPO_URL="https://github.com/anthroplankton/numerical-jax-project.git"
+export BRANCH="main"  # after the fine-tuning workflow is merged
+# export BRANCH="<branch-containing-demo2-finetune>"  # before merge
 # export COMMIT_SHA="<real commit SHA>"
 
-# Example for this repository and current evidence branch:
-# export REPO_URL="https://github.com/anthroplankton/numerical-jax-project.git"
-# export BRANCH="feat/demo2-tpu-evidence"
+# Before merge, replace BRANCH with one that contains the fine-tuning workflow
+# when using Path C.
 ```
 
 `COMMIT_SHA` is optional. Choose one checkout mode:
@@ -296,13 +437,27 @@ git rev-parse HEAD
 curl -LsSf https://astral.sh/uv/install.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
 uv --version
-uv sync --group pretrained
+
+# Path A/B inference setup:
+uv sync --frozen --group pretrained
+
+# Path C fine-tuning setup:
+# uv sync --frozen --group pretrained --group training
 
 uv pip install -U "jax[tpu]" \
   -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
 
-uv run python -c "import jax; print('jax_version=', jax.__version__); print('default_backend=', jax.default_backend()); print('device_count=', jax.device_count()); print('local_device_count=', jax.local_device_count()); print('devices=', jax.devices())"
+uv run python -c "import jax; print('jax_version=', jax.__version__); print('default_backend=', jax.default_backend()); print('device_count=', jax.device_count()); print('local_device_count=', jax.local_device_count()); print('devices=', jax.devices()); raise SystemExit(0 if jax.default_backend() == 'tpu' else 1)"
+```
 
+The backend check must report TPU backend/devices before interpreting the Demo 2
+run as TPU evidence.
+
+## Path A: Public-Example TPU Inference Smoke Run
+
+Run inside the **TPU VM shell** after the shared checkout and TPU setup:
+
+```bash
 uv run --group pretrained python examples/pretrained_vit_inference.py \
   --jax-platform tpu \
   --image-manifest examples/assets/manifest.txt \
@@ -315,10 +470,7 @@ ls -lh runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json
 head -40 runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json
 ```
 
-The backend check must report TPU backend/devices before interpreting the Demo 2
-run as TPU evidence.
-
-## Artifact Retrieval And Cleanup
+## Inference Artifact Retrieval
 
 Run from **Google Cloud Shell or a local `gcloud` terminal**.
 
@@ -342,9 +494,9 @@ gcloud compute tpus tpu-vm scp --recurse \
   --zone "$ZONE"
 ```
 
-This copies the remote folder to local `runs/vit-inference/`, which is ignored
-by Git. Keep raw TPU JSON and generated comparison JSON there; commit only
-intentionally curated Markdown tables under `report/results/`.
+This copies the remote inference folder to local `runs/vit-inference/`, which
+is ignored by Git. Keep raw TPU JSON and generated comparison JSON there;
+commit only intentionally curated Markdown tables under `report/results/`.
 
 To retrieve only the public-example smoke-run JSON, use the single-file form:
 
@@ -356,24 +508,7 @@ gcloud compute tpus tpu-vm scp \
   runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json \
   --project "$PROJECT_ID" \
   --zone "$ZONE"
-
-gcloud compute tpus queued-resources delete "$QUEUED_RESOURCE_ID" \
-  --project "$PROJECT_ID" \
-  --zone "$ZONE" \
-  --force \
-  --quiet
-
-gcloud compute tpus queued-resources list \
-  --project "$PROJECT_ID" \
-  --zone "$ZONE"
-
-gcloud compute tpus tpu-vm list \
-  --project "$PROJECT_ID" \
-  --zone "$ZONE"
 ```
-
-Both list commands should show no remaining resource for the completed smoke-run
-resource.
 
 ## Local Comparison
 
@@ -405,11 +540,11 @@ does not run, retrieve, or compare Imagenette 320 TPU artifacts.
 
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
-export ZONE="<ZONE>"
-export TPU_NAME="<TPU_NAME>"
-export QUEUED_RESOURCE_ID="<QUEUED_RESOURCE_ID>"
-export REPO_URL="<REPO_URL>"
-export BRANCH="<BRANCH>"
+export ZONE="us-east1-d"
+export TPU_NAME="demo2-vit-v6e1-use1-spot"
+export QUEUED_RESOURCE_ID="${TPU_NAME}-qr"
+export REPO_URL="https://github.com/anthroplankton/numerical-jax-project.git"
+export BRANCH="main"
 
 bash scripts/demo2_tpu_run_when_active.sh
 ```
@@ -424,7 +559,7 @@ after artifact retrieval and comparison, opt in:
 bash scripts/demo2_tpu_run_when_active.sh --delete-after
 ```
 
-## Imagenette 320 TPU Inference Benchmark
+## Path B: Imagenette 320 TPU Inference Artifacts
 
 The repository now has retrieved TPU JSON artifacts for Imagenette 320
 inference runs on `val64`, `val256`, and the full validation manifest, each with
@@ -555,9 +690,558 @@ The existing generated summary file for this cross-device view is
 universal speedup claim; it is still inference-only timing evidence from
 specific artifacts.
 
+## Path C: Optional Classifier-Head Fine-Tuning With GCS Checkpoint/Resume
+
+This optional path is still Demo 2. It freezes the pretrained ViT backbone,
+trains only the classifier head, and uses Orbax checkpoints to demonstrate
+checkpoint/resume behavior under spot or preemptible TPU risk. It is not full
+ViT fine-tuning and not an accuracy benchmark.
+
+### GCS Durable Checkpoint Setup
+
+Run this section from **Google Cloud Shell or a local terminal with `gcloud`**.
+GCS is used as a durable copy of checkpoints and artifacts. Orbax still writes
+local checkpoint files first under the TPU VM run directory. Use a temporary
+demo bucket rather than a shared bucket for commands that later show
+destructive cleanup examples.
+
+```bash
+export PROJECT_ID="<PROJECT_ID>"
+export REGION="europe-west4"
+export BUCKET_SUFFIX="chihuahua"
+export BUCKET_NAME="${PROJECT_ID}-demo2-vit-ft-${BUCKET_SUFFIX}"
+export GCS_RUN_ROOT="gs://$BUCKET_NAME/numerical-jax-project/demo2-vit-finetune"
+
+gcloud config set project "$PROJECT_ID"
+gcloud storage buckets create "gs://$BUCKET_NAME" \
+  --project "$PROJECT_ID" \
+  --location "$REGION" \
+  --uniform-bucket-level-access \
+  --public-access-prevention
+
+gcloud storage buckets update "gs://$BUCKET_NAME" --clear-soft-delete
+gcloud storage buckets describe "gs://$BUCKET_NAME"
+```
+
+For short-lived demo buckets, clear soft delete immediately after bucket
+creation. For a repeatable reset, use a new bucket name and clear soft delete at
+creation time. The `GCS_RUN_ROOT` prefix is arbitrary, but it must stay
+consistent across first-run checkpoint copy, restore, artifact copy, and
+cleanup.
+
+Local GCS write/read preflight:
+
+```bash
+export LOCAL_PREFLIGHT_DIR="/tmp/demo2-vit-ft-gcs-preflight"
+export LOCAL_PREFLIGHT_READBACK="/tmp/demo2-vit-ft-gcs-readback"
+
+mkdir -p "$LOCAL_PREFLIGHT_DIR"
+printf "local preflight %s\n" "$(date -Is)" > "$LOCAL_PREFLIGHT_DIR/local.txt"
+gcloud storage rsync --recursive "$LOCAL_PREFLIGHT_DIR" "$GCS_RUN_ROOT/preflight/local"
+
+rm -rf "$LOCAL_PREFLIGHT_READBACK"
+mkdir -p "$LOCAL_PREFLIGHT_READBACK"
+gcloud storage rsync --recursive "$GCS_RUN_ROOT/preflight/local" "$LOCAL_PREFLIGHT_READBACK"
+cat "$LOCAL_PREFLIGHT_READBACK/local.txt"
+```
+
+After SSH to the TPU VM, run a TPU VM GCS write preflight. Shell variables set
+before SSH do not automatically exist inside the TPU VM shell, so re-export the
+same `BUCKET_NAME` and `GCS_RUN_ROOT` values before TPU VM preflight, restore,
+or artifact-copy commands. Use the same `BUCKET_SUFFIX` that created the bucket.
+
+```bash
+export PROJECT_ID="<PROJECT_ID>"
+export BUCKET_SUFFIX="chihuahua"
+export BUCKET_NAME="${PROJECT_ID}-demo2-vit-ft-${BUCKET_SUFFIX}"
+export GCS_RUN_ROOT="gs://$BUCKET_NAME/numerical-jax-project/demo2-vit-finetune"
+export TPU_PREFLIGHT_DIR="/tmp/demo2-vit-ft-tpu-preflight"
+
+mkdir -p "$TPU_PREFLIGHT_DIR"
+printf "tpu vm preflight %s\n" "$(date -Is)" > "$TPU_PREFLIGHT_DIR/tpu-vm.txt"
+gcloud storage rsync --recursive "$TPU_PREFLIGHT_DIR" "$GCS_RUN_ROOT/preflight/tpu-vm"
+gcloud storage ls "$GCS_RUN_ROOT/preflight/tpu-vm/"
+```
+
+### First Fine-Tuning Smoke Run
+
+Run inside the **TPU VM shell** after the shared checkout and TPU setup. If the
+shared setup was done for inference only, sync the training dependency group
+before running fine-tuning:
+
+```bash
+uv sync --frozen --group pretrained --group training
+
+uv pip install -U "jax[tpu]" \
+  -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
+
+uv run python -c "import jax; print('jax_version=', jax.__version__); print('default_backend=', jax.default_backend()); print('device_count=', jax.device_count()); print('local_device_count=', jax.local_device_count()); print('devices=', jax.devices()); raise SystemExit(0 if jax.default_backend() == 'tpu' else 1)"
+```
+
+Download and extract Imagenette 320 on the TPU VM:
+
+```bash
+mkdir -p data/local
+curl -L --fail --show-error \
+  -o data/local/imagenette2-320.tgz \
+  https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz
+tar -xzf data/local/imagenette2-320.tgz -C data/local
+test -d data/local/imagenette2-320/train
+test -d data/local/imagenette2-320/val
+```
+
+Build small balanced train/eval manifests from the existing Imagenette files:
+
+```bash
+uv run python scripts/build_image_manifest.py \
+  data/local/imagenette2-320/train \
+  --output data/local/imagenette2-320/train/manifest_train_balanced_50.txt \
+  --per-class-limit 5
+
+uv run python scripts/build_image_manifest.py \
+  data/local/imagenette2-320/val \
+  --output data/local/imagenette2-320/val/manifest_val_balanced_50.txt \
+  --per-class-limit 5
+```
+
+Balanced manifests make class distribution easier to inspect in `summary.json`.
+They are still tiny smoke inputs, not an Imagenette accuracy protocol.
+
+### Fine-Tuning Command Profiles
+
+Use one of these profiles depending on the evidence needed. Always use absolute
+`RUN_DIR` and `CKPT_DIR` values before passing `--output-dir` and
+`--checkpoint-dir`; Orbax can fail with `ValueError: Checkpoint path should be
+absolute`.
+
+**Short interactive smoke profile**
+
+This fixed-step profile is suitable for quick verification and report-friendly
+curves. Add `--reinit-head --seed 0` only when a clearer learning-curve
+demonstration is useful; the default keeps the pretrained classifier head.
+
+```bash
+export RUN_NAME="demo2_cloud_vit_head_finetune_tpu_curve"
+export RUN_DIR="$(pwd)/runs/vit-finetune/$RUN_NAME"
+export CKPT_DIR="$RUN_DIR/checkpoints"
+mkdir -p "$RUN_DIR" "$CKPT_DIR"
+
+uv run --group pretrained --group training python examples/demo2_pretrained_vit_finetune.py \
+  --jax-platform tpu \
+  --train-manifest data/local/imagenette2-320/train/manifest_train_balanced_50.txt \
+  --eval-manifest data/local/imagenette2-320/val/manifest_val_balanced_50.txt \
+  --batch-size 8 \
+  --learning-rate 0.001 \
+  --max-steps 300 \
+  --min-train-seconds 0 \
+  --checkpoint-every-steps 100 \
+  --checkpoint-every-seconds 0 \
+  --eval-every-steps 25 \
+  --checkpoint-dir "$CKPT_DIR" \
+  --output-dir "$RUN_DIR" \
+  --save-predictions
+```
+
+**Checkpoint/resume evidence profile**
+
+This deterministic profile avoids relying on real spot preemption. The first
+run stops at step `300`, then the resume run continues to step `500`; expected
+resume evidence is `start_step=300` and `final_step=500`.
+
+The first-run commands below use post-run GCS sync. Orbax writes local
+checkpoints first under `CKPT_DIR`, and `gcloud storage rsync` runs only after
+the training command exits successfully. This keeps the profile simple and
+deterministic, but it is not fully preemption-safe: if the spot TPU is
+preempted before `rsync` runs, local-only checkpoints may be lost.
+
+For better durability on spot TPU without adding background live-sync
+automation, use short segmented runs: run step `0` to `100`, sync completed
+artifacts and checkpoints to GCS, restore from GCS, then resume from `100` to
+`300` or `500`.
+
+First run:
+
+```bash
+export RUN_NAME="demo2_cloud_vit_head_finetune_tpu_resume_first"
+export RUN_DIR="$(pwd)/runs/vit-finetune/$RUN_NAME"
+export CKPT_DIR="$RUN_DIR/checkpoints"
+export GCS_RUN_ROOT="gs://$BUCKET_NAME/numerical-jax-project/demo2-vit-finetune"
+mkdir -p "$RUN_DIR" "$CKPT_DIR"
+
+set -e
+uv run --group pretrained --group training python examples/demo2_pretrained_vit_finetune.py \
+  --jax-platform tpu \
+  --train-manifest data/local/imagenette2-320/train/manifest_train_balanced_50.txt \
+  --eval-manifest data/local/imagenette2-320/val/manifest_val_balanced_50.txt \
+  --batch-size 8 \
+  --learning-rate 0.001 \
+  --max-steps 300 \
+  --min-train-seconds 0 \
+  --checkpoint-every-steps 100 \
+  --checkpoint-every-seconds 0 \
+  --eval-every-steps 50 \
+  --checkpoint-dir "$CKPT_DIR" \
+  --output-dir "$RUN_DIR" \
+  --save-predictions
+
+test -f "$RUN_DIR/summary.json"
+export GCS_RUN_URI="$GCS_RUN_ROOT/artifacts/$RUN_NAME"
+export GCS_CKPT_URI="$GCS_RUN_ROOT/checkpoints/$RUN_NAME"
+
+gcloud storage rsync --recursive "$RUN_DIR" "$GCS_RUN_URI"
+gcloud storage rsync --recursive "$CKPT_DIR" "$GCS_CKPT_URI"
+gcloud storage ls "$GCS_CKPT_URI/"
+```
+
+Resume run after restoring the checkpoint directory from GCS:
+
+```bash
+export GCS_RUN_ROOT="gs://$BUCKET_NAME/numerical-jax-project/demo2-vit-finetune"
+export BASE_RUN_NAME="demo2_cloud_vit_head_finetune_tpu_resume_first"
+export RESUME_RUN_NAME="demo2_cloud_vit_head_finetune_tpu_resume"
+export RESUME_RUN_DIR="$(pwd)/runs/vit-finetune/$RESUME_RUN_NAME"
+export RESUME_CKPT_DIR="$RESUME_RUN_DIR/checkpoints"
+export GCS_CKPT_URI="$GCS_RUN_ROOT/checkpoints/$BASE_RUN_NAME"
+
+mkdir -p "$RESUME_RUN_DIR" "$RESUME_CKPT_DIR"
+gcloud storage rsync --recursive "$GCS_CKPT_URI" "$RESUME_CKPT_DIR"
+find "$RESUME_CKPT_DIR" -name "*.orbax-checkpoint-tmp" -type d -prune -exec rm -rf {} +
+
+uv run --group pretrained --group training python examples/demo2_pretrained_vit_finetune.py \
+  --jax-platform tpu \
+  --train-manifest data/local/imagenette2-320/train/manifest_train_balanced_50.txt \
+  --eval-manifest data/local/imagenette2-320/val/manifest_val_balanced_50.txt \
+  --batch-size 8 \
+  --learning-rate 0.001 \
+  --max-steps 500 \
+  --min-train-seconds 0 \
+  --checkpoint-every-steps 100 \
+  --checkpoint-every-seconds 0 \
+  --eval-every-steps 50 \
+  --checkpoint-dir "$RESUME_CKPT_DIR" \
+  --output-dir "$RESUME_RUN_DIR" \
+  --resume \
+  --save-predictions
+```
+
+Verify the resume summary:
+
+```bash
+uv run python - <<'PY'
+import json
+import os
+from pathlib import Path
+
+summary = json.loads((Path(os.environ["RESUME_RUN_DIR"]) / "summary.json").read_text())
+checks = {
+    "backend": summary["backend"] == "tpu",
+    "resumed_from_checkpoint": summary["resumed_from_checkpoint"] is True,
+    "start_step": summary["start_step"] == 300,
+    "final_step": summary["final_step"] == 500,
+    "trainable_scope": summary["trainable_scope"] == "classifier_head_only",
+    "frozen_scope": summary["frozen_scope"] == "vit_backbone",
+}
+print(json.dumps({key: summary.get(key) for key in [
+    "backend",
+    "resumed_from_checkpoint",
+    "start_step",
+    "final_step",
+    "trainable_scope",
+    "frozen_scope",
+]}, indent=2))
+failed = [name for name, ok in checks.items() if not ok]
+raise SystemExit(f"failed checks: {failed}" if failed else 0)
+PY
+```
+
+The observed longer workflow restored checkpoint step `15140` and
+completed successfully with `backend=tpu`, `resumed_from_checkpoint=true`,
+`start_step=15140`, `final_step=51538`, `trainable_scope=classifier_head_only`,
+and `frozen_scope=vit_backbone`. That longer run remains useful as
+checkpoint/resume evidence, but the fixed-step profile above is easier to
+explain in reports.
+
+**Throughput/time smoke profile**
+
+This profile keeps the time-controlled command shape for timing and checkpoint
+stress evidence. It is not intended to produce a useful loss curve.
+
+```bash
+export RUN_NAME="demo2_cloud_vit_head_finetune_tpu_time"
+export RUN_DIR="$(pwd)/runs/vit-finetune/$RUN_NAME"
+export CKPT_DIR="$RUN_DIR/checkpoints"
+mkdir -p "$RUN_DIR" "$CKPT_DIR"
+
+uv run --group pretrained --group training python examples/demo2_pretrained_vit_finetune.py \
+  --jax-platform tpu \
+  --train-manifest data/local/imagenette2-320/train/manifest_train_balanced_50.txt \
+  --eval-manifest data/local/imagenette2-320/val/manifest_val_balanced_50.txt \
+  --batch-size 8 \
+  --learning-rate 0.001 \
+  --max-steps 100000 \
+  --min-train-seconds 120 \
+  --checkpoint-every-steps 0 \
+  --checkpoint-every-seconds 30 \
+  --eval-every-steps 0 \
+  --checkpoint-dir "$CKPT_DIR" \
+  --output-dir "$RUN_DIR" \
+  --save-predictions
+```
+
+`--max-steps 100000` is only an upper bound for the time-controlled smoke run.
+Prefer `--checkpoint-every-steps 0` and `--checkpoint-every-seconds 30` in this
+profile. Step-based checkpointing such as `--checkpoint-every-steps 20` created
+too many checkpoints on TPU and made live GCS sync fragile.
+
+### Monitoring While Training Runs
+
+From **Google Cloud Shell or a local terminal with `gcloud`**:
+
+```bash
+gcloud compute tpus queued-resources describe "$QUEUED_RESOURCE_ID" \
+  --project "$PROJECT_ID" \
+  --zone "$ZONE"
+
+gcloud compute tpus tpu-vm list \
+  --project "$PROJECT_ID" \
+  --zone "$ZONE"
+```
+
+From the **TPU VM shell**, re-enter the repository root before re-exporting run
+paths. `RUN_DIR` uses `$(pwd)`, so setting it from `~` instead of
+`~/numerical-jax-project` points monitoring commands at the wrong
+`runs/vit-finetune/` directory. For resume runs, use `RESUME_RUN_NAME`,
+`RESUME_RUN_DIR`, and `RESUME_CKPT_DIR` instead.
+
+```bash
+cd ~/numerical-jax-project
+export RUN_NAME="demo2_cloud_vit_head_finetune_tpu_resume_first"
+export RUN_DIR="$(pwd)/runs/vit-finetune/$RUN_NAME"
+export CKPT_DIR="$RUN_DIR/checkpoints"
+```
+
+Run `tail -f` and the metrics loop one at a time, or in separate terminals.
+
+Tail the training log:
+
+```bash
+tail -f "$RUN_DIR/train.log"
+```
+
+Watch recent metrics:
+
+```bash
+while true; do
+  date
+  tail -n 5 "$RUN_DIR/metrics.csv"
+  sleep 10
+done
+```
+
+Inspect checkpoint files:
+
+```bash
+ls -lh "$CKPT_DIR"
+find "$CKPT_DIR" -maxdepth 2 -type f | head
+```
+
+From **GCS**:
+
+```bash
+gcloud storage ls "$GCS_CKPT_URI/"
+gcloud storage du --summarize "$GCS_CKPT_URI"
+gcloud storage ls "$GCS_RUN_ROOT/artifacts/$RUN_NAME/"
+```
+
+Avoid live-rsyncing the entire Orbax checkpoint root while Orbax is actively
+writing checkpoints. In the observed run, `rsync` of the whole checkpoint root
+could race with Orbax checkpoint creation or cleanup and report
+`FileNotFoundError` for `_CHECKPOINT_METADATA`. Prefer final `rsync` after
+training completes. Treat live sync as advanced and experimental; if it is
+attempted, sync only a completed/stable checkpoint step directory, not the whole
+checkpoint root while Orbax is writing.
+
+### Metrics And Report Review After Training
+
+Inspect these generated artifacts under the run directory:
+
+```text
+summary.json
+metrics.csv
+eval_metrics.csv
+train.log
+predictions_before.json
+predictions_after.json
+checkpoints/
+```
+
+Useful inspection commands:
+
+```bash
+cd ~/numerical-jax-project
+export RUN_NAME="<RUN_NAME>"
+export RUN_DIR="$(pwd)/runs/vit-finetune/$RUN_NAME"
+export CKPT_DIR="$RUN_DIR/checkpoints"
+test -d "$RUN_DIR"
+
+ls -lh "$RUN_DIR"
+uv run python -m json.tool "$RUN_DIR/summary.json" | head -80
+head -5 "$RUN_DIR/metrics.csv"
+tail -5 "$RUN_DIR/metrics.csv"
+cat "$RUN_DIR/eval_metrics.csv"
+tail -40 "$RUN_DIR/train.log"
+```
+
+Expected `summary.json` fields include:
+
+- `backend`
+- `devices`
+- `selected_jax_platform`
+- `model_name`
+- `trainable_scope`
+- `frozen_scope`
+- `start_step`
+- `final_step`
+- `resumed_from_checkpoint`
+- `latest_checkpoint_step`
+- `train_label_counts`
+- `eval_label_counts`
+- `num_train_classes`
+- `num_eval_classes`
+- `eval_every_steps`
+- `reinit_head`
+- `seed`
+- `initial_loss`
+- `final_loss`
+- `mean_step_time_sec`
+- `examples_per_second`
+- `total_runtime_sec`
+- `git_commit`
+- `git_branch`
+- `git_dirty`
+
+`metrics.csv` contains per-step training loss, training accuracy, step time,
+throughput, and checkpoint-save flags. `eval_metrics.csv` contains
+`step`, `eval_loss`, and `eval_accuracy`, and is intended to be easy to load in
+pandas from an ipynb report notebook. `mean_step_time_sec` and
+`examples_per_second` measure training-step time and exclude checkpoint write
+time. `total_runtime_sec` includes setup, evaluation, checkpointing, prediction
+writing, and summary writing overhead.
+
+Near-zero loss can be expected in a tiny smoke setup and does not imply
+dataset-level accuracy. The subset may be easy, class-skewed, or already well
+served by the pretrained ImageNet classifier head. Use `train_label_counts` and
+`eval_label_counts` to make that visible in reports. Treat this path as
+workflow evidence, checkpoint/resume evidence, and TPU execution evidence, not
+an accuracy study.
+
+For notebook/report plots, load local ignored artifacts such as `summary.json`,
+`metrics.csv`, `eval_metrics.csv`, `predictions_before.json`, and
+`predictions_after.json`. Do not commit raw checkpoints, logs, datasets, model
+caches, GCS objects, or generated notebook outputs; commit only intentionally
+curated derived summaries under `report/results/`.
+
+### Fine-Tuning Artifact Retrieval
+
+Retrieve fine-tuning artifacts after the run using one of these scoped paths.
+If the TPU VM is still available, copy `runs/vit-finetune/` from the VM:
+
+```bash
+mkdir -p runs
+
+gcloud compute tpus tpu-vm scp --recurse \
+  "$TPU_NAME":~/numerical-jax-project/runs/vit-finetune \
+  runs/ \
+  --project "$PROJECT_ID" \
+  --zone "$ZONE"
+```
+
+If the final artifact copy was written to GCS, retrieve from the GCS artifact
+prefix instead. Use the same `BUCKET_SUFFIX` that created the bucket.
+
+```bash
+export PROJECT_ID="<PROJECT_ID>"
+export BUCKET_SUFFIX="chihuahua"
+export BUCKET_NAME="${PROJECT_ID}-demo2-vit-ft-${BUCKET_SUFFIX}"
+export RUN_NAME="demo2_cloud_vit_head_finetune_tpu_resume"
+export GCS_RUN_ROOT="gs://$BUCKET_NAME/numerical-jax-project/demo2-vit-finetune"
+export GCS_RUN_URI="$GCS_RUN_ROOT/artifacts/$RUN_NAME"
+export GCS_CKPT_URI="$GCS_RUN_ROOT/checkpoints/$RUN_NAME"
+
+mkdir -p "runs/vit-finetune/$RUN_NAME"
+gcloud storage rsync --recursive "$GCS_RUN_URI" "runs/vit-finetune/$RUN_NAME"
+gcloud storage rsync --recursive \
+  "$GCS_CKPT_URI" \
+  "runs/vit-finetune/$RUN_NAME/checkpoints"
+```
+
+Both retrieval paths copy raw summaries, metrics, logs, predictions, and
+checkpoints under ignored `runs/vit-finetune/`. Commit only intentionally
+curated, small report summaries under `report/results/`.
+
+### Cleanup
+
+Use this queued-resource cleanup for Path A, Path B, or Path C after artifact
+retrieval, or after abandoning a blocked allocation:
+
+```bash
+gcloud compute tpus queued-resources delete "$QUEUED_RESOURCE_ID" \
+  --project "$PROJECT_ID" \
+  --zone "$ZONE" \
+  --force
+
+gcloud compute tpus queued-resources list \
+  --project "$PROJECT_ID" \
+  --zone "$ZONE"
+
+gcloud compute tpus tpu-vm list \
+  --project "$PROJECT_ID" \
+  --zone "$ZONE"
+```
+
+Optionally delete GCS checkpoint and artifact objects after retrieving evidence.
+Do this only for a temporary demo bucket that is not shared with other
+work. Before deleting a demo bucket, save a small local manual note describing
+what was retrieved and why the bucket can be removed.
+
+```bash
+export PROJECT_ID="<PROJECT_ID>"
+export BUCKET_SUFFIX="chihuahua"
+export BUCKET_NAME="${PROJECT_ID}-demo2-vit-ft-${BUCKET_SUFFIX}"
+
+gcloud storage rm --recursive "gs://$BUCKET_NAME/**"
+gcloud storage buckets delete "gs://$BUCKET_NAME"
+```
+
+To inspect for leftover Demo 2 buckets after cleanup, run this read-only check;
+if matching buckets still appear, inspect their contents and purpose before
+deleting anything:
+
+```bash
+gcloud storage buckets list "gs://${PROJECT_ID}-demo2-*" \
+  --project "$PROJECT_ID" \
+  --format="table(name,location,storageClass)"
+```
+
+For future demo runs, use a new bucket name and clear soft delete at creation
+time:
+
+```bash
+gcloud storage buckets update "gs://$BUCKET_NAME" --clear-soft-delete
+```
+
+Real spot or preemptible interruption is non-deterministic and is not guaranteed
+to deliver graceful SIGTERM. Controlled SIGTERM plus resume remains the primary
+interruption evidence path when graceful behavior must be demonstrated. Durable
+resume after TPU VM deletion requires copying checkpoints to GCS or another
+durable location before the VM is deleted.
+
 ## Limitations
 
-- Demo 2 is ViT inference only; it does not train or fine-tune the model.
+- Demo 2 TPU inference tables remain ViT inference timing evidence only.
+- Optional fine-tuning TPU evidence is classifier-head-only smoke workflow and
+  GCS checkpoint/resume evidence, not full ViT fine-tuning and not an accuracy
+  benchmark.
 - The public TPU smoke run uses five public images, batch size 4, final-batch
   padding with `num_padded_images = 3`, and a short benchmark loop.
 - The Imagenette 320 TPU tables use validation manifests for inference timing

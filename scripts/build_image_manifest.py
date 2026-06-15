@@ -35,6 +35,14 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         help="Optional maximum number of sorted image paths to include.",
     )
     parser.add_argument(
+        "--per-class-limit",
+        type=_positive_int,
+        help=(
+            "Optional class-balanced mode: select up to N sorted images from "
+            "each immediate parent directory."
+        ),
+    )
+    parser.add_argument(
         "--extensions",
         nargs="+",
         default=list(DEFAULT_EXTENSIONS),
@@ -59,9 +67,16 @@ def normalize_extensions(raw_extensions: Sequence[str]) -> tuple[str, ...]:
 
 
 def find_image_paths(
-    image_dir: Path, *, extensions: Sequence[str], limit: int | None = None
+    image_dir: Path,
+    *,
+    extensions: Sequence[str],
+    limit: int | None = None,
+    per_class_limit: int | None = None,
 ) -> list[Path]:
     """Return sorted local image paths without opening the files."""
+    if limit is not None and per_class_limit is not None:
+        msg = "use either limit or per_class_limit, not both"
+        raise ValueError(msg)
     if not image_dir.is_dir():
         msg = f"image directory does not exist: {image_dir}"
         raise NotADirectoryError(msg)
@@ -75,13 +90,34 @@ def find_image_paths(
         ),
         key=lambda path: path.as_posix().lower(),
     )
-    if limit is not None:
+    if per_class_limit is not None:
+        image_paths = select_per_parent_class(
+            image_paths,
+            per_class_limit=per_class_limit,
+        )
+    elif limit is not None:
         image_paths = image_paths[:limit]
     if not image_paths:
         extensions_text = ", ".join(normalized_extensions)
         msg = f"no images with extensions {extensions_text} under {image_dir}"
         raise ValueError(msg)
     return image_paths
+
+
+def select_per_parent_class(
+    image_paths: Sequence[Path],
+    *,
+    per_class_limit: int,
+) -> list[Path]:
+    """Select up to N sorted images from each immediate parent directory."""
+    grouped_paths: dict[Path, list[Path]] = {}
+    for image_path in image_paths:
+        grouped_paths.setdefault(image_path.parent, []).append(image_path)
+
+    selected: list[Path] = []
+    for class_dir in sorted(grouped_paths, key=lambda path: path.as_posix().lower()):
+        selected.extend(grouped_paths[class_dir][:per_class_limit])
+    return selected
 
 
 def build_manifest_text(image_paths: Sequence[Path], manifest_path: Path) -> str:
@@ -116,6 +152,7 @@ def main() -> None:
         args.image_dir,
         extensions=args.extensions,
         limit=args.limit,
+        per_class_limit=args.per_class_limit,
     )
     write_manifest(image_paths, output_path)
     print(f"manifest: {output_path}")

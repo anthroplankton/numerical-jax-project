@@ -542,6 +542,85 @@
     create/delete cloud resources, rerun TPU benchmarks, or add new TPU
     evidence。
 
+## Phase 5.12: Demo 2 Optional ViT Classifier-Head Fine-Tuning Extension
+
+- Date / phase label：2026-06-05 Demo 2 classifier-head fine-tuning workflow
+  support
+- What changed：
+  - Added `examples/demo2_pretrained_vit_finetune.py` as an optional Demo 2
+    extension, not a new Demo 3。
+  - The script uses the existing pretrained ViT model path, freezes the ViT
+    backbone, trains only the classifier head, and writes generated artifacts
+    under ignored `runs/vit-finetune/`。
+  - Added Orbax checkpoint/resume support for classifier-head parameters,
+    optimizer state, current step, and minimal metadata only。
+  - Added lightweight helper tests that avoid TPU, Google Cloud credentials,
+    model downloads, Imagenette data, and Orbax-heavy runtime。
+  - Added the `training` dependency group for `optax` and `orbax-checkpoint`。
+  - Updated README, Demo 2 docs, TPU quickstart/reference docs, current status,
+    and result-artifact guidance。
+- Claim boundary：
+  - This phase did not run model downloads, TPU jobs, `gcloud` commands, cloud
+    resource creation/deletion, commits, or pushes。
+  - No TPU fine-tuning evidence exists yet from this phase。
+  - The extension is a checkpoint/resume and TPU training smoke workflow, not
+    full ViT fine-tuning, not a large benchmark, and not dataset-level accuracy
+    evaluation。
+
+## Phase 5.13: Demo 2 TPU Fine-Tuning GCS Resume Evidence Documentation
+
+- Date / phase label：2026-06-05 Demo 2 TPU fine-tuning GCS checkpoint/resume
+  documentation
+- What changed：
+  - Updated Demo 2 documentation for the optional classifier-head-only
+    fine-tuning TPU smoke workflow。
+  - Documented GCS durable checkpoint setup, local and TPU VM GCS preflight,
+    first-run command, GCS restore/resume command, monitoring checks, artifact
+    retrieval, metrics review, and cleanup。
+  - Added the successful observed workflow facts：first `v6e-1` spot run in
+    `us-east1-d`，real spot/maintenance interruption after the first run，GCS
+    checkpoint copies at steps `15100`, `15120`, and `15140`，and successful
+    resume on `v6e-1` spot in `europe-west4-a`。
+  - Added a curated result note:
+    `report/results/demo2_cloud_vit_head_finetune_tpu_resume_gcs.md`。
+- Evidence boundary：
+  - The resume summary fields recorded in the documentation are
+    `backend=tpu`, `resumed_from_checkpoint=true`, `start_step=15140`,
+    `final_step=51538`, `trainable_scope=classifier_head_only`, and
+    `frozen_scope=vit_backbone`。
+  - Raw artifacts remain ignored under `runs/vit-finetune/` and/or temporary
+    GCS storage；checkpoints, logs, model caches, and datasets are not committed。
+  - This remains smoke workflow evidence, checkpoint/resume evidence, and TPU
+    execution evidence, not full ViT fine-tuning, not a large benchmark, and
+    not dataset-level accuracy evaluation。
+- Claim boundary for this patch：
+  - This documentation update did not run cloud commands, TPU jobs, model
+    downloads, `gcloud` resource creation/deletion, commits, or pushes。
+
+## Phase 5.14: Demo 2 Fine-Tuning Metrics And Report Usability
+
+- Date / phase label：2026-06-05 Demo 2 fine-tuning metrics/report usability
+- What changed：
+  - Added balanced manifest support through `scripts/build_image_manifest.py`
+    with `--per-class-limit` for tiny report-friendly Imagenette smoke inputs。
+  - Extended the optional classifier-head fine-tuning workflow to record
+    `train_label_counts`, `eval_label_counts`, `num_train_classes`, and
+    `num_eval_classes` in `summary.json`。
+  - Added optional periodic evaluation output in `eval_metrics.csv` with
+    `step`, `eval_loss`, and `eval_accuracy` columns for notebook plotting。
+  - Added optional `--reinit-head --seed` support to reinitialize only the
+    classifier head for clearer learning-curve demonstrations while keeping the
+    pretrained classifier head as the default。
+  - Updated reusable docs with short smoke, checkpoint/resume, and
+    throughput/time command profiles。
+- Claim boundary：
+  - This remains a classifier-head-only workflow with the ViT backbone frozen。
+  - The added metrics support report analysis and plotting, but does not make
+    the run a full ViT fine-tuning study, Imagenette dataset-level accuracy
+    benchmark, or controlled hardware benchmark。
+  - This patch did not run cloud commands, TPU jobs, model downloads, `gcloud`
+    resource creation/deletion, commits, or pushes。
+
 ## Planned Phases
 
 ### Phase 6: Real MNIST/Fashion-MNIST and Curated Local Result

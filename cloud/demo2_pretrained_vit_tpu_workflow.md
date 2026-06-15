@@ -7,7 +7,8 @@ recommended executable path from local baseline to TPU cleanup, start with
 This document keeps details that are useful after the quickstart: resource
 creation variants, queued-resource state interpretation, spot and TRC spot
 notes, monitoring and evidence guidance, cleanup discipline, troubleshooting
-notes, and the course-specific TRC spot TPU evidence appendices.
+notes, optional classifier-head fine-tuning smoke evidence, and the
+course-specific TRC spot TPU evidence appendices.
 
 TRC was the funding/quota path used for the course project. TRC is not required
 by the code itself. Any valid Google Cloud TPU quota and funding path may be
@@ -30,7 +31,8 @@ appropriate.
 - **Google Cloud Shell or local terminal with `gcloud`**: cloud auth, resource
   creation, SSH, artifact retrieval, and cleanup.
 - **TPU VM shell**: repository checkout, dependency setup, JAX TPU verification,
-  and Demo 2 execution.
+  and Demo 2 execution, including the optional classifier-head fine-tuning
+  smoke workflow.
 
 ## Placeholders And Privacy
 
@@ -208,6 +210,17 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
 Do not claim TPU execution succeeded unless backend/device verification reports
 TPU and the Demo 2 command completes on the TPU VM.
 
+Optional classifier-head fine-tuning is also part of Demo 2. The script
+`examples/demo2_pretrained_vit_finetune.py` freezes the ViT backbone, updates
+only the classifier head, and writes generated artifacts under
+`runs/vit-finetune/`. Use the quickstart for the executable TPU command and
+GCS-backed resume sequence. The observed fine-tuning evidence is a smoke
+workflow result only: a first `v6e-1` spot run in `us-east1-d`, a real spot or
+maintenance interruption after that run, GCS checkpoint copies at steps `15100`,
+`15120`, and `15140`, and a successful restore/resume run on `v6e-1` spot in
+`europe-west4-a`. Do not describe this as full ViT fine-tuning or an accuracy
+benchmark.
+
 ## Imagenette 320 Cloud TPU Inference Evidence
 
 The repository now has retrieved TPU JSON artifacts for Imagenette 320
@@ -277,6 +290,11 @@ universal TPU speedup claim.
 
 - Raw TPU JSON belongs under ignored `runs/vit-inference/`.
 - Generated comparison JSON also belongs under ignored `runs/vit-inference/`.
+- Raw fine-tuning summaries, metrics, logs, predictions, checkpoints, and
+  resume artifacts belong under ignored `runs/vit-finetune/`.
+- Durable fine-tuning checkpoint copies may temporarily live in GCS. Use
+  placeholder bucket names in docs, keep GCS object contents out of Git, and
+  commit only intentionally reduced report summaries under `report/results/`.
 - Curated Markdown tables may be committed under `report/results/` when they are
   intentionally report-ready.
 - Do not commit model caches, Hugging Face cache files, private images, raw cloud
@@ -286,6 +304,10 @@ universal TPU speedup claim.
 
 Useful monitoring and observability evidence can include:
 
+- Application metrics: loss, step time, examples per second, runtime,
+  checkpoint step, resume start step, and final step.
+- Checkpoint evidence: checkpoint directory, latest checkpoint step, restored
+  start step, final step, and whether the run resumed.
 - Google Cloud Console resource lifecycle notes.
 - Cloud Monitoring charts for TPU utilization, host CPU, memory, or idle time,
   if available.
@@ -311,10 +333,25 @@ Capture these items for each real TPU attempt:
   local device count, and devices.
 - Demo command and output artifact path.
 - TPU JSON artifact path.
+- For fine-tuning attempts: `summary.json`, `metrics.csv`, checkpoint directory,
+  latest checkpoint step, resume command, resume start step, final step, and
+  whether controlled SIGTERM or real spot interruption was used.
+- For GCS-backed resume: bucket placeholder, checkpoint object prefix, copied
+  checkpoint steps, restore source, resume run output path, and confirmation
+  that Orbax stored only the classifier head, optimizer state, step, and
+  metadata.
 - Artifact retrieval command.
 - Cleanup command and deletion verification output.
 - Comparison command and curated Markdown table path.
 - Limitations and failed attempts, if any.
+
+For spot or preemptible TPU risk, controlled SIGTERM plus resume is the primary
+deterministic checkpoint evidence path. Real interruption is non-deterministic
+and may not send graceful SIGTERM. The observed fine-tuning workflow also had a
+real spot or maintenance interruption after the first run, then restored from
+GCS on a replacement TPU VM. Durable resume after TPU VM deletion requires
+copying checkpoints to Google Cloud Storage or another durable location before
+deleting the VM.
 
 ## Cleanup Discipline
 
@@ -396,7 +433,7 @@ Artifact and comparison evidence:
   succeeded, and queued-resource and TPU-VM list commands returned zero items in
   `us-east1-d`.
 
-Recorded TPU JSON fields for this smoke run:
+Recorded TPU JSON fields for this public-example inference smoke run:
 
 ```text
 backend=tpu
@@ -424,6 +461,28 @@ Smoke-run limitations:
 - Short benchmark loop.
 - No dataset-level accuracy evaluation.
 - Not a full controlled hardware benchmark.
+
+## Appendix: Demo 2 Fine-Tuning GCS Resume Evidence
+
+The optional classifier-head fine-tuning workflow has now been observed on TPU
+as a smoke workflow, not as an accuracy benchmark.
+
+Observed non-private facts:
+
+- First run: `v6e-1` spot TPU in `us-east1-d`.
+- Interruption: real spot or maintenance interruption occurred after the first
+  run.
+- Durable checkpoint copies: GCS held checkpoint steps `15100`, `15120`, and
+  `15140`.
+- Resume run: `v6e-1` spot TPU in `europe-west4-a`.
+- Resume summary fields: `backend=tpu`, `resumed_from_checkpoint=true`,
+  `start_step=15140`, `final_step=51538`,
+  `trainable_scope=classifier_head_only`, and `frozen_scope=vit_backbone`.
+
+Raw run directories, checkpoint files, logs, predictions, datasets, and model
+caches remain ignored and should not be committed. The reusable first-run,
+GCS-copy, restore/resume, monitoring, retrieval, and cleanup commands are in
+`cloud/demo2_tpu_quickstart.md`.
 
 ## Appendix: Course Imagenette 320 TPU Inference Evidence
 
