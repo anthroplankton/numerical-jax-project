@@ -15,5 +15,5 @@ Public examples are small reproducible smoke/demo evidence and are not part of t
 | public examples | external Ryzen 7735HS WSL CPU | 4 | run | cpu | cpu | 5 | 2 | 3 | 5 | 0.274197 | 2.74197 | 9.11753 | demo2_external_ryzen7735hs_wsl_public_examples_cpu_b4.json |
 | public examples | external Ryzen 7735HS WSL CPU | 8 | not run | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | not run |
 | public examples | cloud TPU | 1 | not run | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | not run |
-| public examples | cloud TPU | 4 | run | tpu | TPU v6 lite | 5 | 2 | 3 | 5 | 0.00109825 | 0.0109825 | 2276.34 | demo2_cloud_public_examples_tpu_b4.json |
+| public examples | cloud TPU | 4 | run | tpu | TPU v6 lite | 5 | 2 | 3 | 5 | 0.00109104 | 0.0109104 | 2291.39 | demo2_cloud_public_examples_tpu_b4.json |
 | public examples | cloud TPU | 8 | not run | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | not run |
