@@ -106,9 +106,9 @@ private cloud screenshots。
 因此，目前可以宣稱已完成第一個 TPU smoke run 與 artifact retrieval /
 comparison / cleanup verification，也可以宣稱已整理 Imagenette 320 TPU
 inference timing evidence，包括 single-device vs explicit sharded inference
-timing artifacts。不能宣稱 training、fine-tuning、full benchmark study、
-dataset-level accuracy evaluation、controlled hardware comparison，或 TPU
-generally 1931x faster。
+timing artifacts。這些 artifacts 的範圍是 ViT inference timing；training、
+fine-tuning、full benchmark study、dataset-level accuracy evaluation、
+controlled hardware comparison，與 general TPU speedup claim 屬於不同範圍。
 
 ## Operational Notes
 
@@ -125,7 +125,7 @@ generally 1931x faster。
 
 ## Remaining Work
 
-以下工作仍屬後續延伸，不應在尚未執行前寫成 completed evidence：
+以下工作屬於後續延伸；完成後再整理成對應的 evidence：
 
 - 保存更完整的 branch / exact commit / environment metadata。
 - 擷取可公開的 monitoring evidence 或 redacted screenshots。
@@ -156,7 +156,7 @@ generally 1931x faster。
 
 ## Next Planned Steps
 
-1. 保留第一個 TPU smoke-run evidence，但不要提交 raw JSON under
+1. 保留第一個 TPU smoke-run evidence；raw JSON 維持在 ignored
    `runs/vit-inference/`。
 2. 將 curated comparison table 保留在：
    `report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md`。

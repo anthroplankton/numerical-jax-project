@@ -748,7 +748,8 @@ Set variables for one run, then rerun the same command block after changing the
 split, batch size, output path, or sharding arguments. Set `INFER_OUTPUT`
 explicitly so the original `*_tpu_b*.json` names and the labeled
 `*_tpu_single_v6e1_b*.json` or `*_tpu_sharded_v6e8_b*.json` names both work.
-Do not duplicate the full command for every batch size.
+Use the variable block rather than duplicating the full command for every batch
+size.
 
 Examples for the original TPU table family:
 
@@ -912,8 +913,8 @@ uv run python scripts/compare_vit_results.py \
   --markdown-output report/results/demo2_cloud_imagenette320_valfull_tpu_sharded_v6e8.md
 ```
 
-Do not hand-write benchmark table values. Regenerate Markdown tables from the
-JSON artifacts under `runs/vit-inference/`.
+Regenerate Markdown tables from the JSON artifacts under `runs/vit-inference/`
+rather than hand-writing benchmark table values.
 
 ### Generate Grouped Summaries
 
@@ -1149,10 +1150,10 @@ runs/vit-finetune/demo2_cloud_vit_head_finetune_tpu_sharded_curve_b64/
 runs/vit-finetune/demo2_cloud_vit_head_finetune_tpu_sharded_curve_b256/
 ```
 
-Do not add a report-facing single-vs-multi fine-tuning comparison table unless
-there is an intentionally reduced training-summary artifact design. Raw
-fine-tuning summaries, metrics, logs, predictions, and checkpoints stay under
-ignored `runs/vit-finetune/`.
+A report-facing single-vs-multi fine-tuning comparison table should be based on
+an intentionally reduced training-summary artifact design. Raw fine-tuning
+summaries, metrics, logs, predictions, and checkpoints stay under ignored
+`runs/vit-finetune/`.
 
 **Checkpoint/resume workflow profile**
 
@@ -1558,5 +1559,5 @@ the VM is deleted.
   only. They do not compute Imagenette labels, top-k accuracy, or dataset-level
   evaluation metrics.
 - The tables are not a full controlled hardware benchmark study.
-- Do not generalize any timing ratio beyond the specific artifacts and command
-  settings used to generate it.
+- Timing ratios apply only to the specific artifacts and command settings used to
+  generate them.

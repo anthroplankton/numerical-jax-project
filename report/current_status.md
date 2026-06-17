@@ -37,9 +37,9 @@ pretrained ViT workflow with JAX/Flax**。
 
 TPU execution evidence now exists for a small public-example smoke run,
 Imagenette 320 validation-manifest inference timing, and explicit single-device
-versus multi-device sharded TPU inference timing. It should not be described as
-training, a full benchmark study, dataset-level accuracy evaluation, controlled
-hardware comparison, or a universal TPU speedup claim. The optional
+versus multi-device sharded TPU inference timing. Its scope is inference timing,
+rather than training, a full benchmark study, dataset-level accuracy evaluation,
+controlled hardware comparison, or a universal TPU speedup claim. The optional
 classifier-head fine-tuning extension has also produced TPU smoke workflow
 evidence: first run on `v6e-1` spot in `us-east1-d`, real spot or maintenance
 interruption after that run, GCS checkpoint copies at steps `15100`, `15120`,
@@ -204,14 +204,12 @@ Key recorded fields:
 - num_batches：2
 - num_padded_images：3
 - timed_batch_runs：10
-- total timed inference：約 0.01098252 秒
-- throughput：約 2276.3446 images/sec
+- exact timing, throughput, and speedup values：
+  `report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md`
 
-The generated comparison table reports about 1931.76x throughput speedup versus
-the local CPU `b4` artifact for this specific smoke run. This statement is
-limited to the five-image public smoke run. It is not a general TPU speed claim,
-not dataset-level accuracy evaluation, and not a full controlled hardware
-benchmark.
+This evidence is limited to the five-image public smoke run. It is not a general
+TPU speed claim, not dataset-level accuracy evaluation, and not a full controlled
+hardware benchmark.
 
 Imagenette 320 TPU inference JSON artifacts have also been retrieved under
 ignored `runs/vit-inference/` for:

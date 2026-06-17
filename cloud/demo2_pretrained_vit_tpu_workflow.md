@@ -63,7 +63,7 @@ Repository checkout placeholders are used inside the TPU VM shell:
 results also record observed code provenance as `git_commit`, `git_branch`, and
 `git_dirty` when Git metadata is available inside the TPU VM shell. Use the JSON
 `git_commit` field to audit the code version that actually produced a new
-artifact; do not invent these fields for legacy artifacts.
+artifact; keep legacy artifact provenance metadata unchanged.
 
 Do not document or commit project numbers, billing account IDs, private
 hostnames, private IP addresses, credential paths, SSH key fingerprints, raw
@@ -207,8 +207,8 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
   --output runs/vit-inference/demo2_cloud_public_examples_tpu_b4.json
 ```
 
-Do not claim TPU execution succeeded unless backend/device verification reports
-TPU and the Demo 2 command completes on the TPU VM.
+TPU execution success evidence requires backend/device verification reporting
+TPU and a completed Demo 2 command on the TPU VM.
 
 Optional classifier-head fine-tuning is also part of Demo 2. The script
 `examples/demo2_pretrained_vit_finetune.py` freezes the ViT backbone, updates
@@ -219,10 +219,10 @@ GCS-backed resume sequence. The observed fine-tuning evidence is a smoke
 workflow result only: a first `v6e-1` spot run in `us-east1-d`, a real spot or
 maintenance interruption after that run, GCS checkpoint copies at steps `15100`,
 `15120`, and `15140`, and a successful restore/resume run on `v6e-1` spot in
-`europe-west4-a`. Explicit sharded fine-tuning TPU execution is still a planned
-manual validation target until a real sharded artifact is generated and
-retrieved. Do not describe this as full ViT fine-tuning or an accuracy
-benchmark.
+`europe-west4-a`. Explicit sharded fine-tuning TPU execution uses the same
+manual validation path when a matching sharded artifact is generated and
+retrieved. This is classifier-head-only workflow evidence rather than full ViT
+fine-tuning or an accuracy benchmark.
 
 ## Imagenette 320 Cloud TPU Inference Evidence
 
@@ -451,25 +451,17 @@ Artifact and comparison evidence:
   succeeded, and queued-resource and TPU-VM list commands returned zero items in
   `us-east1-d`.
 
-Recorded TPU JSON fields for this public-example inference smoke run:
+Recorded TPU JSON fields for this public-example inference smoke run include
+backend, device kind, manifest kind, image count, batch size, batch count,
+padding count, and timed batch runs. The curated comparison table is the source
+of exact timing, throughput, and speedup values:
 
 ```text
-backend=tpu
-device_kind=TPU v6 lite
-mode=image_manifest
-manifest_kind=public_example
-num_images=5
-batch_size=4
-num_batches=2
-num_padded_images=3
-timed_batch_runs=10
-total_timed_inference_sec=about 0.01098252
-throughput_images_per_sec=about 2276.3446
+report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md
 ```
 
-The generated comparison table reports about 1931.76x throughput speedup versus
-the local CPU `b4` public-examples artifact for this specific five-image smoke
-run. This should not be generalized to TPU performance overall.
+This public-example comparison is limited to the artifacts and command settings
+used for that table.
 
 Smoke-run limitations:
 

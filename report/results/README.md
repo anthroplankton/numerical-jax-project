@@ -21,8 +21,7 @@ include privacy-safe Git provenance fields (`git_commit`, `git_branch`, and
 `git_dirty`) when Git metadata is available from the checkout. `git_commit` is
 the observed code version from `git rev-parse HEAD`; `git_dirty` records whether
 `git status --short` had any output, without storing the full status. Legacy JSON
-artifacts may not contain these fields; do not fabricate commit metadata for
-them.
+artifacts may not contain these fields; keep their provenance metadata unchanged.
 
 This file is a result artifact index, not a TPU execution runbook. For the
 reusable TPU execution path, see `../../cloud/demo2_tpu_quickstart.md`; for
@@ -61,8 +60,8 @@ The optional Demo 2 fine-tuning extension writes generated artifacts under
 `eval_metrics.csv` is the preferred lightweight source for notebook
 learning-curve plots. Add a curated report-facing summary under
 `report/results/` only after a real run is executed and the summary is
-intentionally reduced for the report. Do not add a sharded TPU fine-tuning
-summary until an actual sharded TPU artifact exists.
+intentionally reduced for the report. A curated sharded TPU fine-tuning summary
+belongs here when a matching sharded TPU artifact exists.
 
 Fine-tuning checkpoints should not include the frozen ViT backbone or Hugging
 Face model cache. The intended checkpoint evidence is classifier-head
@@ -141,8 +140,8 @@ The external Ryzen 7735HS WSL tables are supplementary CPU evidence. Keep them
 separate from the local-machine tables:
 
 - `demo2_external_ryzen7735hs_wsl_public_examples_cpu.md`: public example image
-  set, `b1` and `b4` only. External public `b8` is pending and should not be
-  fabricated.
+  set, `b1` and `b4` only. External public `b8` is outside the current curated
+  table scope.
 - `demo2_external_ryzen7735hs_wsl_imagenette320_val64_cpu.md`: Imagenette 320
   validation manifest with 64 images, `b1`, `b4`, and `b8`.
 - `demo2_external_ryzen7735hs_wsl_imagenette320_val256_cpu.md`: Imagenette 320
@@ -218,6 +217,6 @@ kind `TPU v6 lite`.
 
 Interpret the table narrowly. It is a first public-example smoke run with five
 images, batch size 4, three padded final-batch entries, and a short benchmark
-loop. It is not a dataset-level accuracy evaluation and not a controlled
-hardware benchmark. Do not describe the reported speedup as general TPU
-performance.
+loop. It is not a dataset-level accuracy evaluation or a controlled hardware
+benchmark. The reported speedup is specific to these artifacts and command
+settings.

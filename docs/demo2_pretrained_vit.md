@@ -452,8 +452,8 @@ platform, for example `demo2_local_imagenette320_val64_cpu.md`. Supplementary
 external-machine artifacts should use a neutral environment label, such as
 `demo2_external_ryzen7735hs_wsl_imagenette320_val64_cpu.md`.
 
-The current supplementary external public examples table has `b1` and `b4`
-only. External public `b8` is pending and should not be fabricated.
+The current supplementary external public examples table covers `b1` and `b4`.
+External public `b8` is outside the current curated table scope.
 
 For CPU artifacts, avoid including a GPU model in the file name. Reserve labels
 such as `rx7600s` and `rocm` for explicit ROCm/GPU sanity-check artifacts with
@@ -657,20 +657,25 @@ batch sharding, prediction collection uses a jitted prediction step rather than
 falling back to an unsharded prediction path. Scalar loss and accuracy outputs
 do not use explicit output shardings.
 
-Example TPU VM inference command after a multi-device TPU resource is prepared:
+Example TPU VM inference command after a multi-device TPU resource is prepared.
+Set `SHARDED_BATCH_SIZE` to a global batch size divisible by the visible JAX
+device count used for the mesh.
 
 ```bash
+export SHARDED_BATCH_SIZE=8
+export SHARDED_OUTPUT="runs/vit-inference/demo2_sharded_public_examples_tpu_b${SHARDED_BATCH_SIZE}.json"
+
 uv run --group pretrained python examples/pretrained_vit_inference.py \
   --jax-platform tpu \
   --image-manifest examples/assets/manifest.txt \
-  --batch-size 4 \
+  --batch-size "$SHARDED_BATCH_SIZE" \
   --batch-sharding data \
   --mesh-axis-name data \
   --require-multiple-devices \
   --min-shard-devices 2 \
   --warmup-steps 1 \
   --benchmark-steps 5 \
-  --output runs/vit-inference/demo2_sharded_public_examples_tpu_b4.json
+  --output "$SHARDED_OUTPUT"
 ```
 
 The generated inference JSON and fine-tuning `summary.json` include a top-level
@@ -678,8 +683,9 @@ The generated inference JSON and fine-tuning `summary.json` include a top-level
 shape, per-device batch size, partition specs, and whether explicit jit
 shardings were applied. For inference, the curated `single_v6e1` and
 `sharded_v6e8` table families under `report/results/` are completed timing
-artifacts. For classifier-head fine-tuning, do not describe explicit sharded TPU
-execution as completed until a real sharded fine-tuning artifact exists.
+artifacts. Classifier-head fine-tuning currently has the same sharding workflow
+surface; completed sharded fine-tuning evidence requires a generated sharded
+fine-tuning artifact.
 
 Expected manifest metadata for the current image sets:
 
@@ -687,6 +693,7 @@ Expected manifest metadata for the current image sets:
 | --- | ---: | ---: | ---: | ---: |
 | Public `examples/assets/manifest.txt` | 5 | 1 | 5 | 0 |
 | Public `examples/assets/manifest.txt` | 5 | 4 | 2 | 3 |
+| Public `examples/assets/manifest.txt` | 5 | 8 | 1 | 3 |
 | Local `data/local/demo2_vit_images/manifest.txt` | 15 | 1 | 15 | 0 |
 | Local `data/local/demo2_vit_images/manifest.txt` | 15 | 4 | 4 | 1 |
 
@@ -795,17 +802,15 @@ uv run python scripts/compare_vit_results.py \
 ```
 
 The JSON comparison output remains an ignored/generated artifact under
-`runs/vit-inference/`. Only the intentionally curated report-ready Markdown table
-belongs under `report/results/`. The current table reports about 1931.76x
-throughput speedup for this specific small public smoke-run comparison; it
-should not be generalized to TPU performance overall.
+`runs/vit-inference/`. The intentionally curated report-ready Markdown table
+under `report/results/` is the source of exact timing, throughput, and speedup
+values for this public-example `b4` comparison.
 
-Do not mix external Ryzen 7735HS WSL CPU artifacts into the primary local CPU vs
-cloud TPU table. External CPU evidence is supplementary cross-machine CPU
+Keep the primary local CPU versus cloud TPU table limited to those two artifacts.
+External Ryzen 7735HS WSL CPU evidence is supplementary cross-machine CPU
 evidence. The current three-way public-example smoke/demo view belongs in the
-separate `report/results/demo2_public_examples_summary.md`; it should not be
-treated as the primary local-vs-TPU result because it mixes hardware, OS/WSL,
-cache, and thermal variables.
+separate `report/results/demo2_public_examples_summary.md` because it mixes
+hardware, OS/WSL, cache, and thermal variables.
 
 ## Local CUDA Limitation
 
@@ -850,9 +855,9 @@ needed.
 - The Imagenette TPU tables are ViT inference timing evidence for retrieved
   JSON artifacts. They do not train or fine-tune the model, compute Imagenette
   accuracy, or establish a universal TPU speedup claim.
-- The optional fine-tuning extension is a classifier-head-only workflow smoke
-  run. It should not be described as full ViT fine-tuning, a large benchmark, or
-  model-quality evaluation.
+- The optional fine-tuning extension is classifier-head-only workflow smoke
+  evidence rather than full ViT fine-tuning, a large benchmark, or model-quality
+  evaluation.
 - Private manifest runs are qualitative local demonstrations, not public
   benchmark datasets or classification-accuracy measurements.
 - Dataset-level accuracy evaluation, longer benchmark loops, monitoring
