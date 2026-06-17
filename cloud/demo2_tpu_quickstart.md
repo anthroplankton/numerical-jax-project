@@ -74,14 +74,14 @@ These variables are used from **Google Cloud Shell or a local terminal with
 
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
-export REGION="us-east1"
-export ZONE="us-east1-d"
-export TPU_NAME="demo2-vit-v6e1-use1-spot"
-export QUEUED_RESOURCE_ID="${TPU_NAME}-qr"
-export ACCELERATOR_TYPE="v6e-1"
-export RUNTIME_VERSION="v2-alpha-tpuv6e"
-export NETWORK_NAME="default"
-export SUBNET_NAME="default"
+export REGION="<REGION>"
+export ZONE="<ZONE>"
+export TPU_NAME="<TPU_NAME>"
+export QUEUED_RESOURCE_ID="<QUEUED_RESOURCE_ID>"
+export ACCELERATOR_TYPE="<ACCELERATOR_TYPE>"
+export RUNTIME_VERSION="<RUNTIME_VERSION>"
+export NETWORK_NAME="<NETWORK_NAME>"
+export SUBNET_NAME="<SUBNET_NAME>"
 ```
 
 These common variable names are reused by the resource profiles below. Replace
@@ -219,21 +219,11 @@ publish real environment-specific bucket names or project identifiers. Replace
 `<BUCKET_SUFFIX>` with a lowercase value that makes the bucket globally unique
 when combined with `PROJECT_ID`; change it if the bucket name already exists.
 
-Example Path C variable block:
+Start with one selected resource profile above. Then add the GCS variables:
 
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
-export REGION="europe-west4"
-export ZONE="europe-west4-a"
-
-export TPU_NAME="demo2-vit-ft-v6e1-ew4a-spot"
-export QUEUED_RESOURCE_ID="${TPU_NAME}-qr"
-
-export ACCELERATOR_TYPE="v6e-1"
-export RUNTIME_VERSION="v2-alpha-tpuv6e"
-export NETWORK_NAME="default"
-export SUBNET_NAME="default"
-
+export REGION="<REGION>"
 export BUCKET_SUFFIX="<BUCKET_SUFFIX>"
 export BUCKET_NAME="${PROJECT_ID}-demo2-vit-ft-${BUCKET_SUFFIX}"
 export GCS_RUN_ROOT="gs://$BUCKET_NAME/numerical-jax-project/demo2-vit-finetune"
@@ -472,10 +462,24 @@ used as the source of truth for result provenance.
 Clone or update the repository:
 
 ```bash
-git clone "$REPO_URL" numerical-jax-project
+if [ ! -d numerical-jax-project/.git ]; then
+  git clone --origin origin "$REPO_URL" numerical-jax-project
+fi
 cd numerical-jax-project
-git fetch --all --prune
-git switch "$BRANCH"
+
+if git remote get-url origin >/dev/null 2>&1; then
+  git remote set-url origin "$REPO_URL"
+else
+  git remote add origin "$REPO_URL"
+fi
+
+git fetch origin --prune
+if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
+  git switch "$BRANCH"
+else
+  git switch --create "$BRANCH" --track "origin/$BRANCH"
+fi
+git pull --ff-only origin "$BRANCH"
 
 # Reproducible mode only, after replacing <COMMIT_SHA> with a real commit:
 # git checkout "$COMMIT_SHA"
@@ -522,15 +526,12 @@ run as a TPU run.
 
 Additional checks for sharded runs:
 
-Run this only before commands that use `--batch-sharding data`. After setting
-`INFER_BATCH_SIZE` or `FINETUNE_BATCH_SIZE`, confirm that the TPU VM exposes at
-least two visible JAX devices and that the selected global batch size is
-divisible by the visible device count.
+Run these only before commands that use `--batch-sharding data`.
+
+First, confirm that the TPU VM exposes at least two visible JAX devices:
 
 ```bash
 uv run python - <<'PY'
-import os
-
 import jax
 
 backend = jax.default_backend()
@@ -546,6 +547,19 @@ if backend != "tpu":
     raise SystemExit("default backend is not TPU")
 if device_count < 2:
     raise SystemExit("multi-device sharding requires at least 2 visible JAX devices")
+PY
+```
+
+After setting `INFER_BATCH_SIZE` or `FINETUNE_BATCH_SIZE`, confirm that the
+selected global batch size is divisible by the visible device count:
+
+```bash
+uv run python - <<'PY'
+import os
+
+import jax
+
+device_count = jax.device_count()
 
 checked_batch = False
 for name in ("INFER_BATCH_SIZE", "FINETUNE_BATCH_SIZE"):
@@ -562,7 +576,9 @@ for name in ("INFER_BATCH_SIZE", "FINETUNE_BATCH_SIZE"):
     print(f"{name}={batch_size} ok for visible device count {device_count}")
 
 if not checked_batch:
-    print("Set INFER_BATCH_SIZE or FINETUNE_BATCH_SIZE before checking divisibility.")
+    raise SystemExit(
+        "set INFER_BATCH_SIZE or FINETUNE_BATCH_SIZE before checking divisibility"
+    )
 PY
 ```
 
@@ -654,9 +670,9 @@ run Path C fine-tuning.
 
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
-export ZONE="us-east1-d"
-export TPU_NAME="demo2-vit-v6e1-use1-spot"
-export QUEUED_RESOURCE_ID="${TPU_NAME}-qr"
+export ZONE="<ZONE>"
+export TPU_NAME="<TPU_NAME>"
+export QUEUED_RESOURCE_ID="<QUEUED_RESOURCE_ID>"
 export REPO_URL="https://github.com/anthroplankton/numerical-jax-project.git"
 export BRANCH="main"
 
@@ -901,10 +917,11 @@ JSON artifacts under `runs/vit-inference/`.
 
 ### Generate Grouped Summaries
 
-If a local CPU-vs-cloud TPU Imagenette comparison is added later, generate it
-only after choosing a clear comparison baseline and preserving the limitations.
-The grouped cross-device Imagenette summaries are generated from the result
-directory:
+The grouped summary script recognizes the original local CPU, external CPU, and
+original cloud TPU raw JSON naming families. It does not include the
+`single_v6e1` or `sharded_v6e8` table families above unless the script is
+extended. Generate grouped summaries from the result directory only after
+choosing a clear comparison baseline and preserving the limitations:
 
 ```bash
 uv run python scripts/generate_vit_summary_tables.py --input-dir runs/vit-inference --output-dir report/results
@@ -936,7 +953,7 @@ destructive cleanup examples.
 
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
-export REGION="europe-west4"
+export REGION="<REGION>"
 export BUCKET_SUFFIX="<BUCKET_SUFFIX>"
 export BUCKET_NAME="${PROJECT_ID}-demo2-vit-ft-${BUCKET_SUFFIX}"
 export GCS_RUN_ROOT="gs://$BUCKET_NAME/numerical-jax-project/demo2-vit-finetune"

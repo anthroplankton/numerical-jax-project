@@ -77,12 +77,12 @@ needed and safe.
 | --- | --- | --- |
 | Normal on-demand TPU quota | Direct TPU VM or queued resource | May incur regular cost |
 | Spot quota | Queued resource with `--spot` | Availability and interruption behavior differ from on-demand |
-| TRC spot quota | Queued resource with `--spot` | Course project used this path |
+| TRC or institutional TPU quota | Match the available allocation mode | Use `--spot` only when the allocation is spot or preemptible |
 | No TPU quota or no budget | Local CPU only | Demo 2 still runs locally |
 | Long `WAITING_FOR_RESOURCES` | Delete queued resource and try another zone/type | Do not leave unused resources queued |
 
-The quickstart uses the queued-resource path because it matches the successful
-course run and works naturally with spot or TRC spot quota.
+The quickstart uses the queued-resource path because it keeps allocation state
+visible and works with both spot and on-demand queued-resource allocation modes.
 
 ## Direct TPU VM Creation Path
 
@@ -113,8 +113,8 @@ gcloud compute tpus tpu-vm delete <TPU_NAME> \
 
 ## Queued-Resource Path
 
-Queued resources are useful for spot quota, TRC spot quota, and cases where the
-resource may wait for capacity before provisioning.
+Queued resources are useful for spot allocation, on-demand queued allocation,
+and cases where the resource may wait for capacity before provisioning.
 
 Generic queued resource:
 
@@ -129,7 +129,7 @@ gcloud compute tpus queued-resources create <QUEUED_RESOURCE_ID> \
   --subnetwork=<SUBNET_NAME>
 ```
 
-Spot or TRC spot queued resource:
+Spot or preemptible queued resource:
 
 ```bash
 gcloud compute tpus queued-resources create <QUEUED_RESOURCE_ID> \
@@ -232,6 +232,10 @@ validation-manifest inference runs:
 - `val64`: batch sizes `b1`, `b4`, and `b8`.
 - `val256`: batch sizes `b1`, `b4`, and `b8`.
 - `val_full`: batch sizes `b1`, `b4`, and `b8`.
+- `val256` single/sharded family: `v6e-1` single-device and `v6e-8` explicit
+  batch-axis sharded runs.
+- `val_full` single/sharded family: `v6e-1` single-device and `v6e-8` explicit
+  batch-axis sharded runs.
 
 The repository does not download Imagenette automatically. Download Imagenette
 320 from its official source and preserve the same path on the local machine and
@@ -262,6 +266,10 @@ runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_b8.json
 runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_b1.json
 runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_b4.json
 runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_b8.json
+runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_single_v6e1_b*.json
+runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_sharded_v6e8_b*.json
+runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_single_v6e1_b*.json
+runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_sharded_v6e8_b*.json
 ```
 
 Retrieve a complete TPU VM result folder from **Google Cloud Shell or a local
@@ -283,6 +291,10 @@ The curated TPU Markdown table paths are:
 report/results/demo2_cloud_imagenette320_val64_tpu.md
 report/results/demo2_cloud_imagenette320_val256_tpu.md
 report/results/demo2_cloud_imagenette320_valfull_tpu.md
+report/results/demo2_cloud_imagenette320_val256_tpu_single_v6e1.md
+report/results/demo2_cloud_imagenette320_val256_tpu_sharded_v6e8.md
+report/results/demo2_cloud_imagenette320_valfull_tpu_single_v6e1.md
+report/results/demo2_cloud_imagenette320_valfull_tpu_sharded_v6e8.md
 ```
 
 These are ViT inference timing tables only. They are not training results, not
@@ -498,6 +510,8 @@ Imagenette 320 validation-manifest inference:
 - `val64`: `b1`, `b4`, and `b8`.
 - `val256`: `b1`, `b4`, and `b8`.
 - `val_full`: `b1`, `b4`, and `b8`.
+- `val256`: `single_v6e1` and `sharded_v6e8` table families.
+- `val_full`: `single_v6e1` and `sharded_v6e8` table families.
 
 The curated Markdown tables are:
 
@@ -505,12 +519,17 @@ The curated Markdown tables are:
 report/results/demo2_cloud_imagenette320_val64_tpu.md
 report/results/demo2_cloud_imagenette320_val256_tpu.md
 report/results/demo2_cloud_imagenette320_valfull_tpu.md
+report/results/demo2_cloud_imagenette320_val256_tpu_single_v6e1.md
+report/results/demo2_cloud_imagenette320_val256_tpu_sharded_v6e8.md
+report/results/demo2_cloud_imagenette320_valfull_tpu_single_v6e1.md
+report/results/demo2_cloud_imagenette320_valfull_tpu_sharded_v6e8.md
 ```
 
 Recorded table scope:
 
 - Backend: `tpu`.
-- JSON-visible device kind: `TPU v6 lite`.
+- TPU device metadata: recorded in the raw JSON artifacts and summarized in the
+  table families.
 - Benchmark shape: one warmup step and five benchmark steps.
 - Full validation manifest size: 3925 images.
 - Full validation `b4` and `b8` runs include 3 padded final-batch entries.

@@ -6,7 +6,8 @@ It uses raw JSON outputs under ignored `runs/vit-inference/`, curated
 report-ready Markdown tables under `report/results/`, manifest batching, public
 example assets, supplementary external CPU evidence, a completed Google Cloud
 TPU public-example smoke run, and retrieved Imagenette 320 TPU inference
-artifacts. The default model is `google/vit-base-patch16-224` from Hugging Face.
+artifacts, including single-device and explicit multi-device sharded TPU table
+families. The default model is `google/vit-base-patch16-224` from Hugging Face.
 The optional head fine-tuning extension writes generated smoke-run artifacts
 under ignored `runs/vit-finetune/`.
 
@@ -15,13 +16,14 @@ path for the project. Demo 1 remains preserved as background raw-JAX CNN work,
 and Demo 3 remains optional future work.
 
 TPU inference evidence now includes a small public-example smoke run plus
-Imagenette 320 `val64`, `val256`, and `val_full` inference timing tables. The
-optional fine-tuning extension is part of Demo 2, not Demo 3, and has produced
-classifier-head-only TPU smoke workflow evidence with GCS checkpoint
-restore/resume. It should still be described narrowly: workflow,
-checkpoint/resume, and TPU execution evidence, not full ViT fine-tuning, not a
-dataset-level accuracy evaluation, and not a full controlled benchmark. For
-actual TPU execution, use
+Imagenette 320 `val64`, `val256`, and `val_full` inference timing tables,
+including `v6e-1` single-device and `v6e-8` explicit sharded table families for
+`val256` and `val_full`. The optional fine-tuning extension is part of Demo 2,
+not Demo 3, and has produced classifier-head-only TPU smoke workflow evidence
+with GCS checkpoint restore/resume. It should still be described narrowly:
+workflow, checkpoint/resume, and TPU execution evidence, not full ViT
+fine-tuning, not a dataset-level accuracy evaluation, and not a full controlled
+benchmark. For actual TPU execution, use
 `cloud/demo2_tpu_quickstart.md`. For resource variants, monitoring/evidence
 guidance, cleanup discipline, and course evidence appendices, see
 `cloud/demo2_pretrained_vit_tpu_workflow.md`.
@@ -498,7 +500,7 @@ that count.
   "command_used": "python examples/pretrained_vit_inference.py --jax-platform cpu ...",
   "output_path": "runs/vit-inference/metrics.json",
   "git_commit": "0123456789abcdef0123456789abcdef01234567",
-  "git_branch": "feat/demo2-tpu-evidence",
+  "git_branch": "<branch-name>",
   "git_dirty": false,
   "model_name": "google/vit-base-patch16-224",
   "selected_jax_platform": "cpu",
@@ -549,7 +551,7 @@ mistaken for whole-run predictions:
   "command_used": "python examples/pretrained_vit_inference.py --jax-platform cpu ...",
   "output_path": "runs/vit-inference/demo2_local_private_examples_cpu_b4.json",
   "git_commit": "0123456789abcdef0123456789abcdef01234567",
-  "git_branch": "feat/demo2-tpu-evidence",
+  "git_branch": "<branch-name>",
   "git_dirty": false,
   "manifest_path": "data/local/demo2_vit_images/manifest.txt",
   "manifest_kind": "local_private",
@@ -624,10 +626,11 @@ throughput counts.
 
 ## Explicit Batch-Axis Sharding Option
 
-The previous Demo 2 TPU workflow showed TPU backend execution, but it did not
-yet show explicit multi-device JAX sharding. The inference script and optional
-classifier-head fine-tuning script now include a planned manual validation path
-for batch-axis data sharding:
+The inference script and optional classifier-head fine-tuning script expose an
+explicit batch-axis data-sharding option. Inference now has retrieved
+single-device and explicit multi-device sharded TPU timing artifacts. Sharded
+classifier-head fine-tuning remains a command/workflow path until an actual
+sharded fine-tuning artifact is generated and retrieved.
 
 - `--batch-sharding none|data`: defaults to `none`; `data` uses explicit
   batch-axis sharding for image batches.
@@ -654,7 +657,7 @@ batch sharding, prediction collection uses a jitted prediction step rather than
 falling back to an unsharded prediction path. Scalar loss and accuracy outputs
 do not use explicit output shardings.
 
-Planned TPU VM inference command after a multi-device TPU resource is prepared:
+Example TPU VM inference command after a multi-device TPU resource is prepared:
 
 ```bash
 uv run --group pretrained python examples/pretrained_vit_inference.py \
@@ -673,9 +676,10 @@ uv run --group pretrained python examples/pretrained_vit_inference.py \
 The generated inference JSON and fine-tuning `summary.json` include a top-level
 `sharding` object with the requested mode, mesh axis name, device counts, mesh
 shape, per-device batch size, partition specs, and whether explicit jit
-shardings were applied. This is a planned evidence target until an actual
-sharded TPU artifact is generated and retrieved; do not describe explicit
-sharded TPU execution as completed based on these commands alone.
+shardings were applied. For inference, the curated `single_v6e1` and
+`sharded_v6e8` table families under `report/results/` are completed timing
+artifacts. For classifier-head fine-tuning, do not describe explicit sharded TPU
+execution as completed until a real sharded fine-tuning artifact exists.
 
 Expected manifest metadata for the current image sets:
 

@@ -164,6 +164,16 @@ artifacts under ignored `runs/vit-inference/`:
   with 256 images, `b1`, `b4`, and `b8`.
 - `demo2_cloud_imagenette320_valfull_tpu.md`: full Imagenette 320 validation
   manifest with 3925 images, `b1`, `b4`, and `b8`.
+- `demo2_cloud_imagenette320_val256_tpu_single_v6e1.md`: single-device `v6e-1`
+  TPU table for the Imagenette 320 `val256` manifest.
+- `demo2_cloud_imagenette320_val256_tpu_sharded_v6e8.md`: explicit
+  multi-device sharded `v6e-8` TPU table for the Imagenette 320 `val256`
+  manifest.
+- `demo2_cloud_imagenette320_valfull_tpu_single_v6e1.md`: single-device `v6e-1`
+  TPU table for the full Imagenette 320 validation manifest.
+- `demo2_cloud_imagenette320_valfull_tpu_sharded_v6e8.md`: explicit
+  multi-device sharded `v6e-8` TPU table for the full Imagenette 320 validation
+  manifest.
 
 Regenerate these tables locally after the TPU JSON files have been retrieved:
 
@@ -187,7 +197,11 @@ uv run python scripts/compare_vit_results.py \
   --markdown-output report/results/demo2_cloud_imagenette320_valfull_tpu.md
 ```
 
-Interpret these tables narrowly. They are ViT inference timing evidence only:
+The single-device and sharded table regenerate commands are documented in
+`cloud/demo2_tpu_quickstart.md` alongside their raw JSON naming patterns. Keep
+those tables in the same inference-only scope as the original TPU tables.
+
+Interpret these tables narrowly. They are ViT inference timing summaries only:
 not training, not Imagenette accuracy evaluation, not a controlled hardware
 benchmark, and not a universal TPU speedup claim.
 
