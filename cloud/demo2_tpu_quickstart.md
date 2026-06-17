@@ -4,21 +4,23 @@
 
 This is the reusable Cloud TPU quickstart for Demo 2 pretrained ViT inference
 and the optional classifier-head fine-tuning smoke extension.
-It separates shared resource setup from three executable paths: public-example
-TPU inference smoke, Imagenette 320 TPU inference artifacts, and optional
-classifier-head fine-tuning with GCS checkpoint/resume. It also documents
-artifact retrieval, local comparison commands, and cleanup. Fine-tuning outputs
-use `runs/vit-finetune/` and are not part of the existing inference result
-tables.
+It separates shared resource setup from reusable run blocks: public-example TPU
+inference smoke, Imagenette 320 TPU inference artifacts, optional
+classifier-head fine-tuning with GCS checkpoint/resume, and explicit
+batch-axis sharding examples. It also documents artifact retrieval, local
+comparison commands, and cleanup. Example resource names, run names, and
+artifact filenames are reusable naming patterns. Replace them for a new
+environment and do not treat them as claims about current quota or performance.
+Fine-tuning outputs use `runs/vit-finetune/` and are separate from the
+inference result tables.
 
 Local CPU remains the stable default path for this repository. TPU execution is
 optional and requires a Google Cloud project, billing or another funding path,
 Cloud TPU API access, suitable TPU quota, and strict cleanup discipline.
 
-The course project used TRC spot quota for its first successful run. TRC is not
-required by the code itself: a reader may use normal on-demand TPU quota, spot
-quota, TRC quota, institutional quota, or another valid Google Cloud TPU funding
-setup.
+TRC is not required by the code itself: a reader may use normal on-demand TPU
+quota, spot quota, TRC quota, institutional quota, or another valid Google Cloud
+TPU funding setup.
 
 ## Where Commands Run
 
@@ -29,7 +31,7 @@ setup.
 - **TPU VM shell**: clone the repository, install dependencies, verify JAX TPU
   devices, and run Demo 2.
 
-## Local CPU Baseline Preparation
+## Local Public-Example CPU Baseline For Path A
 
 Run from the **local Ubuntu/WSL repo root**.
 
@@ -39,7 +41,10 @@ Install dependencies if needed:
 uv sync --frozen --group pretrained
 ```
 
-If the local CPU `b4` public-example JSON does not already exist, create it:
+This artifact is the local CPU counterpart for the Path A public-example TPU
+`b4` smoke run and the optional Path A helper. It is intentionally narrow;
+Imagenette timing artifacts are handled separately in Path B. If the local CPU
+`b4` public-example JSON does not already exist, create it:
 
 ```bash
 uv run --group pretrained python examples/pretrained_vit_inference.py \
@@ -57,10 +62,10 @@ JSON unless a later artifact policy explicitly changes.
 ## Environment Variables
 
 Use this section as a variable hierarchy. The common cloud resource variables
-apply to every TPU path. Scenario-specific blocks then set the zone, TPU shape,
-runtime, and resource names for a particular run. GCS variables are needed only
-for the optional fine-tuning checkpoint/resume workflow. Repository checkout and
-run-directory variables are used only after SSH inside the TPU VM shell.
+apply to every TPU path. Resource profile examples then set the zone, TPU shape,
+runtime, and resource names. GCS variables are needed only for the optional
+fine-tuning checkpoint/resume workflow. Repository checkout and run-directory
+variables are used only after SSH inside the TPU VM shell.
 
 ### Common Cloud Resource Variables
 
@@ -79,16 +84,25 @@ export NETWORK_NAME="default"
 export SUBNET_NAME="default"
 ```
 
-These common variable names are reused by the scenario blocks below. The
-example values above match the public-example inference smoke shape; replace
-them with the selected scenario values before creating resources. The selected
-subnet must exist in the region corresponding to the selected TPU zone. Network
-and subnet names are not secrets, but project-specific network topology details
-should still be documented conservatively.
+These common variable names are reused by the resource profiles below. Replace
+the example values with the selected profile values before creating resources.
+The selected subnet must exist in the region corresponding to the selected TPU
+zone. Network and subnet names are not secrets, but project-specific network
+topology details should still be documented conservatively.
 
-### Scenario-Specific TPU Blocks
+### Example TPU Resource Profiles
 
-**A. Public-example inference smoke run**
+Select one resource profile before creating a queued resource. These profiles
+only choose the TPU zone, accelerator type, runtime, and resource names. They do
+not decide whether the workload is public-example inference, Imagenette
+inference, fine-tuning, or checkpoint/resume. After setting one profile, use the
+shared queued-resource creation, SSH, setup, run, retrieval, and cleanup
+sections below. Profiles with `spot` in the example name are intended for
+queued-resource creation with `--spot`; the on-demand fallback profile is not.
+Resource names are readability labels only; they do not determine which
+workload must run on the TPU VM.
+
+**v6e-1 single-device spot profile, `us-east1-d`, inference-oriented name**
 
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
@@ -102,10 +116,11 @@ export NETWORK_NAME="default"
 export SUBNET_NAME="default"
 ```
 
-This reproduces the successful public-example inference smoke-run resource
-shape, subject to matching quota and funding availability.
+This uses a `demo2-vit-*` resource name as an inference-oriented naming
+example. The one-device `v6e-1` shape can run any compatible unsharded workflow;
+replace the zone, name, and quota mode if availability differs.
 
-**B. Fine-tuning first-run shape**
+**v6e-1 single-device spot profile, `us-east1-d`, fine-tuning-oriented name**
 
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
@@ -117,14 +132,13 @@ export ACCELERATOR_TYPE="v6e-1"
 export RUNTIME_VERSION="v2-alpha-tpuv6e"
 export NETWORK_NAME="default"
 export SUBNET_NAME="default"
-# Use --spot when creating the queued resource.
 ```
 
-This shape produced a successful first classifier-head fine-tuning smoke run,
-but `us-east1-d` `v6e-1` spot later repeatedly showed maintenance or
-preemption risk. Do not treat the zone as guaranteed stable.
+This keeps the same one-device TPU shape while using a `demo2-vit-ft-*`
+resource name for fine-tuning or checkpoint/resume examples. The name is a
+convention, not a workflow restriction.
 
-**C. Fine-tuning GCS resume shape**
+**v6e-1 single-device spot profile, `europe-west4-a`, fine-tuning-oriented name**
 
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
@@ -136,13 +150,31 @@ export ACCELERATOR_TYPE="v6e-1"
 export RUNTIME_VERSION="v2-alpha-tpuv6e"
 export NETWORK_NAME="default"
 export SUBNET_NAME="default"
-# Use --spot when creating the queued resource.
 ```
 
-This was the successful GCS checkpoint restore/resume region in the observed
-workflow. Do not overgeneralize it as guaranteed stable.
+This keeps the one-device TPU shape while changing the region and resource
+name. It can be used with inference, fine-tuning, or checkpoint/resume
+workflows when quota and availability match.
 
-**D. On-demand fallback candidate**
+**v6e-8 multi-device spot profile, `europe-west4-a`**
+
+```bash
+export PROJECT_ID="<PROJECT_ID>"
+export REGION="europe-west4"
+export ZONE="europe-west4-a"
+export TPU_NAME="demo2-vit-v6e8-ew4a-spot"
+export QUEUED_RESOURCE_ID="${TPU_NAME}-qr"
+export ACCELERATOR_TYPE="v6e-8"
+export RUNTIME_VERSION="v2-alpha-tpuv6e"
+export NETWORK_NAME="default"
+export SUBNET_NAME="default"
+```
+
+Use a multi-device profile when explicit batch-axis sharding is required. After
+SSH, verify that `jax.device_count()` reports at least two visible JAX devices
+before running commands with `--batch-sharding data`.
+
+**v4-32 on-demand fallback candidate**
 
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
@@ -156,9 +188,19 @@ export NETWORK_NAME="default"
 export SUBNET_NAME="default"
 ```
 
-Do not claim the on-demand path was run unless there is artifact evidence.
 On-demand should not use `--spot`; it may cost more, but is less exposed to
-spot preemption.
+spot preemption. Check the selected zone and runtime version before using this
+profile.
+
+Example resource names and naming intent:
+
+| Profile | Example resource name | Naming intent |
+| --- | --- | --- |
+| `v6e-1` single-device spot | `demo2-vit-v6e1-use1-spot` | Inference-oriented naming example |
+| `v6e-1` single-device spot | `demo2-vit-ft-v6e1-use1-spot` | Fine-tuning-oriented naming example |
+| `v6e-1` single-device spot | `demo2-vit-ft-v6e1-ew4a-spot` | Fine-tuning/checkpoint-oriented naming example in another region |
+| `v6e-8` multi-device spot | `demo2-vit-v6e8-ew4a-spot` | Multi-device sharding naming example |
+| `v4-32` on-demand | `demo2-vit-ft-v4-32-usc2-ondemand` | On-demand fallback naming example |
 
 ### Fine-Tuning GCS Variables
 
@@ -167,15 +209,15 @@ consistently across first-run checkpoint copy, restore, artifact copy, and
 cleanup.
 
 ```bash
-export BUCKET_SUFFIX="chihuahua"
+export BUCKET_SUFFIX="<BUCKET_SUFFIX>"
 export BUCKET_NAME="${PROJECT_ID}-demo2-vit-ft-${BUCKET_SUFFIX}"
 export GCS_RUN_ROOT="gs://$BUCKET_NAME/numerical-jax-project/demo2-vit-finetune"
 ```
 
-Keep `PROJECT_ID` as a placeholder in reusable docs. Do not publish real
-personal bucket names or project identifiers. `BUCKET_SUFFIX` must be lowercase
-and should make the bucket globally unique when combined with `PROJECT_ID`;
-change it if the bucket name already exists.
+Keep `PROJECT_ID` and `BUCKET_SUFFIX` as placeholders in reusable docs. Do not
+publish real environment-specific bucket names or project identifiers. Replace
+`<BUCKET_SUFFIX>` with a lowercase value that makes the bucket globally unique
+when combined with `PROJECT_ID`; change it if the bucket name already exists.
 
 Example Path C variable block:
 
@@ -192,7 +234,7 @@ export RUNTIME_VERSION="v2-alpha-tpuv6e"
 export NETWORK_NAME="default"
 export SUBNET_NAME="default"
 
-export BUCKET_SUFFIX="chihuahua"
+export BUCKET_SUFFIX="<BUCKET_SUFFIX>"
 export BUCKET_NAME="${PROJECT_ID}-demo2-vit-ft-${BUCKET_SUFFIX}"
 export GCS_RUN_ROOT="gs://$BUCKET_NAME/numerical-jax-project/demo2-vit-finetune"
 ```
@@ -210,10 +252,13 @@ before SSH do not automatically exist inside the TPU VM shell.
 
 ```bash
 export REPO_URL="https://github.com/anthroplankton/numerical-jax-project.git"
-export BRANCH="main"  # after the fine-tuning workflow is merged
-# export BRANCH="<branch-containing-demo2-finetune>"  # before merge
-# export COMMIT_SHA="<real commit SHA>"
+export BRANCH="main"
+# export BRANCH="<BRANCH_NAME>"
+# export COMMIT_SHA="<COMMIT_SHA>"
 ```
+
+Choose a branch that contains the workflow you want to run. Set `COMMIT_SHA`
+only when the checkout should be pinned to a specific commit.
 
 ### TPU VM Run Variables
 
@@ -281,14 +326,15 @@ gcloud compute tpus tpu-vm list \
 | --- | --- | --- |
 | Normal on-demand TPU quota | Direct TPU VM or queued resource | May incur regular cost |
 | Spot quota | Queued resource with `--spot` | Cheaper/available differently, can be interrupted |
-| TRC spot quota | Queued resource with `--spot` | Course project used this path |
+| TRC or institutional TPU quota | Match the available allocation mode | Use `--spot` only when the allocation is spot or preemptible |
 | No TPU quota or no budget | Local CPU only | Still supports Demo 2 workflow |
 | Long `WAITING_FOR_RESOURCES` | Delete queued resource and try another zone/type | Do not leave unused resources queued |
 
 ## Queued-Resource Creation Path
 
-The queued-resource path is the canonical quickstart path because it matches the
-successful course run and works with spot or TRC spot quota.
+The queued-resource path is the canonical quickstart path because it keeps
+allocation state visible and works with both spot and on-demand queued-resource
+allocation modes.
 For direct TPU VM creation, see
 [demo2_pretrained_vit_tpu_workflow.md](demo2_pretrained_vit_tpu_workflow.md).
 
@@ -305,8 +351,7 @@ gcloud compute tpus queued-resources create "$QUEUED_RESOURCE_ID" \
   --subnetwork "$SUBNET_NAME"
 ```
 
-Add `--spot` when using spot or TRC spot quota. The course project's successful
-TRC spot run used `--spot`:
+Add `--spot` when the selected quota or allocation is spot or preemptible:
 
 ```bash
 gcloud compute tpus queued-resources create "$QUEUED_RESOURCE_ID" \
@@ -322,9 +367,9 @@ gcloud compute tpus queued-resources create "$QUEUED_RESOURCE_ID" \
 
 Optional queue expiration guard:
 
-If your installed `gcloud` version and selected queued-resource API support it,
-you can add `--valid-until-duration` to limit how long the queued resource
-should remain valid. Check support first:
+Add `--valid-until-duration=45m` when you want the queued-resource request to
+expire if capacity is not allocated within the selected window. Check
+queued-resource creation options before using the guard:
 
 ```bash
 gcloud compute tpus queued-resources create --help
@@ -376,12 +421,14 @@ Interpret the state conservatively:
   another zone/type or an on-demand fallback if the run window requires more
   stability.
 
-Observed pattern, not a guarantee:
+Capacity notes, not guarantees:
 
-- `us-east1-d` `v6e-1` spot completed a first fine-tuning run, but later
-  repeatedly showed maintenance/preemption risk.
-- `europe-west4-a` `v6e-1` spot completed the GCS checkpoint restore/resume
-  run.
+- If a selected spot TPU profile shows maintenance, preemption, or unusable VM
+  behavior, delete unused queued resources before trying another zone,
+  accelerator type, or on-demand profile.
+- A `v6e-1` resource exposes one visible JAX device in these examples. Verify
+  the actual device count with the backend check before choosing unsharded or
+  sharded commands.
 
 ## SSH
 
@@ -403,13 +450,13 @@ already set:
 
 ```bash
 export REPO_URL="https://github.com/anthroplankton/numerical-jax-project.git"
-export BRANCH="main"  # after the fine-tuning workflow is merged
-# export BRANCH="<branch-containing-demo2-finetune>"  # before merge
-# export COMMIT_SHA="<real commit SHA>"
-
-# Before merge, replace BRANCH with one that contains the fine-tuning workflow
-# when using Path C.
+export BRANCH="main"
+# export BRANCH="<BRANCH_NAME>"
+# export COMMIT_SHA="<COMMIT_SHA>"
 ```
+
+Choose a branch that contains the workflow you want to run. Set `COMMIT_SHA`
+only when the checkout should be pinned to a specific commit.
 
 `COMMIT_SHA` is optional. Choose one checkout mode:
 
@@ -418,9 +465,11 @@ export BRANCH="main"  # after the fine-tuning workflow is merged
 - Reproducible benchmark mode: replace `COMMIT_SHA` with a real commit SHA and
   run `git checkout "$COMMIT_SHA"`.
 
-New Demo 2 JSON records `git_commit` from the observed checkout when Git
+Demo 2 JSON records `git_commit` from the current checkout when Git
 metadata is available. `COMMIT_SHA` remains an optional checkout pin; it is not
 used as the source of truth for result provenance.
+
+Clone or update the repository:
 
 ```bash
 git clone "$REPO_URL" numerical-jax-project
@@ -433,7 +482,11 @@ git switch "$BRANCH"
 
 git status --short --branch
 git rev-parse HEAD
+```
 
+Install dependencies:
+
+```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
 uv --version
@@ -446,12 +499,72 @@ uv sync --frozen --group pretrained
 
 uv pip install -U "jax[tpu]" \
   -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
-
-uv run python -c "import jax; print('jax_version=', jax.__version__); print('default_backend=', jax.default_backend()); print('device_count=', jax.device_count()); print('local_device_count=', jax.local_device_count()); print('devices=', jax.devices()); raise SystemExit(0 if jax.default_backend() == 'tpu' else 1)"
 ```
 
-The backend check must report TPU backend/devices before interpreting the Demo 2
-run as TPU evidence.
+General TPU backend check:
+
+```bash
+uv run python - <<'PY'
+import jax
+
+print("jax_version =", jax.__version__)
+print("default_backend =", jax.default_backend())
+print("device_count =", jax.device_count())
+print("local_device_count =", jax.local_device_count())
+print("devices =", jax.devices())
+if jax.default_backend() != "tpu":
+    raise SystemExit("default backend is not TPU")
+PY
+```
+
+The backend check must report TPU backend/devices before treating the Demo 2
+run as a TPU run.
+
+Additional checks for sharded runs:
+
+Run this only before commands that use `--batch-sharding data`. After setting
+`INFER_BATCH_SIZE` or `FINETUNE_BATCH_SIZE`, confirm that the TPU VM exposes at
+least two visible JAX devices and that the selected global batch size is
+divisible by the visible device count.
+
+```bash
+uv run python - <<'PY'
+import os
+
+import jax
+
+backend = jax.default_backend()
+device_count = jax.device_count()
+
+print("jax_version =", jax.__version__)
+print("default_backend =", backend)
+print("device_count =", device_count)
+print("local_device_count =", jax.local_device_count())
+print("devices =", jax.devices())
+
+if backend != "tpu":
+    raise SystemExit("default backend is not TPU")
+if device_count < 2:
+    raise SystemExit("multi-device sharding requires at least 2 visible JAX devices")
+
+checked_batch = False
+for name in ("INFER_BATCH_SIZE", "FINETUNE_BATCH_SIZE"):
+    value = os.environ.get(name)
+    if value is None:
+        continue
+    checked_batch = True
+    batch_size = int(value)
+    if batch_size % device_count != 0:
+        raise SystemExit(
+            f"{name}={batch_size} is not divisible by visible device count "
+            f"{device_count}"
+        )
+    print(f"{name}={batch_size} ok for visible device count {device_count}")
+
+if not checked_batch:
+    print("Set INFER_BATCH_SIZE or FINETUNE_BATCH_SIZE before checking divisibility.")
+PY
+```
 
 ## Path A: Public-Example TPU Inference Smoke Run
 
@@ -526,7 +639,7 @@ uv run python scripts/compare_vit_results.py \
 Keep raw JSON and comparison JSON under ignored `runs/vit-inference/`. Curated
 Markdown comparison tables belong under `report/results/`.
 
-## Optional Run-When-Active Helper
+## Optional Path A Run-When-Active Helper
 
 The manual quickstart above remains the primary workflow because it keeps cloud
 resource creation, artifact retrieval, comparison, and cleanup visible. For an
@@ -535,8 +648,9 @@ resource to become `ACTIVE`, runs the same public-example TPU `b4` smoke command
 on the TPU VM, retrieves the JSON artifact, runs the existing local comparison
 command, and prints cleanup instructions:
 
-This helper only runs and retrieves the public-example `b4` smoke artifact. It
-does not run, retrieve, or compare Imagenette 320 TPU artifacts.
+This helper only runs and retrieves the Path A public-example `b4` smoke
+artifact. It does not create queued resources, run Imagenette 320 inference, or
+run Path C fine-tuning.
 
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
@@ -549,11 +663,11 @@ export BRANCH="main"
 bash scripts/demo2_tpu_run_when_active.sh
 ```
 
-The helper does not create queued resources. It writes a small sanitized command
-log under `runs/vit-inference/` and does not record expanded project IDs, repo
-URLs, IPs, or private local paths. By default it does not delete resources; it
-prints cleanup commands for review. To explicitly delete the queued resource
-after artifact retrieval and comparison, opt in:
+The helper writes a small sanitized command log under `runs/vit-inference/` and
+does not record expanded project IDs, repo URLs, IPs, or private local paths.
+By default it does not delete resources; it prints cleanup commands for review.
+To explicitly delete the queued resource after artifact retrieval and
+comparison, opt in:
 
 ```bash
 bash scripts/demo2_tpu_run_when_active.sh --delete-after
@@ -561,45 +675,12 @@ bash scripts/demo2_tpu_run_when_active.sh --delete-after
 
 ## Path B: Imagenette 320 TPU Inference Artifacts
 
-The repository now has retrieved TPU JSON artifacts for Imagenette 320
-inference runs on `val64`, `val256`, and the full validation manifest, each with
-batch sizes `b1`, `b4`, and `b8`. The raw JSON artifacts stay under ignored
-`runs/vit-inference/`; the curated Markdown tables are:
+Use this path to run Imagenette 320 inference timing on a TPU VM. The inference
+commands write raw JSON artifacts under `runs/vit-inference/` on the TPU VM.
+Retrieve those JSON artifacts before generating curated Markdown tables under
+`report/results/`.
 
-```text
-report/results/demo2_cloud_imagenette320_val64_tpu.md
-report/results/demo2_cloud_imagenette320_val256_tpu.md
-report/results/demo2_cloud_imagenette320_valfull_tpu.md
-```
-
-These tables are TPU inference timing evidence. They are not training evidence,
-not dataset-level accuracy evaluation, not a full controlled benchmark study,
-and not a universal TPU speedup claim.
-
-### Regenerate Curated Markdown Tables
-
-After retrieving Imagenette 320 TPU JSON artifacts, generate the curated TPU
-Markdown tables from the **local Ubuntu/WSL repo root**:
-
-```bash
-uv run python scripts/compare_vit_results.py \
-  runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b1.json \
-  runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b4.json \
-  runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b8.json \
-  --markdown-output report/results/demo2_cloud_imagenette320_val64_tpu.md
-
-uv run python scripts/compare_vit_results.py \
-  runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_b1.json \
-  runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_b4.json \
-  runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_b8.json \
-  --markdown-output report/results/demo2_cloud_imagenette320_val256_tpu.md
-
-uv run python scripts/compare_vit_results.py \
-  runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_b1.json \
-  runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_b4.json \
-  runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_b8.json \
-  --markdown-output report/results/demo2_cloud_imagenette320_valfull_tpu.md
-```
+### Prepare Imagenette And Manifests
 
 Prepare Imagenette 320 before running the TPU commands. Use the official
 Imagenette source, then extract files so this path exists:
@@ -614,7 +695,7 @@ Imagenette 320 archive are documented in
 Imagenette benchmark runs, the TPU VM must have the same
 `data/local/imagenette2-320/val` path before benchmark commands run.
 
-Build the validation manifests used by the retrieved artifact families:
+Build the validation manifests used by the run examples below:
 
 ```bash
 uv run python scripts/build_image_manifest.py \
@@ -645,50 +726,198 @@ data/local/imagenette2-320/val/manifest_val_256.txt
 data/local/imagenette2-320/val/manifest_val_full.txt
 ```
 
-Cloud TPU Imagenette val64 command pattern:
+### Imagenette Inference Run Variables
+
+Set variables for one run, then rerun the same command block after changing the
+split, batch size, output path, or sharding arguments. Set `INFER_OUTPUT`
+explicitly so the original `*_tpu_b*.json` names and the labeled
+`*_tpu_single_v6e1_b*.json` or `*_tpu_sharded_v6e8_b*.json` names both work.
+Do not duplicate the full command for every batch size.
+
+Examples for the original TPU table family:
+
+| `INFER_SPLIT` | `INFER_MANIFEST` | `INFER_BATCH_SIZE` | `INFER_WARMUP_STEPS` | `INFER_BENCHMARK_STEPS` | `INFER_OUTPUT` pattern |
+| --- | --- | ---: | ---: | ---: | --- |
+| `val64` | `data/local/imagenette2-320/val/manifest_val_64.txt` | `1`, `4`, `8` | `1` | `5` | `runs/vit-inference/demo2_cloud_imagenette320_${INFER_SPLIT}_tpu_b${INFER_BATCH_SIZE}.json` |
+| `val256` | `data/local/imagenette2-320/val/manifest_val_256.txt` | `1`, `4`, `8` | `1` | `5` | `runs/vit-inference/demo2_cloud_imagenette320_${INFER_SPLIT}_tpu_b${INFER_BATCH_SIZE}.json` |
+| `valfull` | `data/local/imagenette2-320/val/manifest_val_full.txt` | `1`, `4`, `8` | `1` | `5` | `runs/vit-inference/demo2_cloud_imagenette320_${INFER_SPLIT}_tpu_b${INFER_BATCH_SIZE}.json` |
+
+Examples for single-device and multi-device sharding table families:
+
+| `INFER_SPLIT` | `INFER_MANIFEST` | `INFER_BATCH_SIZE` | `INFER_WARMUP_STEPS` | `INFER_BENCHMARK_STEPS` | `INFER_RUN_LABEL` | Sharding | `INFER_OUTPUT` pattern |
+| --- | --- | ---: | ---: | ---: | --- | --- | --- |
+| `val256` | `data/local/imagenette2-320/val/manifest_val_256.txt` | `8`, `16`, `64`, `256` | `3` | `20` | `single_v6e1` | `none` | `runs/vit-inference/demo2_cloud_imagenette320_${INFER_SPLIT}_tpu_${INFER_RUN_LABEL}_b${INFER_BATCH_SIZE}.json` |
+| `val256` | `data/local/imagenette2-320/val/manifest_val_256.txt` | `8`, `16`, `64`, `256` | `3` | `20` | `sharded_v6e8` | `data` | `runs/vit-inference/demo2_cloud_imagenette320_${INFER_SPLIT}_tpu_${INFER_RUN_LABEL}_b${INFER_BATCH_SIZE}.json` |
+| `valfull` | `data/local/imagenette2-320/val/manifest_val_full.txt` | `8`, `16`, `64`, `256`, `1024` | `3` | `20` | `single_v6e1` | `none` | `runs/vit-inference/demo2_cloud_imagenette320_${INFER_SPLIT}_tpu_${INFER_RUN_LABEL}_b${INFER_BATCH_SIZE}.json` |
+| `valfull` | `data/local/imagenette2-320/val/manifest_val_full.txt` | `8`, `16`, `64`, `256`, `1024` | `3` | `20` | `sharded_v6e8` | `data` | `runs/vit-inference/demo2_cloud_imagenette320_${INFER_SPLIT}_tpu_${INFER_RUN_LABEL}_b${INFER_BATCH_SIZE}.json` |
+
+Original TPU naming variable example:
 
 ```bash
-uv run --group pretrained python examples/pretrained_vit_inference.py \
-  --jax-platform tpu \
-  --image-manifest data/local/imagenette2-320/val/manifest_val_64.txt \
-  --batch-size 1 \
-  --warmup-steps 1 \
-  --benchmark-steps 5 \
-  --output runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b1.json
-
-uv run --group pretrained python examples/pretrained_vit_inference.py \
-  --jax-platform tpu \
-  --image-manifest data/local/imagenette2-320/val/manifest_val_64.txt \
-  --batch-size 4 \
-  --warmup-steps 1 \
-  --benchmark-steps 5 \
-  --output runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b4.json
-
-uv run --group pretrained python examples/pretrained_vit_inference.py \
-  --jax-platform tpu \
-  --image-manifest data/local/imagenette2-320/val/manifest_val_64.txt \
-  --batch-size 8 \
-  --warmup-steps 1 \
-  --benchmark-steps 5 \
-  --output runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b8.json
+export INFER_SPLIT="val64"
+export INFER_MANIFEST="data/local/imagenette2-320/val/manifest_val_64.txt"
+export INFER_BATCH_SIZE="1"
+export INFER_WARMUP_STEPS="1"
+export INFER_BENCHMARK_STEPS="5"
+export INFER_SHARDING_ARGS="--batch-sharding none"
+export INFER_OUTPUT="runs/vit-inference/demo2_cloud_imagenette320_${INFER_SPLIT}_tpu_b${INFER_BATCH_SIZE}.json"
 ```
 
-Use the same pattern with `manifest_val_256.txt` and `manifest_val_full.txt` for
-the retrieved `val256` and `valfull` TPU artifact families.
+Single-device variable example:
+
+```bash
+export INFER_SPLIT="val256"
+export INFER_MANIFEST="data/local/imagenette2-320/val/manifest_val_256.txt"
+export INFER_BATCH_SIZE="8"
+export INFER_RUN_LABEL="single_v6e1"
+export INFER_WARMUP_STEPS="3"
+export INFER_BENCHMARK_STEPS="20"
+export INFER_SHARDING_ARGS="--batch-sharding none"
+export INFER_OUTPUT="runs/vit-inference/demo2_cloud_imagenette320_${INFER_SPLIT}_tpu_${INFER_RUN_LABEL}_b${INFER_BATCH_SIZE}.json"
+```
+
+Multi-device sharding variable example:
+
+```bash
+export INFER_SPLIT="valfull"
+export INFER_MANIFEST="data/local/imagenette2-320/val/manifest_val_full.txt"
+export INFER_BATCH_SIZE="1024"
+export INFER_RUN_LABEL="sharded_v6e8"
+export INFER_WARMUP_STEPS="3"
+export INFER_BENCHMARK_STEPS="20"
+export INFER_SHARDING_ARGS="--batch-sharding data --mesh-axis-name data --require-multiple-devices --min-shard-devices 2"
+export INFER_OUTPUT="runs/vit-inference/demo2_cloud_imagenette320_${INFER_SPLIT}_tpu_${INFER_RUN_LABEL}_b${INFER_BATCH_SIZE}.json"
+```
+
+After setting one variable block, run:
+
+```bash
+mkdir -p "$(dirname "$INFER_OUTPUT")"
+
+uv run --group pretrained python examples/pretrained_vit_inference.py \
+  --jax-platform tpu \
+  --image-manifest "$INFER_MANIFEST" \
+  --batch-size "$INFER_BATCH_SIZE" \
+  --warmup-steps "$INFER_WARMUP_STEPS" \
+  --benchmark-steps "$INFER_BENCHMARK_STEPS" \
+  $INFER_SHARDING_ARGS \
+  --output "$INFER_OUTPUT"
+```
+
+For multi-device sharding, run the backend/device-count check in the shared TPU
+setup section first. The global batch size must be divisible by the visible JAX
+device count when using `--batch-sharding data`.
+
+Raw JSON artifact naming examples:
+
+```text
+runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b1.json
+runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b4.json
+runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b8.json
+runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_single_v6e1_b8.json
+runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_sharded_v6e8_b8.json
+runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_single_v6e1_b1024.json
+runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_sharded_v6e8_b1024.json
+```
+
+After the TPU run finishes, use the inference artifact retrieval section above
+to copy remote `runs/vit-inference/` JSON artifacts back to the local
+repository.
+
+### Regenerate Curated Markdown Tables
+
+After retrieving Imagenette 320 TPU JSON artifacts, generate the curated TPU
+Markdown tables from the **local Ubuntu/WSL repo root**. The commands below
+create these Markdown outputs:
+
+```text
+report/results/demo2_cloud_imagenette320_val64_tpu.md
+report/results/demo2_cloud_imagenette320_val256_tpu.md
+report/results/demo2_cloud_imagenette320_valfull_tpu.md
+report/results/demo2_cloud_imagenette320_val256_tpu_single_v6e1.md
+report/results/demo2_cloud_imagenette320_val256_tpu_sharded_v6e8.md
+report/results/demo2_cloud_imagenette320_valfull_tpu_single_v6e1.md
+report/results/demo2_cloud_imagenette320_valfull_tpu_sharded_v6e8.md
+```
+
+Original TPU inference tables:
+
+```bash
+uv run python scripts/compare_vit_results.py \
+  runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b1.json \
+  runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b4.json \
+  runs/vit-inference/demo2_cloud_imagenette320_val64_tpu_b8.json \
+  --markdown-output report/results/demo2_cloud_imagenette320_val64_tpu.md
+
+uv run python scripts/compare_vit_results.py \
+  runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_b1.json \
+  runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_b4.json \
+  runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_b8.json \
+  --markdown-output report/results/demo2_cloud_imagenette320_val256_tpu.md
+
+uv run python scripts/compare_vit_results.py \
+  runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_b1.json \
+  runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_b4.json \
+  runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_b8.json \
+  --markdown-output report/results/demo2_cloud_imagenette320_valfull_tpu.md
+```
+
+Single-device and multi-device sharding tables:
+
+```bash
+uv run python scripts/compare_vit_results.py \
+  runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_single_v6e1_b8.json \
+  runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_single_v6e1_b16.json \
+  runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_single_v6e1_b64.json \
+  runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_single_v6e1_b256.json \
+  --markdown-output report/results/demo2_cloud_imagenette320_val256_tpu_single_v6e1.md
+
+uv run python scripts/compare_vit_results.py \
+  runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_sharded_v6e8_b8.json \
+  runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_sharded_v6e8_b16.json \
+  runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_sharded_v6e8_b64.json \
+  runs/vit-inference/demo2_cloud_imagenette320_val256_tpu_sharded_v6e8_b256.json \
+  --markdown-output report/results/demo2_cloud_imagenette320_val256_tpu_sharded_v6e8.md
+
+uv run python scripts/compare_vit_results.py \
+  runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_single_v6e1_b8.json \
+  runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_single_v6e1_b16.json \
+  runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_single_v6e1_b64.json \
+  runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_single_v6e1_b256.json \
+  runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_single_v6e1_b1024.json \
+  --markdown-output report/results/demo2_cloud_imagenette320_valfull_tpu_single_v6e1.md
+
+uv run python scripts/compare_vit_results.py \
+  runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_sharded_v6e8_b8.json \
+  runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_sharded_v6e8_b16.json \
+  runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_sharded_v6e8_b64.json \
+  runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_sharded_v6e8_b256.json \
+  runs/vit-inference/demo2_cloud_imagenette320_valfull_tpu_sharded_v6e8_b1024.json \
+  --markdown-output report/results/demo2_cloud_imagenette320_valfull_tpu_sharded_v6e8.md
+```
+
+Do not hand-write benchmark table values. Regenerate Markdown tables from the
+JSON artifacts under `runs/vit-inference/`.
+
+### Generate Grouped Summaries
 
 If a local CPU-vs-cloud TPU Imagenette comparison is added later, generate it
 only after choosing a clear comparison baseline and preserving the limitations.
-The current generated cross-device Imagenette summary is produced from the
-result directory:
+The grouped cross-device Imagenette summaries are generated from the result
+directory:
 
 ```bash
 uv run python scripts/generate_vit_summary_tables.py --input-dir runs/vit-inference --output-dir report/results
 ```
 
-The existing generated summary file for this cross-device view is
-`report/results/demo2_imagenette320_cpu_vs_tpu.md`. Do not treat that table as a
-universal speedup claim; it is still inference-only timing evidence from
-specific artifacts.
+Generated summary files include `report/results/demo2_imagenette320_cpu_vs_tpu.md`.
+
+### Interpretation Limits
+
+Treat the raw JSON artifacts and generated Markdown outputs as inference timing
+summaries from specific command settings. They are not training results, not
+dataset-level accuracy evaluation, not a full controlled benchmark study, and
+not a general performance claim.
 
 ## Path C: Optional Classifier-Head Fine-Tuning With GCS Checkpoint/Resume
 
@@ -708,7 +937,7 @@ destructive cleanup examples.
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
 export REGION="europe-west4"
-export BUCKET_SUFFIX="chihuahua"
+export BUCKET_SUFFIX="<BUCKET_SUFFIX>"
 export BUCKET_NAME="${PROJECT_ID}-demo2-vit-ft-${BUCKET_SUFFIX}"
 export GCS_RUN_ROOT="gs://$BUCKET_NAME/numerical-jax-project/demo2-vit-finetune"
 
@@ -752,7 +981,7 @@ or artifact-copy commands. Use the same `BUCKET_SUFFIX` that created the bucket.
 
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
-export BUCKET_SUFFIX="chihuahua"
+export BUCKET_SUFFIX="<BUCKET_SUFFIX>"
 export BUCKET_NAME="${PROJECT_ID}-demo2-vit-ft-${BUCKET_SUFFIX}"
 export GCS_RUN_ROOT="gs://$BUCKET_NAME/numerical-jax-project/demo2-vit-finetune"
 export TPU_PREFLIGHT_DIR="/tmp/demo2-vit-ft-tpu-preflight"
@@ -775,7 +1004,17 @@ uv sync --frozen --group pretrained --group training
 uv pip install -U "jax[tpu]" \
   -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
 
-uv run python -c "import jax; print('jax_version=', jax.__version__); print('default_backend=', jax.default_backend()); print('device_count=', jax.device_count()); print('local_device_count=', jax.local_device_count()); print('devices=', jax.devices()); raise SystemExit(0 if jax.default_backend() == 'tpu' else 1)"
+uv run python - <<'PY'
+import jax
+
+print("jax_version =", jax.__version__)
+print("default_backend =", jax.default_backend())
+print("device_count =", jax.device_count())
+print("local_device_count =", jax.local_device_count())
+print("devices =", jax.devices())
+if jax.default_backend() != "tpu":
+    raise SystemExit("default backend is not TPU")
+PY
 ```
 
 Download and extract Imagenette 320 on the TPU VM:
@@ -809,16 +1048,14 @@ They are still tiny smoke inputs, not an Imagenette accuracy protocol.
 
 ### Fine-Tuning Command Profiles
 
-Use one of these profiles depending on the evidence needed. Always use absolute
+Use one of these profiles depending on the workflow needed. Always use absolute
 `RUN_DIR` and `CKPT_DIR` values before passing `--output-dir` and
 `--checkpoint-dir`; Orbax can fail with `ValueError: Checkpoint path should be
 absolute`.
 
-The `v6e-1` smoke and resume profiles below remain unsharded because the
-observed `v6e-1` smoke shape exposes one visible JAX device, while
-`--batch-sharding data` intentionally requires at least two visible devices.
-Use the separate multi-device sharded validation profile after selecting an
-`<ACCELERATOR_TYPE>` that exposes at least two visible JAX devices.
+Use `--batch-sharding none` for single-device TPU profiles. Use
+`--batch-sharding data` only when the selected TPU VM exposes at least two
+visible JAX devices and the batch size is divisible by that device count.
 
 **Short interactive smoke profile**
 
@@ -826,8 +1063,13 @@ This fixed-step profile is suitable for quick verification and report-friendly
 curves. Add `--reinit-head --seed 0` only when a clearer learning-curve
 demonstration is useful; the default keeps the pretrained classifier head.
 
+Single-device example:
+
 ```bash
-export RUN_NAME="demo2_cloud_vit_head_finetune_tpu_curve"
+export FINETUNE_BATCH_SIZE="8"
+export FINETUNE_RUN_LABEL="single_v6e1_b${FINETUNE_BATCH_SIZE}"
+export FINETUNE_SHARDING_ARGS="--batch-sharding none"
+export RUN_NAME="demo2_cloud_vit_head_finetune_tpu_${FINETUNE_RUN_LABEL}"
 export RUN_DIR="$(pwd)/runs/vit-finetune/$RUN_NAME"
 export CKPT_DIR="$RUN_DIR/checkpoints"
 mkdir -p "$RUN_DIR" "$CKPT_DIR"
@@ -836,7 +1078,8 @@ uv run --group pretrained --group training python examples/demo2_pretrained_vit_
   --jax-platform tpu \
   --train-manifest data/local/imagenette2-320/train/manifest_train_balanced_50.txt \
   --eval-manifest data/local/imagenette2-320/val/manifest_val_balanced_50.txt \
-  --batch-size 8 \
+  --batch-size "$FINETUNE_BATCH_SIZE" \
+  $FINETUNE_SHARDING_ARGS \
   --learning-rate 0.001 \
   --max-steps 300 \
   --min-train-seconds 0 \
@@ -848,15 +1091,61 @@ uv run --group pretrained --group training python examples/demo2_pretrained_vit_
   --save-predictions
 ```
 
-**Checkpoint/resume evidence profile**
+Multi-device sharding example:
+
+```bash
+export FINETUNE_BATCH_SIZE="8"
+export FINETUNE_RUN_LABEL="sharded_curve_b${FINETUNE_BATCH_SIZE}"
+export FINETUNE_SHARDING_ARGS="--batch-sharding data --mesh-axis-name data --require-multiple-devices --min-shard-devices 2"
+export RUN_NAME="demo2_cloud_vit_head_finetune_tpu_${FINETUNE_RUN_LABEL}"
+export RUN_DIR="$(pwd)/runs/vit-finetune/$RUN_NAME"
+export CKPT_DIR="$RUN_DIR/checkpoints"
+mkdir -p "$RUN_DIR" "$CKPT_DIR"
+
+uv run --group pretrained --group training python examples/demo2_pretrained_vit_finetune.py \
+  --jax-platform tpu \
+  --train-manifest data/local/imagenette2-320/train/manifest_train_balanced_50.txt \
+  --eval-manifest data/local/imagenette2-320/val/manifest_val_balanced_50.txt \
+  --batch-size "$FINETUNE_BATCH_SIZE" \
+  $FINETUNE_SHARDING_ARGS \
+  --learning-rate 0.001 \
+  --max-steps 300 \
+  --min-train-seconds 0 \
+  --checkpoint-every-steps 100 \
+  --checkpoint-every-seconds 0 \
+  --eval-every-steps 25 \
+  --checkpoint-dir "$CKPT_DIR" \
+  --output-dir "$RUN_DIR" \
+  --save-predictions
+```
+
+Fine-tuning artifact naming examples:
+
+```text
+runs/vit-finetune/demo2_cloud_vit_head_finetune_tpu_single_v6e1_b8/
+runs/vit-finetune/demo2_cloud_vit_head_finetune_tpu_single_v6e1_b16/
+runs/vit-finetune/demo2_cloud_vit_head_finetune_tpu_single_v6e1_b64/
+runs/vit-finetune/demo2_cloud_vit_head_finetune_tpu_single_v6e1_b256/
+runs/vit-finetune/demo2_cloud_vit_head_finetune_tpu_sharded_curve_b8/
+runs/vit-finetune/demo2_cloud_vit_head_finetune_tpu_sharded_curve_b16/
+runs/vit-finetune/demo2_cloud_vit_head_finetune_tpu_sharded_curve_b64/
+runs/vit-finetune/demo2_cloud_vit_head_finetune_tpu_sharded_curve_b256/
+```
+
+Do not add a report-facing single-vs-multi fine-tuning comparison table unless
+there is an intentionally reduced training-summary artifact design. Raw
+fine-tuning summaries, metrics, logs, predictions, and checkpoints stay under
+ignored `runs/vit-finetune/`.
+
+**Checkpoint/resume workflow profile**
 
 This deterministic profile avoids relying on real spot preemption. The first
-run stops at step `300`, then the resume run continues to step `500`; expected
-resume evidence is `start_step=300` and `final_step=500`.
+run stops at step `300`, then the resume run continues to step `500`. The
+summary verification below checks `start_step=300` and `final_step=500`.
 
 The first-run commands below use post-run GCS sync. Orbax writes local
 checkpoints first under `CKPT_DIR`, and `gcloud storage rsync` runs only after
-the training command exits successfully. This keeps the profile simple and
+the training command exits with status 0. This keeps the profile simple and
 deterministic, but it is not fully preemption-safe: if the spot TPU is
 preempted before `rsync` runs, local-only checkpoints may be lost.
 
@@ -960,17 +1249,14 @@ raise SystemExit(f"failed checks: {failed}" if failed else 0)
 PY
 ```
 
-The observed longer workflow restored checkpoint step `15140` and
-completed successfully with `backend=tpu`, `resumed_from_checkpoint=true`,
-`start_step=15140`, `final_step=51538`, `trainable_scope=classifier_head_only`,
-and `frozen_scope=vit_backbone`. That longer run remains useful as
-checkpoint/resume evidence, but the fixed-step profile above is easier to
-explain in reports.
+For report-facing result details from longer checkpoint/resume runs, use the
+curated summaries under `report/results/` rather than adding result numbers to
+this quickstart.
 
 **Throughput/time smoke profile**
 
 This profile keeps the time-controlled command shape for timing and checkpoint
-stress evidence. It is not intended to produce a useful loss curve.
+stress checks. It is not intended to produce a useful loss curve.
 
 ```bash
 export RUN_NAME="demo2_cloud_vit_head_finetune_tpu_time"
@@ -998,49 +1284,6 @@ uv run --group pretrained --group training python examples/demo2_pretrained_vit_
 Prefer `--checkpoint-every-steps 0` and `--checkpoint-every-seconds 30` in this
 profile. Step-based checkpointing such as `--checkpoint-every-steps 20` created
 too many checkpoints on TPU and made live GCS sync fragile.
-
-### Optional Multi-Device Sharded Fine-Tuning Validation
-
-This is planned manual validation, not completed TPU evidence. Use it only
-after selecting a TPU VM shape such as `<ACCELERATOR_TYPE>` in `<ZONE>` with
-`<TPU_NAME>` and `<RUNTIME_VERSION>` that exposes at least two visible JAX
-devices to the process.
-
-Before running a sharded profile on the TPU VM, confirm the visible device
-count:
-
-```bash
-uv run python - <<'PY'
-import jax
-
-print("device_count", jax.device_count())
-print("local_device_count", jax.local_device_count())
-print(jax.devices())
-PY
-```
-
-For a sharded variant, keep the same profile settings above and add the
-following flags immediately after `--batch-size 8`:
-
-```bash
-  --batch-sharding data \
-  --mesh-axis-name data \
-  --require-multiple-devices \
-  --min-shard-devices 2 \
-```
-
-The short interactive sharded profile should still use `--max-steps 300`.
-The checkpoint/resume sharded profile should still use `--max-steps 300` for
-the first run and `--max-steps 500` for the resume run. Use distinct
-`RUN_NAME` values for sharded validation artifacts so they are not confused
-with the unsharded `v6e-1` smoke and resume evidence.
-
-When `--batch-sharding data` is used, the selected batch size must be divisible
-by the visible mesh device count. The existing `--batch-size 8` examples are
-suitable only when the visible device count divides 8, such as common 4-device
-or 8-device targets. If the selected `<ACCELERATOR_TYPE>` exposes a different
-visible device count, adjust `--batch-size` accordingly or disable batch
-sharding.
 
 ### Monitoring While Training Runs
 
@@ -1103,8 +1346,8 @@ gcloud storage ls "$GCS_RUN_ROOT/artifacts/$RUN_NAME/"
 ```
 
 Avoid live-rsyncing the entire Orbax checkpoint root while Orbax is actively
-writing checkpoints. In the observed run, `rsync` of the whole checkpoint root
-could race with Orbax checkpoint creation or cleanup and report
+writing checkpoints. Live `rsync` of the whole checkpoint root can race with
+Orbax checkpoint creation or cleanup and report
 `FileNotFoundError` for `_CHECKPOINT_METADATA`. Prefer final `rsync` after
 training completes. Treat live sync as advanced and experimental; if it is
 attempted, sync only a completed/stable checkpoint step directory, not the whole
@@ -1178,12 +1421,12 @@ pandas from an ipynb report notebook. `mean_step_time_sec` and
 time. `total_runtime_sec` includes setup, evaluation, checkpointing, prediction
 writing, and summary writing overhead.
 
-Near-zero loss can be expected in a tiny smoke setup and does not imply
+Near-zero loss can happen in a tiny smoke setup and does not imply
 dataset-level accuracy. The subset may be easy, class-skewed, or already well
 served by the pretrained ImageNet classifier head. Use `train_label_counts` and
 `eval_label_counts` to make that visible in reports. Treat this path as
-workflow evidence, checkpoint/resume evidence, and TPU execution evidence, not
-an accuracy study.
+workflow, checkpoint/resume, and TPU execution smoke material, not an accuracy
+study.
 
 For notebook/report plots, load local ignored artifacts such as `summary.json`,
 `metrics.csv`, `eval_metrics.csv`, `predictions_before.json`, and
@@ -1211,7 +1454,7 @@ prefix instead. Use the same `BUCKET_SUFFIX` that created the bucket.
 
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
-export BUCKET_SUFFIX="chihuahua"
+export BUCKET_SUFFIX="<BUCKET_SUFFIX>"
 export BUCKET_NAME="${PROJECT_ID}-demo2-vit-ft-${BUCKET_SUFFIX}"
 export RUN_NAME="demo2_cloud_vit_head_finetune_tpu_resume"
 export GCS_RUN_ROOT="gs://$BUCKET_NAME/numerical-jax-project/demo2-vit-finetune"
@@ -1249,14 +1492,14 @@ gcloud compute tpus tpu-vm list \
   --zone "$ZONE"
 ```
 
-Optionally delete GCS checkpoint and artifact objects after retrieving evidence.
+Optionally delete GCS checkpoint and artifact objects after retrieving artifacts.
 Do this only for a temporary demo bucket that is not shared with other
 work. Before deleting a demo bucket, save a small local manual note describing
 what was retrieved and why the bucket can be removed.
 
 ```bash
 export PROJECT_ID="<PROJECT_ID>"
-export BUCKET_SUFFIX="chihuahua"
+export BUCKET_SUFFIX="<BUCKET_SUFFIX>"
 export BUCKET_NAME="${PROJECT_ID}-demo2-vit-ft-${BUCKET_SUFFIX}"
 
 gcloud storage rm --recursive "gs://$BUCKET_NAME/**"
@@ -1281,16 +1524,16 @@ gcloud storage buckets update "gs://$BUCKET_NAME" --clear-soft-delete
 ```
 
 Real spot or preemptible interruption is non-deterministic and is not guaranteed
-to deliver graceful SIGTERM. Controlled SIGTERM plus resume remains the primary
-interruption evidence path when graceful behavior must be demonstrated. Durable
-resume after TPU VM deletion requires copying checkpoints to GCS or another
-durable location before the VM is deleted.
+to deliver graceful SIGTERM. Use controlled SIGTERM plus resume when graceful
+interruption behavior must be demonstrated. Durable resume after TPU VM
+deletion requires copying checkpoints to GCS or another durable location before
+the VM is deleted.
 
 ## Limitations
 
-- Demo 2 TPU inference tables remain ViT inference timing evidence only.
-- Optional fine-tuning TPU evidence is classifier-head-only smoke workflow and
-  GCS checkpoint/resume evidence, not full ViT fine-tuning and not an accuracy
+- Demo 2 TPU inference tables remain ViT inference timing summaries only.
+- Optional fine-tuning TPU material is classifier-head-only smoke workflow and
+  GCS checkpoint/resume material, not full ViT fine-tuning and not an accuracy
   benchmark.
 - The public TPU smoke run uses five public images, batch size 4, final-batch
   padding with `num_padded_images = 3`, and a short benchmark loop.
@@ -1298,5 +1541,5 @@ durable location before the VM is deleted.
   only. They do not compute Imagenette labels, top-k accuracy, or dataset-level
   evaluation metrics.
 - The tables are not a full controlled hardware benchmark study.
-- Do not generalize any reported speedup beyond the specific artifacts and
-  command settings used to produce it.
+- Do not generalize any timing ratio beyond the specific artifacts and command
+  settings used to generate it.
