@@ -225,7 +225,6 @@ def render_overview(
             "Git commit",
             "Git dirty",
             "Result JSON",
-            "Command used",
         ],
         [
             "---",
@@ -241,7 +240,6 @@ def render_overview(
             "---:",
             "---:",
             "---:",
-            "---",
             "---",
             "---",
             "---",
@@ -277,7 +275,6 @@ def build_overview_row(
             "n/a",
             "n/a",
             "not run",
-            "not run",
         ]
     summary = record.summary
     return [
@@ -297,7 +294,6 @@ def build_overview_row(
         format_git_commit(summary.get("git_commit")),
         value_or_na(summary.get("git_dirty")),
         record.path.name,
-        value_or_na(summary.get("command_used")),
     ]
 
 

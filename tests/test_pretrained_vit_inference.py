@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -23,6 +26,35 @@ def load_vit_example_module():
     return module
 
 
+def test_module_import_does_not_import_jax_before_platform_selection() -> None:
+    probe = """
+import importlib.util
+import json
+import sys
+from pathlib import Path
+
+script_path = Path("examples/pretrained_vit_inference.py").resolve()
+spec = importlib.util.spec_from_file_location("pretrained_vit_import_probe", script_path)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+loaded = {
+    "jax": "jax" in sys.modules,
+    "jax.sharding": "jax.sharding" in sys.modules,
+}
+print(json.dumps(loaded, sort_keys=True))
+raise SystemExit(1 if any(loaded.values()) else 0)
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", probe],
+        cwd=PROJECT_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert json.loads(completed.stdout) == {"jax": False, "jax.sharding": False}
+
+
 def test_parse_args_uses_safe_defaults() -> None:
     module = load_vit_example_module()
 
@@ -32,6 +64,10 @@ def test_parse_args_uses_safe_defaults() -> None:
     assert args.model == "google/vit-base-patch16-224"
     assert args.image == SAMPLE_IMAGE_PATH
     assert args.batch_size == 1
+    assert args.batch_sharding == "none"
+    assert args.mesh_axis_name == "data"
+    assert args.require_multiple_devices is False
+    assert args.min_shard_devices == 2
     assert args.warmup_steps == 1
     assert args.benchmark_steps == 5
     assert args.jax_platform == "cpu"
@@ -50,6 +86,13 @@ def test_parse_args_accepts_benchmark_settings() -> None:
             "runs/test/metrics.json",
             "--batch-size",
             "4",
+            "--batch-sharding",
+            "data",
+            "--mesh-axis-name",
+            "batch",
+            "--require-multiple-devices",
+            "--min-shard-devices",
+            "4",
             "--warmup-steps",
             "0",
             "--benchmark-steps",
@@ -64,6 +107,10 @@ def test_parse_args_accepts_benchmark_settings() -> None:
     assert args.image == SAMPLE_IMAGE_PATH
     assert args.output == Path("runs/test/metrics.json")
     assert args.batch_size == 4
+    assert args.batch_sharding == "data"
+    assert args.mesh_axis_name == "batch"
+    assert args.require_multiple_devices is True
+    assert args.min_shard_devices == 4
     assert args.warmup_steps == 0
     assert args.benchmark_steps == 2
     assert args.jax_platform == "default"
@@ -123,6 +170,20 @@ def test_parse_args_rejects_invalid_step_counts() -> None:
 
     with pytest.raises(SystemExit):
         module.parse_args(["--image", str(SAMPLE_IMAGE_PATH), "--benchmark-steps", "0"])
+
+    with pytest.raises(SystemExit):
+        module.parse_args(
+            ["--image", str(SAMPLE_IMAGE_PATH), "--min-shard-devices", "0"]
+        )
+
+
+def test_parse_args_rejects_unknown_batch_sharding() -> None:
+    module = load_vit_example_module()
+
+    with pytest.raises(SystemExit):
+        module.parse_args(
+            ["--image", str(SAMPLE_IMAGE_PATH), "--batch-sharding", "model"]
+        )
 
 
 def test_read_image_manifest_resolves_paths_without_reading_images(tmp_path) -> None:
@@ -407,6 +468,7 @@ def test_build_run_metrics_single_image_keeps_result_fields() -> None:
         benchmark_steps=2,
         image_results=[image_metrics],
         manifest_path=None,
+        sharding_metadata={"enabled": False, "mode": "none"},
     )
 
     assert metrics == {
@@ -433,6 +495,7 @@ def test_build_run_metrics_single_image_keeps_result_fields() -> None:
         "batch_size": 2,
         "warmup_steps": 1,
         "benchmark_steps": 2,
+        "sharding": {"enabled": False, "mode": "none"},
         "mean_step_time_sec": pytest.approx(0.3),
         "total_timed_inference_sec": pytest.approx(0.6),
         "throughput_counted_images": 4,
@@ -495,9 +558,11 @@ def test_build_run_metrics_manifest_uses_aggregate_fields() -> None:
         num_padded_images=0,
         last_batch_policy="pad_with_last_image",
         step_times=[0.1, 0.2],
+        sharding_metadata={"enabled": False, "mode": "none"},
     )
 
     assert metrics["mode"] == "image_manifest"
+    assert metrics["sharding"] == {"enabled": False, "mode": "none"}
     assert metrics["manifest_path"] == str(PRIVATE_MANIFEST_PATH)
     assert metrics["manifest_kind"] == "local_private"
     assert metrics["input_shape"] == [2, 3, 224, 224]

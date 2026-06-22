@@ -621,6 +621,53 @@
   - This patch did not run cloud commands, TPU jobs, model downloads, `gcloud`
     resource creation/deletion, commits, or pushes。
 
+## Phase 5.15: Demo 2 Explicit Batch-Axis Sharding For Fine-Tuning
+
+- Date / phase label：2026-06-16 Demo 2 fine-tuning explicit JAX sharding
+  support
+- What changed：
+  - Extended the shared batch-axis sharding helper for fine-tuning batch-vector
+    inputs：labels use `PartitionSpec('data')` and masks use
+    `PartitionSpec('data')`。
+  - Added the inference-matching sharding CLI surface to the optional
+    classifier-head fine-tuning workflow：`--batch-sharding none|data`,
+    `--mesh-axis-name`, `--require-multiple-devices`, and
+    `--min-shard-devices`。
+  - Kept ViT backbone parameters, classifier-head parameters, optimizer state,
+    checkpoints, and checkpoint identity metadata unsharded。
+  - Updated `summary.json` to include a top-level `sharding` object for
+    requested settings and resolved runtime sharding facts。
+  - Updated docs/status wording so planned sharded TPU fine-tuning commands are
+    clear without claiming completed sharded TPU evidence。
+- Claim boundary：
+  - This phase adds code/tests/docs support only；it did not run `gcloud`,
+    create/start/stop/delete cloud resources, run TPU jobs, download datasets,
+    download model weights, or create/update notebooks。
+  - Sharded TPU fine-tuning execution remains planned manual validation until a
+    real artifact exists。
+
+## Phase 5.16: Demo 2 Single-vs-Sharded TPU Inference Documentation Sync
+
+- Date / phase label：2026-06-18 Demo 2 single-vs-sharded TPU inference
+  documentation sync
+- What changed：
+  - Synchronized report-facing documentation with the latest retrieved
+    single-device `v6e-1` and explicit multi-device sharded `v6e-8` TPU
+    inference table families。
+  - Kept `cloud/demo2_tpu_quickstart.md` as the command/workflow source and
+    updated surrounding docs to reference evidence families, table paths, and
+    interpretation boundaries rather than duplicating full command blocks。
+  - Clarified that explicit sharded TPU inference now has timing artifacts, while
+    explicit sharded classifier-head fine-tuning remains a manual validation
+    target until a real sharded fine-tuning artifact exists。
+  - Kept the submitted
+    `report/progress_report_demo2_tpu_current.ipynb` unchanged；a future report
+    notebook should be created separately。
+- Claim boundary：
+  - This was a documentation sync only；it did not run `gcloud`,
+    create/start/stop/delete cloud resources, rerun benchmarks, regenerate result
+    tables, modify raw JSON artifacts, create/update notebooks, commit, or push。
+
 ## Planned Phases
 
 ### Phase 6: Real MNIST/Fashion-MNIST and Curated Local Result

@@ -18,12 +18,16 @@ pretrained ViT workflow with JAX/Flax**。
 - curated report-ready Markdown tables：`report/results/`
 - Google Cloud / TRC setup state：TRC confirmation 已收到；第一個 Demo 2 TPU
   public-example smoke run、artifact retrieval、comparison table、cleanup
-  verification，以及 Imagenette 320 TPU inference tables 都已有 privacy-safe
-  report record
+  verification，以及 Imagenette 320 TPU inference tables，包括 single-device 與
+  explicit sharded table families，都已有 privacy-safe report record
 - optional Demo 2 fine-tuning TPU state：classifier-head-only workflow 已在 TPU
   上觀察到 first run、spot/maintenance interruption、GCS checkpoint copies，
   以及 replacement TPU VM restore/resume；raw artifacts 仍維持在 ignored
   `runs/vit-finetune/` 或暫存 GCS，不進 Git
+- explicit JAX sharding state：Demo 2 inference 已有 `v6e-1` single-device 與
+  `v6e-8` explicit batch-axis sharded TPU timing artifacts；optional
+  classifier-head fine-tuning exposes the same sharding CLI surface，但目前尚未有
+  completed sharded TPU fine-tuning artifact
 - report-ready setup/evidence record：`report/google_cloud_trc_setup.md`
 - remaining benchmark work after TPU inference evidence：若時間與 quota 允許，
   可再規劃 controlled hardware comparison、較完整 monitoring evidence，或明確
@@ -31,9 +35,10 @@ pretrained ViT workflow with JAX/Flax**。
   local-only data preparation，不自動下載、不進 pytest/CI，也不提交 `data/local/`
   內容
 
-TPU execution evidence now exists for both a small public-example smoke run and
-Imagenette 320 validation-manifest inference timing. It should not be described
-as training, a full benchmark study, dataset-level accuracy evaluation,
+TPU execution evidence now exists for a small public-example smoke run,
+Imagenette 320 validation-manifest inference timing, and explicit single-device
+versus multi-device sharded TPU inference timing. Its scope is inference timing,
+rather than training, a full benchmark study, dataset-level accuracy evaluation,
 controlled hardware comparison, or a universal TPU speedup claim. The optional
 classifier-head fine-tuning extension has also produced TPU smoke workflow
 evidence: first run on `v6e-1` spot in `us-east1-d`, real spot or maintenance
@@ -67,11 +72,15 @@ workflow evidence, not full ViT fine-tuning or accuracy benchmark evidence.
 - Optional Demo 2 classifier-head fine-tuning script:
   - `examples/demo2_pretrained_vit_finetune.py`
   - freezes the ViT backbone and trains only the classifier head
+  - exposes explicit batch-axis sharding flags matching inference:
+    `--batch-sharding`, `--mesh-axis-name`, `--require-multiple-devices`, and
+    `--min-shard-devices`
   - uses Orbax checkpoint/resume for head params, optimizer state, step, and
     minimal metadata only
   - writes report-friendly `summary.json`, `metrics.csv`, and
-    `eval_metrics.csv`; `summary.json` includes train/eval label counts and
-    class counts so tiny-manifest skew is visible
+    `eval_metrics.csv`; `summary.json` includes train/eval label counts,
+    class counts, and sharding metadata so tiny-manifest skew and resolved
+    runtime sharding settings are visible
   - generated outputs belong under ignored `runs/vit-finetune/`
 - Local CPU public example images:
   - `examples/assets/chihuahua_pet_licorice.jpg`
@@ -195,14 +204,12 @@ Key recorded fields:
 - num_batches：2
 - num_padded_images：3
 - timed_batch_runs：10
-- total timed inference：約 0.01098252 秒
-- throughput：約 2276.3446 images/sec
+- exact timing, throughput, and speedup values：
+  `report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md`
 
-The generated comparison table reports about 1931.76x throughput speedup versus
-the local CPU `b4` artifact for this specific smoke run. This statement is
-limited to the five-image public smoke run. It is not a general TPU speed claim,
-not dataset-level accuracy evaluation, and not a full controlled hardware
-benchmark.
+This evidence is limited to the five-image public smoke run. It is not a general
+TPU speed claim, not dataset-level accuracy evaluation, and not a full controlled
+hardware benchmark.
 
 Imagenette 320 TPU inference JSON artifacts have also been retrieved under
 ignored `runs/vit-inference/` for:
@@ -216,12 +223,22 @@ ignored `runs/vit-inference/` for:
 - `val_full`: `demo2_cloud_imagenette320_valfull_tpu_b1.json`,
   `demo2_cloud_imagenette320_valfull_tpu_b4.json`, and
   `demo2_cloud_imagenette320_valfull_tpu_b8.json`
+- `val256` single/sharded family:
+  `demo2_cloud_imagenette320_val256_tpu_single_v6e1_b*.json` and
+  `demo2_cloud_imagenette320_val256_tpu_sharded_v6e8_b*.json`
+- `val_full` single/sharded family:
+  `demo2_cloud_imagenette320_valfull_tpu_single_v6e1_b*.json` and
+  `demo2_cloud_imagenette320_valfull_tpu_sharded_v6e8_b*.json`
 
 The curated TPU Imagenette tables are:
 
 - `report/results/demo2_cloud_imagenette320_val64_tpu.md`
 - `report/results/demo2_cloud_imagenette320_val256_tpu.md`
 - `report/results/demo2_cloud_imagenette320_valfull_tpu.md`
+- `report/results/demo2_cloud_imagenette320_val256_tpu_single_v6e1.md`
+- `report/results/demo2_cloud_imagenette320_val256_tpu_sharded_v6e8.md`
+- `report/results/demo2_cloud_imagenette320_valfull_tpu_single_v6e1.md`
+- `report/results/demo2_cloud_imagenette320_valfull_tpu_sharded_v6e8.md`
 
 For grouped report-ready summaries, start with
 `report/results/README.md`. The generated summary set includes
@@ -229,12 +246,12 @@ For grouped report-ready summaries, start with
 `demo2_imagenette320_cpu_vs_tpu.md`, `demo2_cpu_machine_comparison.md`, and
 `demo2_public_examples_summary.md`.
 
-These tables report backend `tpu`, JSON-visible device kind `TPU v6 lite`,
-batch sizes `b1` / `b4` / `b8`, one warmup step, five benchmark steps, and
-Imagenette validation-manifest inference timing. The full validation manifest
-contains 3925 images; `b4` and `b8` have 3 padded final-batch entries. The
-curated TPU tables report throughput in the approximate range of 1812 to 4370
-images/sec for the retrieved artifacts.
+These tables report backend `tpu`, visible TPU device metadata, batch sizes,
+one warmup step, five benchmark steps, and Imagenette validation-manifest
+inference timing. The original `b1` / `b4` / `b8` TPU tables use JSON-visible
+device kind `TPU v6 lite`. The full validation manifest contains 3925 images;
+some batch configurations include padded final-batch entries. Use the table
+files themselves for exact throughput values.
 
 The Imagenette TPU evidence is still ViT inference only. It is not model
 training, not fine-tuning, not dataset-level accuracy evaluation, not a full
@@ -302,8 +319,8 @@ access, Hugging Face access, image opening, or model weight download.
    `runs/vit-inference/`; commit only curated Markdown result tables.
 2. Keep `report/results/demo2_local_cpu_vs_cloud_tpu_public_examples_b4.md` as
    the curated table for the first CPU-vs-TPU public-example smoke comparison.
-3. Keep the three cloud TPU Imagenette tables as inference timing evidence, not
-   accuracy evaluation or training evidence.
+3. Keep the original and single/sharded cloud TPU Imagenette tables as
+   inference timing evidence, not accuracy evaluation or training evidence.
 4. Preserve the optional Demo 2 classifier-head fine-tuning TPU smoke evidence
    without committing raw `runs/vit-finetune/` artifacts, checkpoints, logs,
    datasets, model caches, or GCS objects.

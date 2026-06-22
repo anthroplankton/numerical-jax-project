@@ -132,7 +132,10 @@ def test_write_summary_tables_outputs_ratios_missing_runs_and_scope_note(
         batch_size=1,
         num_images=64,
         throughput=20.0,
-        command_used="python examples/pretrained_vit_inference.py --jax-platform tpu",
+        command_used=(
+            "python examples/pretrained_vit_inference.py --jax-platform tpu "
+            "--output runs/vit-inference/demo2_asus_a16_private_tpu_b1.json"
+        ),
     )
     write_result_json(
         input_dir / "demo2_local_public_examples_cpu_b1.json",
@@ -158,7 +161,12 @@ def test_write_summary_tables_outputs_ratios_missing_runs_and_scope_note(
     public_summary = (output_dir / "demo2_public_examples_summary.md").read_text()
 
     assert "ViT inference only; no training" in overview
-    assert "python examples/pretrained_vit_inference.py --jax-platform tpu" in overview
+    assert "Command used" not in overview
+    assert (
+        "python examples/pretrained_vit_inference.py --jax-platform tpu" not in overview
+    )
+    assert "demo2_asus_a16_private_tpu_b1.json" not in overview
+    assert "demo2_cloud_imagenette320_val64_tpu_b1.json" in overview
     assert "public examples" not in overview
     assert "public examples" not in batch_scaling
     assert "public examples" not in cpu_vs_tpu

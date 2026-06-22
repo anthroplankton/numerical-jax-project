@@ -6,7 +6,8 @@ The current course presentation focus is **Demo 2: pretrained ViT workflows
 with JAX/Flax** using `google/vit-base-patch16-224`. Local CPU inference has
 been run successfully. Google Cloud TPU evidence now includes the first
 public-example smoke run and Imagenette 320 validation-manifest inference runs
-for `val64`, `val256`, and `val_full`. Raw JSON benchmark outputs live under
+for `val64`, `val256`, and `val_full`, including single-device and explicit
+multi-device sharded TPU table families. Raw JSON benchmark outputs live under
 ignored `runs/vit-inference/`, and curated report-ready Markdown tables live
 under `report/results/`. Demo 2 also has a small optional classifier-head
 fine-tuning extension under `runs/vit-finetune/`.
@@ -15,14 +16,15 @@ The completed TPU inference evidence remains narrow. The public smoke
 comparison used five public example images, batch size 4, one warmup step, five
 benchmark steps, and final-batch padding with `num_padded_images = 3`. The
 Imagenette 320 TPU tables cover `b1`, `b4`, and `b8` for 64-image, 256-image,
-and full validation manifests. These inference results are not dataset-level
-accuracy evaluation, not a full controlled benchmark study, and not a universal
-TPU speedup claim. The optional fine-tuning extension has also produced Demo 2
-TPU smoke workflow evidence: a first v6e-1 spot run, a real spot or maintenance
-interruption after that run, durable GCS checkpoint copies, and a successful
-GCS restore/resume run. Treat that as classifier-head-only workflow,
-checkpoint/resume, and TPU execution evidence, not full ViT fine-tuning or an
-accuracy benchmark.
+and full validation manifests, plus `v6e-1` single-device and `v6e-8` explicit
+batch-axis sharded table families for `val256` and full validation manifests.
+These inference results are not dataset-level accuracy evaluation, not a full
+controlled benchmark study, and not a universal TPU speedup claim. The optional
+fine-tuning extension has also produced Demo 2 TPU smoke workflow evidence: a
+first v6e-1 spot run, a real spot or maintenance interruption after that run,
+durable GCS checkpoint copies, and a successful GCS restore/resume run. Treat
+that as classifier-head-only workflow, checkpoint/resume, and TPU execution
+evidence, not full ViT fine-tuning or an accuracy benchmark.
 
 Local CPU remains the stable default path. TPU execution is optional and
 requires suitable Google Cloud TPU quota/funding, Cloud TPU API access, and
@@ -215,12 +217,18 @@ uv run --group pretrained --group training python examples/demo2_pretrained_vit_
 Fine-tuning outputs stay under ignored `runs/vit-finetune/`, including
 `summary.json`, `metrics.csv`, optional periodic `eval_metrics.csv`,
 predictions, logs, and checkpoints. `summary.json` records label distribution
-metadata so report notebooks can see class skew in tiny smoke manifests. Do not
-commit checkpoints, model caches, dataset files, raw cloud logs, or large
-generated artifacts. The TPU smoke workflow uses local Orbax checkpoints first
-and copies durable checkpoint evidence to GCS for resume after spot or
-maintenance risk; see the TPU quickstart for the exact GCS setup, command
-profiles, monitoring, retrieval, and cleanup steps.
+metadata and batch-sharding metadata so report notebooks can see class skew and
+the resolved runtime sharding configuration in tiny smoke manifests. The
+fine-tuning script accepts the same `--batch-sharding none|data`,
+`--mesh-axis-name`, `--require-multiple-devices`, and `--min-shard-devices`
+surface as inference; default local runs remain unsharded. Do not commit
+checkpoints, model caches, dataset files, raw cloud logs, or large generated
+artifacts. The TPU smoke workflow uses local Orbax checkpoints first and copies
+durable checkpoint evidence to GCS for resume after spot or maintenance risk;
+see the TPU quickstart for the exact GCS setup, inference and fine-tuning
+sharding command profiles, monitoring, retrieval, and cleanup steps. Sharded TPU
+fine-tuning execution remains a manual validation target until real artifacts
+exist.
 
 For TPU execution, use these documents by role:
 

@@ -21,8 +21,7 @@ include privacy-safe Git provenance fields (`git_commit`, `git_branch`, and
 `git_dirty`) when Git metadata is available from the checkout. `git_commit` is
 the observed code version from `git rev-parse HEAD`; `git_dirty` records whether
 `git status --short` had any output, without storing the full status. Legacy JSON
-artifacts may not contain these fields; do not fabricate commit metadata for
-them.
+artifacts may not contain these fields; keep their provenance metadata unchanged.
 
 This file is a result artifact index, not a TPU execution runbook. For the
 reusable TPU execution path, see `../../cloud/demo2_tpu_quickstart.md`; for
@@ -56,10 +55,13 @@ The optional Demo 2 fine-tuning extension writes generated artifacts under
 `runs/vit-finetune/`, including `summary.json`, `metrics.csv`,
 `eval_metrics.csv`, `predictions_before.json`, `predictions_after.json`,
 `train.log`, and Orbax checkpoint directories. These files are ignored by Git.
-`summary.json` includes label-count metadata, and `eval_metrics.csv` is the
-preferred lightweight source for notebook learning-curve plots. Add a curated
-report-facing summary under `report/results/` only after a real run is executed
-and the summary is intentionally reduced for the report.
+`summary.json` includes label-count metadata and, for new runs, a top-level
+`sharding` object with requested and resolved batch-sharding facts.
+`eval_metrics.csv` is the preferred lightweight source for notebook
+learning-curve plots. Add a curated report-facing summary under
+`report/results/` only after a real run is executed and the summary is
+intentionally reduced for the report. A curated sharded TPU fine-tuning summary
+belongs here when a matching sharded TPU artifact exists.
 
 Fine-tuning checkpoints should not include the frozen ViT backbone or Hugging
 Face model cache. The intended checkpoint evidence is classifier-head
@@ -138,8 +140,8 @@ The external Ryzen 7735HS WSL tables are supplementary CPU evidence. Keep them
 separate from the local-machine tables:
 
 - `demo2_external_ryzen7735hs_wsl_public_examples_cpu.md`: public example image
-  set, `b1` and `b4` only. External public `b8` is pending and should not be
-  fabricated.
+  set, `b1` and `b4` only. External public `b8` is outside the current curated
+  table scope.
 - `demo2_external_ryzen7735hs_wsl_imagenette320_val64_cpu.md`: Imagenette 320
   validation manifest with 64 images, `b1`, `b4`, and `b8`.
 - `demo2_external_ryzen7735hs_wsl_imagenette320_val256_cpu.md`: Imagenette 320
@@ -161,6 +163,16 @@ artifacts under ignored `runs/vit-inference/`:
   with 256 images, `b1`, `b4`, and `b8`.
 - `demo2_cloud_imagenette320_valfull_tpu.md`: full Imagenette 320 validation
   manifest with 3925 images, `b1`, `b4`, and `b8`.
+- `demo2_cloud_imagenette320_val256_tpu_single_v6e1.md`: single-device `v6e-1`
+  TPU table for the Imagenette 320 `val256` manifest.
+- `demo2_cloud_imagenette320_val256_tpu_sharded_v6e8.md`: explicit
+  multi-device sharded `v6e-8` TPU table for the Imagenette 320 `val256`
+  manifest.
+- `demo2_cloud_imagenette320_valfull_tpu_single_v6e1.md`: single-device `v6e-1`
+  TPU table for the full Imagenette 320 validation manifest.
+- `demo2_cloud_imagenette320_valfull_tpu_sharded_v6e8.md`: explicit
+  multi-device sharded `v6e-8` TPU table for the full Imagenette 320 validation
+  manifest.
 
 Regenerate these tables locally after the TPU JSON files have been retrieved:
 
@@ -184,7 +196,11 @@ uv run python scripts/compare_vit_results.py \
   --markdown-output report/results/demo2_cloud_imagenette320_valfull_tpu.md
 ```
 
-Interpret these tables narrowly. They are ViT inference timing evidence only:
+The single-device and sharded table regenerate commands are documented in
+`cloud/demo2_tpu_quickstart.md` alongside their raw JSON naming patterns. Keep
+those tables in the same inference-only scope as the original TPU tables.
+
+Interpret these tables narrowly. They are ViT inference timing summaries only:
 not training, not Imagenette accuracy evaluation, not a controlled hardware
 benchmark, and not a universal TPU speedup claim.
 
@@ -201,6 +217,6 @@ kind `TPU v6 lite`.
 
 Interpret the table narrowly. It is a first public-example smoke run with five
 images, batch size 4, three padded final-batch entries, and a short benchmark
-loop. It is not a dataset-level accuracy evaluation and not a controlled
-hardware benchmark. Do not describe the reported speedup as general TPU
-performance.
+loop. It is not a dataset-level accuracy evaluation or a controlled hardware
+benchmark. The reported speedup is specific to these artifacts and command
+settings.

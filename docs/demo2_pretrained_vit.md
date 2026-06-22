@@ -6,7 +6,8 @@ It uses raw JSON outputs under ignored `runs/vit-inference/`, curated
 report-ready Markdown tables under `report/results/`, manifest batching, public
 example assets, supplementary external CPU evidence, a completed Google Cloud
 TPU public-example smoke run, and retrieved Imagenette 320 TPU inference
-artifacts. The default model is `google/vit-base-patch16-224` from Hugging Face.
+artifacts, including single-device and explicit multi-device sharded TPU table
+families. The default model is `google/vit-base-patch16-224` from Hugging Face.
 The optional head fine-tuning extension writes generated smoke-run artifacts
 under ignored `runs/vit-finetune/`.
 
@@ -15,13 +16,14 @@ path for the project. Demo 1 remains preserved as background raw-JAX CNN work,
 and Demo 3 remains optional future work.
 
 TPU inference evidence now includes a small public-example smoke run plus
-Imagenette 320 `val64`, `val256`, and `val_full` inference timing tables. The
-optional fine-tuning extension is part of Demo 2, not Demo 3, and has produced
-classifier-head-only TPU smoke workflow evidence with GCS checkpoint
-restore/resume. It should still be described narrowly: workflow,
-checkpoint/resume, and TPU execution evidence, not full ViT fine-tuning, not a
-dataset-level accuracy evaluation, and not a full controlled benchmark. For
-actual TPU execution, use
+Imagenette 320 `val64`, `val256`, and `val_full` inference timing tables,
+including `v6e-1` single-device and `v6e-8` explicit sharded table families for
+`val256` and `val_full`. The optional fine-tuning extension is part of Demo 2,
+not Demo 3, and has produced classifier-head-only TPU smoke workflow evidence
+with GCS checkpoint restore/resume. It should still be described narrowly:
+workflow, checkpoint/resume, and TPU execution evidence, not full ViT
+fine-tuning, not a dataset-level accuracy evaluation, and not a full controlled
+benchmark. For actual TPU execution, use
 `cloud/demo2_tpu_quickstart.md`. For resource variants, monitoring/evidence
 guidance, cleanup discipline, and course evidence appendices, see
 `cloud/demo2_pretrained_vit_tpu_workflow.md`.
@@ -353,8 +355,9 @@ runs/vit-finetune/demo2_local_balanced50_cpu/checkpoints/
 
 `summary.json` records the mode, model name, trainable scope
 `classifier_head_only`, frozen scope `vit_backbone`, backend/devices, manifests,
-label counts, class counts, batch size, learning rate, `eval_every_steps`,
-`reinit_head`, seed, start/final step, resume status, checkpoint path,
+label counts, class counts, batch size, batch-sharding metadata, learning rate,
+`eval_every_steps`, `reinit_head`, seed, start/final step, resume status,
+checkpoint path,
 initial/final loss, step timing, throughput, total runtime, and privacy-safe Git
 metadata when available. `metrics.csv` is the per-step training CSV.
 `eval_metrics.csv` has `step`, `eval_loss`, and `eval_accuracy` rows for the
@@ -449,8 +452,8 @@ platform, for example `demo2_local_imagenette320_val64_cpu.md`. Supplementary
 external-machine artifacts should use a neutral environment label, such as
 `demo2_external_ryzen7735hs_wsl_imagenette320_val64_cpu.md`.
 
-The current supplementary external public examples table has `b1` and `b4`
-only. External public `b8` is pending and should not be fabricated.
+The current supplementary external public examples table covers `b1` and `b4`.
+External public `b8` is outside the current curated table scope.
 
 For CPU artifacts, avoid including a GPU model in the file name. Reserve labels
 such as `rx7600s` and `rocm` for explicit ROCm/GPU sanity-check artifacts with
@@ -497,7 +500,7 @@ that count.
   "command_used": "python examples/pretrained_vit_inference.py --jax-platform cpu ...",
   "output_path": "runs/vit-inference/metrics.json",
   "git_commit": "0123456789abcdef0123456789abcdef01234567",
-  "git_branch": "feat/demo2-tpu-evidence",
+  "git_branch": "<branch-name>",
   "git_dirty": false,
   "model_name": "google/vit-base-patch16-224",
   "selected_jax_platform": "cpu",
@@ -548,7 +551,7 @@ mistaken for whole-run predictions:
   "command_used": "python examples/pretrained_vit_inference.py --jax-platform cpu ...",
   "output_path": "runs/vit-inference/demo2_local_private_examples_cpu_b4.json",
   "git_commit": "0123456789abcdef0123456789abcdef01234567",
-  "git_branch": "feat/demo2-tpu-evidence",
+  "git_branch": "<branch-name>",
   "git_dirty": false,
   "manifest_path": "data/local/demo2_vit_images/manifest.txt",
   "manifest_kind": "local_private",
@@ -604,6 +607,8 @@ present:
 - `mode` and `processing_mode`
 - `model_name`, `selected_jax_platform`, actual `backend`, and `devices`
 - `git_commit`, `git_branch`, and `git_dirty`
+- `sharding`, which records requested batch-sharding settings and resolved
+  runtime facts
 - `batch_size`, `warmup_steps`, `benchmark_steps`, `timed_batch_runs`
 - `num_images`, `num_batches`, `num_padded_images`, and `last_batch_policy`
 - `mean_step_time_sec`, `total_timed_inference_sec`,
@@ -619,12 +624,76 @@ manifest creates two batches and pads the final one with three repeated copies
 of the last real image. Padded entries are excluded from predictions and
 throughput counts.
 
+## Explicit Batch-Axis Sharding Option
+
+The inference script and optional classifier-head fine-tuning script expose an
+explicit batch-axis data-sharding option. Inference now has retrieved
+single-device and explicit multi-device sharded TPU timing artifacts. Sharded
+classifier-head fine-tuning remains a command/workflow path until an actual
+sharded fine-tuning artifact is generated and retrieved.
+
+- `--batch-sharding none|data`: defaults to `none`; `data` uses explicit
+  batch-axis sharding for image batches.
+- `--mesh-axis-name`: names the one-dimensional device mesh axis; defaults to
+  `data`.
+- `--require-multiple-devices`: fails if the requested runtime does not expose
+  enough JAX devices.
+- `--min-shard-devices`: minimum visible JAX devices for data sharding or the
+  multiple-device guard; defaults to 2.
+
+For inference, when `--batch-sharding data` is selected, image batches shaped
+`[batch_size, 3, 224, 224]` use `PartitionSpec('data', None, None, None)` and
+logits shaped `[batch_size, num_classes]` try to use
+`PartitionSpec('data', None)`. Model parameters remain unsharded. The global
+batch size must be divisible by the mesh device count.
+
+For classifier-head fine-tuning, image batches use
+`PartitionSpec('data', None, None, None)`, labels use
+`PartitionSpec('data')`, and masks use `PartitionSpec('data')`. The ViT
+backbone parameters, classifier-head parameters, optimizer state, and checkpoint
+identity metadata remain unsharded. `train_step` and `eval_step` use explicit
+input shardings for batch arguments. When `--save-predictions` is used with
+batch sharding, prediction collection uses a jitted prediction step rather than
+falling back to an unsharded prediction path. Scalar loss and accuracy outputs
+do not use explicit output shardings.
+
+Example TPU VM inference command after a multi-device TPU resource is prepared.
+Set `SHARDED_BATCH_SIZE` to a global batch size divisible by the visible JAX
+device count used for the mesh.
+
+```bash
+export SHARDED_BATCH_SIZE=8
+export SHARDED_OUTPUT="runs/vit-inference/demo2_sharded_public_examples_tpu_b${SHARDED_BATCH_SIZE}.json"
+
+uv run --group pretrained python examples/pretrained_vit_inference.py \
+  --jax-platform tpu \
+  --image-manifest examples/assets/manifest.txt \
+  --batch-size "$SHARDED_BATCH_SIZE" \
+  --batch-sharding data \
+  --mesh-axis-name data \
+  --require-multiple-devices \
+  --min-shard-devices 2 \
+  --warmup-steps 1 \
+  --benchmark-steps 5 \
+  --output "$SHARDED_OUTPUT"
+```
+
+The generated inference JSON and fine-tuning `summary.json` include a top-level
+`sharding` object with the requested mode, mesh axis name, device counts, mesh
+shape, per-device batch size, partition specs, and whether explicit jit
+shardings were applied. For inference, the curated `single_v6e1` and
+`sharded_v6e8` table families under `report/results/` are completed timing
+artifacts. Classifier-head fine-tuning currently has the same sharding workflow
+surface; completed sharded fine-tuning evidence requires a generated sharded
+fine-tuning artifact.
+
 Expected manifest metadata for the current image sets:
 
 | Image set | Images | Batch size | Num batches | Padded images |
 | --- | ---: | ---: | ---: | ---: |
 | Public `examples/assets/manifest.txt` | 5 | 1 | 5 | 0 |
 | Public `examples/assets/manifest.txt` | 5 | 4 | 2 | 3 |
+| Public `examples/assets/manifest.txt` | 5 | 8 | 1 | 3 |
 | Local `data/local/demo2_vit_images/manifest.txt` | 15 | 1 | 15 | 0 |
 | Local `data/local/demo2_vit_images/manifest.txt` | 15 | 4 | 4 | 1 |
 
@@ -733,17 +802,15 @@ uv run python scripts/compare_vit_results.py \
 ```
 
 The JSON comparison output remains an ignored/generated artifact under
-`runs/vit-inference/`. Only the intentionally curated report-ready Markdown table
-belongs under `report/results/`. The current table reports about 1931.76x
-throughput speedup for this specific small public smoke-run comparison; it
-should not be generalized to TPU performance overall.
+`runs/vit-inference/`. The intentionally curated report-ready Markdown table
+under `report/results/` is the source of exact timing, throughput, and speedup
+values for this public-example `b4` comparison.
 
-Do not mix external Ryzen 7735HS WSL CPU artifacts into the primary local CPU vs
-cloud TPU table. External CPU evidence is supplementary cross-machine CPU
+Keep the primary local CPU versus cloud TPU table limited to those two artifacts.
+External Ryzen 7735HS WSL CPU evidence is supplementary cross-machine CPU
 evidence. The current three-way public-example smoke/demo view belongs in the
-separate `report/results/demo2_public_examples_summary.md`; it should not be
-treated as the primary local-vs-TPU result because it mixes hardware, OS/WSL,
-cache, and thermal variables.
+separate `report/results/demo2_public_examples_summary.md` because it mixes
+hardware, OS/WSL, cache, and thermal variables.
 
 ## Local CUDA Limitation
 
@@ -788,9 +855,9 @@ needed.
 - The Imagenette TPU tables are ViT inference timing evidence for retrieved
   JSON artifacts. They do not train or fine-tune the model, compute Imagenette
   accuracy, or establish a universal TPU speedup claim.
-- The optional fine-tuning extension is a classifier-head-only workflow smoke
-  run. It should not be described as full ViT fine-tuning, a large benchmark, or
-  model-quality evaluation.
+- The optional fine-tuning extension is classifier-head-only workflow smoke
+  evidence rather than full ViT fine-tuning, a large benchmark, or model-quality
+  evaluation.
 - Private manifest runs are qualitative local demonstrations, not public
   benchmark datasets or classification-accuracy measurements.
 - Dataset-level accuracy evaluation, longer benchmark loops, monitoring
